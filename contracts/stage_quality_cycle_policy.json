@@ -1,0 +1,351 @@
+{
+  "surface_kind": "opl_domain_stage_quality_cycle_profile",
+  "version": "domain-stage-quality-cycle-profile.v1",
+  "framework_contract_ref": "contracts/opl-framework/stage-quality-cycle-contract.json",
+  "route_selection_contract_ref": "contracts/opl-framework/stage-quality-cycle-contract.json#/cross_stage_route_selection",
+  "cross_stage_route_selection": {
+    "semantic_route_decision_owner": "decisive_codex_attempt",
+    "stage_transition_materialization_owner": "opl_stage_run_controller",
+    "primary_only_decisive_attempt_role": "producer",
+    "formal_review_decisive_attempt_roles": [
+      "reviewer",
+      "re_reviewer"
+    ],
+    "repairer_can_be_decisive_attempt": false,
+    "same_stage_repair_required_with_budget_remaining_continues_quality_loop": true,
+    "repair_required_review_or_re_review_may_select_cross_stage_route_back_before_budget_exhaustion": true,
+    "repair_required_cross_stage_route_back_requires_target_different_from_current_stage": true,
+    "cross_stage_route_back_requires_narrowest_canonical_owner_stage": true,
+    "repair_required_review_or_re_review_may_select_other_terminal_route_before_budget_exhaustion": false,
+    "repair_required_review_or_re_review_may_select_terminal_route_after_budget_exhaustion": true,
+    "repair_budget_exhaustion_terminal_status": "completed_with_quality_debt",
+    "hard_stop_or_zero_consumable_artifact_route_output": "none"
+  },
+  "review_attempt_contract": {
+    "attempt_roles": [
+      "producer",
+      "reviewer",
+      "repairer",
+      "re_reviewer"
+    ],
+    "new_stage_attempt_per_role": true,
+    "new_execution_session_per_attempt": true,
+    "no_context_inheritance": true,
+    "same_thread_resume_role": "protocol_closeout_resume",
+    "same_thread_resume_counts_as_review": false,
+    "same_thread_resume_consumes_quality_budget": false,
+    "attempt_output_contract": {
+      "envelope_path": "route_impact.stage_quality_cycle",
+      "outcome_field": "outcome",
+      "outcome_required_for_roles": [
+        "reviewer",
+        "re_reviewer"
+      ],
+      "outcome_values": [
+        "pass",
+        "repair_required",
+        "quality_debt",
+        "blocked",
+        "human_gate"
+      ],
+      "attempts_must_not_emit_receipt_verdict": true,
+      "receipt_materializer_owner": "opl_stage_run_controller",
+      "review_receipt_verdict_mapping": {
+        "pass": "pass",
+        "repair_required": "repair_required",
+        "quality_debt": "quality_debt",
+        "blocked": "hard_stop",
+        "human_gate": "hard_stop"
+      }
+    },
+    "role_prompt_refs": {
+      "producer": "agent/prompts/stage-quality-cycle-roles.md#producer",
+      "reviewer": "agent/prompts/stage-quality-cycle-roles.md#reviewer",
+      "repairer": "agent/prompts/stage-quality-cycle-roles.md#repairer",
+      "re_reviewer": "agent/prompts/stage-quality-cycle-roles.md#re-reviewer"
+    },
+    "required_role_output_ref_fields": {
+      "producer": [
+        "artifact_refs",
+        "artifact_hashes",
+        "source_refs",
+        "lineage_refs"
+      ],
+      "reviewer": [
+        "route_impact.stage_quality_cycle.outcome",
+        "finding_refs",
+        "evidence_refs",
+        "acceptance_criteria_refs"
+      ],
+      "repairer": [
+        "repaired_artifact_refs",
+        "repaired_artifact_hashes",
+        "repair_map_refs",
+        "changed_artifact_refs",
+        "lineage_refs"
+      ],
+      "re_reviewer": [
+        "route_impact.stage_quality_cycle.outcome",
+        "re_review_closure_refs",
+        "evidence_refs",
+        "remaining_quality_debt_refs"
+      ]
+    }
+  },
+  "domain_id": "medical_video",
+  "owner": "medical_video",
+  "stages": {
+    "evidence-plan": {
+      "surface_kind": "opl_stage_quality_cycle_policy",
+      "version": "stage-quality-cycle-policy.v1",
+      "enabled": true,
+      "stage_prompt_ref": "agent/prompts/evidence-plan.md",
+      "role_prompt_refs": {
+        "producer": "agent/prompts/stage-quality-cycle-roles.md#producer",
+        "reviewer": "agent/prompts/stage-quality-cycle-roles.md#reviewer",
+        "repairer": "agent/prompts/stage-quality-cycle-roles.md#repairer",
+        "re_reviewer": "agent/prompts/stage-quality-cycle-roles.md#re-reviewer"
+      },
+      "quality_rubric_refs": [
+        "agent/quality_gates/evidence-plan.md"
+      ],
+      "in_thread_refinement": {
+        "allowed": true,
+        "authoritative": false
+      },
+      "formal_review": {
+        "required": true,
+        "risk_tier": "high",
+        "review_depth": "multi_axis",
+        "context_isolation_required": true,
+        "max_repair_rounds": 2,
+        "scope_budget": {
+          "surface_kind": "opl_stage_quality_scope_budget",
+          "version": "opl-stage-quality-scope-budget.v1",
+          "max_attempts": 2,
+          "max_elapsed_ms": null,
+          "max_tokens": null,
+          "token_budget_requires_observed_usage": true,
+          "foreground_execution_must_use_managed_attempt": true
+        }
+      },
+      "budget_exhaustion": "complete_with_quality_debt_if_consumable",
+      "attempt_boundary": {
+        "inherits_stage_goal_scope_authority": true,
+        "role_overlay_may_only_narrow": true,
+        "controller_creates_next_attempt": true,
+        "attempt_is_not_sub_stage": true
+      }
+    },
+    "story-directing": {
+      "surface_kind": "opl_stage_quality_cycle_policy",
+      "version": "stage-quality-cycle-policy.v1",
+      "enabled": true,
+      "stage_prompt_ref": "agent/prompts/story-directing.md",
+      "role_prompt_refs": {
+        "producer": "agent/prompts/stage-quality-cycle-roles.md#producer",
+        "reviewer": "agent/prompts/stage-quality-cycle-roles.md#reviewer",
+        "repairer": "agent/prompts/stage-quality-cycle-roles.md#repairer",
+        "re_reviewer": "agent/prompts/stage-quality-cycle-roles.md#re-reviewer"
+      },
+      "quality_rubric_refs": [
+        "agent/quality_gates/story-directing.md"
+      ],
+      "in_thread_refinement": {
+        "allowed": true,
+        "authoritative": false
+      },
+      "formal_review": {
+        "required": true,
+        "risk_tier": "high",
+        "review_depth": "multi_axis",
+        "context_isolation_required": true,
+        "max_repair_rounds": 2,
+        "scope_budget": {
+          "surface_kind": "opl_stage_quality_scope_budget",
+          "version": "opl-stage-quality-scope-budget.v1",
+          "max_attempts": 2,
+          "max_elapsed_ms": null,
+          "max_tokens": null,
+          "token_budget_requires_observed_usage": true,
+          "foreground_execution_must_use_managed_attempt": true
+        }
+      },
+      "budget_exhaustion": "complete_with_quality_debt_if_consumable",
+      "attempt_boundary": {
+        "inherits_stage_goal_scope_authority": true,
+        "role_overlay_may_only_narrow": true,
+        "controller_creates_next_attempt": true,
+        "attempt_is_not_sub_stage": true
+      }
+    },
+    "media-production": {
+      "surface_kind": "opl_stage_quality_cycle_policy",
+      "version": "stage-quality-cycle-policy.v1",
+      "enabled": true,
+      "stage_prompt_ref": "agent/prompts/media-production.md",
+      "role_prompt_refs": {
+        "producer": "agent/prompts/stage-quality-cycle-roles.md#producer",
+        "reviewer": "agent/prompts/stage-quality-cycle-roles.md#reviewer",
+        "repairer": "agent/prompts/stage-quality-cycle-roles.md#repairer",
+        "re_reviewer": "agent/prompts/stage-quality-cycle-roles.md#re-reviewer"
+      },
+      "quality_rubric_refs": [
+        "agent/quality_gates/media-production.md"
+      ],
+      "in_thread_refinement": {
+        "allowed": true,
+        "authoritative": false
+      },
+      "formal_review": {
+        "required": true,
+        "risk_tier": "high",
+        "review_depth": "multi_axis",
+        "context_isolation_required": true,
+        "max_repair_rounds": 2,
+        "scope_budget": {
+          "surface_kind": "opl_stage_quality_scope_budget",
+          "version": "opl-stage-quality-scope-budget.v1",
+          "max_attempts": 2,
+          "max_elapsed_ms": null,
+          "max_tokens": null,
+          "token_budget_requires_observed_usage": true,
+          "foreground_execution_must_use_managed_attempt": true
+        }
+      },
+      "budget_exhaustion": "complete_with_quality_debt_if_consumable",
+      "attempt_boundary": {
+        "inherits_stage_goal_scope_authority": true,
+        "role_overlay_may_only_narrow": true,
+        "controller_creates_next_attempt": true,
+        "attempt_is_not_sub_stage": true
+      }
+    },
+    "visual-review": {
+      "surface_kind": "opl_stage_quality_cycle_policy",
+      "version": "stage-quality-cycle-policy.v1",
+      "enabled": true,
+      "stage_prompt_ref": "agent/prompts/visual-review.md",
+      "role_prompt_refs": {
+        "producer": "agent/prompts/stage-quality-cycle-roles.md#producer",
+        "reviewer": "agent/prompts/stage-quality-cycle-roles.md#reviewer",
+        "repairer": "agent/prompts/stage-quality-cycle-roles.md#repairer",
+        "re_reviewer": "agent/prompts/stage-quality-cycle-roles.md#re-reviewer"
+      },
+      "quality_rubric_refs": [
+        "agent/quality_gates/visual-review.md"
+      ],
+      "in_thread_refinement": {
+        "allowed": true,
+        "authoritative": false
+      },
+      "formal_review": {
+        "required": true,
+        "risk_tier": "high",
+        "review_depth": "multi_axis",
+        "context_isolation_required": true,
+        "max_repair_rounds": 2,
+        "scope_budget": {
+          "surface_kind": "opl_stage_quality_scope_budget",
+          "version": "opl-stage-quality-scope-budget.v1",
+          "max_attempts": 2,
+          "max_elapsed_ms": null,
+          "max_tokens": null,
+          "token_budget_requires_observed_usage": true,
+          "foreground_execution_must_use_managed_attempt": true
+        }
+      },
+      "budget_exhaustion": "complete_with_quality_debt_if_consumable",
+      "attempt_boundary": {
+        "inherits_stage_goal_scope_authority": true,
+        "role_overlay_may_only_narrow": true,
+        "controller_creates_next_attempt": true,
+        "attempt_is_not_sub_stage": true
+      }
+    },
+    "review-handoff": {
+      "surface_kind": "opl_stage_quality_cycle_policy",
+      "version": "stage-quality-cycle-policy.v1",
+      "enabled": true,
+      "stage_prompt_ref": "agent/prompts/review-handoff.md",
+      "role_prompt_refs": {
+        "producer": "agent/prompts/stage-quality-cycle-roles.md#producer",
+        "reviewer": "agent/prompts/stage-quality-cycle-roles.md#reviewer",
+        "repairer": "agent/prompts/stage-quality-cycle-roles.md#repairer",
+        "re_reviewer": "agent/prompts/stage-quality-cycle-roles.md#re-reviewer"
+      },
+      "quality_rubric_refs": [
+        "agent/quality_gates/review-handoff.md"
+      ],
+      "in_thread_refinement": {
+        "allowed": true,
+        "authoritative": false
+      },
+      "formal_review": {
+        "required": true,
+        "risk_tier": "high",
+        "review_depth": "multi_axis",
+        "context_isolation_required": true,
+        "max_repair_rounds": 2,
+        "scope_budget": {
+          "surface_kind": "opl_stage_quality_scope_budget",
+          "version": "opl-stage-quality-scope-budget.v1",
+          "max_attempts": 2,
+          "max_elapsed_ms": null,
+          "max_tokens": null,
+          "token_budget_requires_observed_usage": true,
+          "foreground_execution_must_use_managed_attempt": true
+        }
+      },
+      "budget_exhaustion": "complete_with_quality_debt_if_consumable",
+      "attempt_boundary": {
+        "inherits_stage_goal_scope_authority": true,
+        "role_overlay_may_only_narrow": true,
+        "controller_creates_next_attempt": true,
+        "attempt_is_not_sub_stage": true
+      }
+    },
+    "asset-curation": {
+      "surface_kind": "opl_stage_quality_cycle_policy",
+      "version": "stage-quality-cycle-policy.v1",
+      "enabled": true,
+      "stage_prompt_ref": "agent/prompts/asset-curation.md",
+      "role_prompt_refs": {
+        "producer": "agent/prompts/stage-quality-cycle-roles.md#producer",
+        "reviewer": "agent/prompts/stage-quality-cycle-roles.md#reviewer",
+        "repairer": "agent/prompts/stage-quality-cycle-roles.md#repairer",
+        "re_reviewer": "agent/prompts/stage-quality-cycle-roles.md#re-reviewer"
+      },
+      "quality_rubric_refs": [
+        "agent/quality_gates/asset-curation.md"
+      ],
+      "in_thread_refinement": {
+        "allowed": true,
+        "authoritative": false
+      },
+      "formal_review": {
+        "required": true,
+        "risk_tier": "high",
+        "review_depth": "multi_axis",
+        "context_isolation_required": true,
+        "max_repair_rounds": 2,
+        "scope_budget": {
+          "surface_kind": "opl_stage_quality_scope_budget",
+          "version": "opl-stage-quality-scope-budget.v1",
+          "max_attempts": 2,
+          "max_elapsed_ms": null,
+          "max_tokens": null,
+          "token_budget_requires_observed_usage": true,
+          "foreground_execution_must_use_managed_attempt": true
+        }
+      },
+      "budget_exhaustion": "complete_with_quality_debt_if_consumable",
+      "attempt_boundary": {
+        "inherits_stage_goal_scope_authority": true,
+        "role_overlay_may_only_narrow": true,
+        "controller_creates_next_attempt": true,
+        "attempt_is_not_sub_stage": true
+      }
+    }
+  }
+}

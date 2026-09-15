@@ -1,0 +1,3 @@
+# 验证数据
+
+tests/test_preflight.py在临时目录生成小型边界反例，不携带真实视频。Framework生成的stage_run_canary_evidence仅是受控骨架fixture，非真实领域进度。

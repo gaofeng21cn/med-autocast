@@ -1,0 +1,9 @@
+# 来源与适配
+
+领域来源：现有“科普视频”工作台的六个medical-video专业Skill，以及docs/04_医学科普视频系列SOP.md、06_媒体后端运行SOP.md、07_角色与视觉差异化SOP.md、11_解释对应与叙事连续性SOP.md、13_剪辑与联合时间轴检查.md。构建输入快照保留在维护者本地恢复档案，不随公开包分发；当前Skill为针对可移植Agent的语义整理，不是原文无差别复制。
+
+结构参考：OPL Book Forge的agent/primary_skill、stages、prompts、professional_skills、knowledge、quality_gates及声明式合同；未复制BookForge历史通过记录。Framework持有标准，Book Forge只是参考。
+
+本仓骨架与carrier由Framework buildStandardDomainAgentScaffold/buildScaffoldFiles生成；主Skill与专业方法由当前获授权开发会话编写。生成工具需要显式OPL_FRAMEWORK_ROOT，不作为Agent运行时依赖。载体主Skill与canonical主Skill字节一致，随包附带领域方法供离线加载。
+
+OMA已调用engineer-agent，但在安装描述符/本机carrier身份一致性校验处失败，没有FoundryRun、AgentBlueprint或EvalSpec。不能将本仓开发成果伪称为OMA运行产物，亦不能将结构检查当作资格通过。精确证据与恢复路径见docs/status.md。

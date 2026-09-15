@@ -1,0 +1,9 @@
+{
+  "surface_kind": "opl_generated_surface_handoff_delta",
+  "schema_version": 1,
+  "defaults_profile": "opl.standard-generated-surface-handoff.v1",
+  "domain_id": "medical_video",
+  "generated_surface_owner": "one-person-lab",
+  "domain_repo_can_own_generated_surface": false,
+  "marker": "generated_by_opl_standard_domain_agent_scaffold_v1"
+}

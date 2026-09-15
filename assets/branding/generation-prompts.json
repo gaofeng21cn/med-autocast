@@ -1,0 +1,22 @@
+{
+  "generator": "built-in image_gen",
+  "reference_style": "OPL Book Forge and Med Auto Grant hand-drawn brand illustrations",
+  "reference_assets": [
+    "opl-bookforge/assets/branding/opl-bookforge-logo.png",
+    "opl-bookforge/assets/branding/opl-bookforge-overview-v2.png"
+  ],
+  "assets": [
+    {
+      "file": "opl-medcast-logo.png",
+      "prompt": "Use case: logo-brand. Create a new companion brand icon for OPL Med Cast in the same OPL family as the supplied OPL Book Forge logo. Input image is STYLE REFERENCE ONLY, not a subject to reproduce. Square 1024x1024 PNG. Match its white softly rounded paper tile, barely visible pale blue dotted notebook grid, black hand-drawn graphite outlines, pencil hatching, navy blue / turquoise / sky blue segmented circular ring with a small amber accent. Replace the book and pen with a simple medical education video symbol: a navy outlined rectangular video frame with a clear turquoise play triangle, and a small stethoscope gently curving around its lower edge. Balanced bold silhouette readable at 132px. Keep generous inner whitespace. No text, no letters, no wordmark, no book, no pen, no watermark. Professionally restrained and recognizable as the same family."
+    },
+    {
+      "file": "opl-medcast-overview.zh-CN.png",
+      "prompt": "Create a NEW Chinese workflow infographic for OPL Med Cast, using the supplied Book Forge diagram ONLY as a stylistic reference, not an editing target. Landscape 16:9. White paper, faint pale blue dot grid, thin rounded black outside border, bold black hand-lettered title, navy/teal/amber pencil hatching and simple marker outlines, matching the OPL family. Design a clean layout with much LESS TEXT than the reference. Exact top title \"OPL Med Cast\", subtitle \"从医学证据到科普视频\". Six equal rounded cards in ONE horizontal row, numbered 1 to 6, with a single large icon and one heading each, connected by simple black left-to-right arrows. Exact headings in order: \"医学证据\", \"故事设计\", \"视听制作\", \"质量复核\", \"审看交付\", \"素材积累\". Icons respectively: evidence documents and magnifier; storyboard and pencil; video player and microphone; headphones and magnifier; folder with video/audio/subtitles; organized picture library. NO small captions inside cards. Below the cards, one wide light teal box containing two simple lines of Chinese text, exact text: \"已有素材优先复用\" and \"发现问题定向返修\". No arrows into or out of this box. Footer centered: \"医学准确 · 叙事连贯 · 审查留痕\". No other text. No looping arrows, no complicated routing lines, no green approval badges, no English except brand title. All Chinese must be clearly written, correctly formed, natural, and free of pseudo-characters. Large readable labels. Generous whitespace and polished pencil-illustration style."
+    },
+    {
+      "file": "opl-medcast-overview.en.png",
+      "prompt": "Create a NEW English workflow infographic for OPL Med Cast, using the supplied Book Forge diagram ONLY as a stylistic reference. Landscape 16:9. Match white paper, faint pale blue dot grid, thin rounded black outside border, bold black hand-lettering, navy/teal/amber pencil hatching and marker outlines. Clean layout with much LESS TEXT than reference. Top title exactly \"OPL Med Cast\", subtitle \"Medical evidence to educational video\". Six equal rounded cards in ONE horizontal row, numbered 1 to 6, with a single large icon and one heading each, connected by simple black left-to-right arrows. Exact headings in order: \"Evidence\", \"Story Design\", \"AV Production\", \"Quality Review\", \"Review Handoff\", \"Asset Library\". Icons respectively: evidence documents and magnifier; storyboard and pencil; video player and microphone; headphones and magnifier; folder with video/audio/subtitles; organized picture library. NO small captions inside cards. Below the cards, one wide light teal box with two simple lines of exact text: \"Reuse existing assets first\" and \"Revise in response to findings\". No arrows into or out of this box. Footer centered: \"Medical accuracy · Story continuity · Review records\". No other text. No looping arrows, no complicated routing lines, no green approval badges. No Chinese. Clearly legible correct spelling, no duplicate labels. Generous whitespace, same polished pencil-illustration OPL family aesthetic."
+    }
+  ]
+}

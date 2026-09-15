@@ -1,0 +1,66 @@
+{
+  "surface_kind": "domain_agent_descriptor",
+  "schema_version": 1,
+  "domain_id": "medical_video",
+  "domain_label": "OPL Med Cast",
+  "marker": "generated_by_opl_standard_domain_agent_scaffold_v1",
+  "standard_agent_interface": {
+    "version": "opl_standard_agent_interface.v1",
+    "workspace_binding": {
+      "locator_surface_kind": "opl_medcast_workspace",
+      "default_profile_id": "one_off",
+      "workspace_kind": "medical_video_workspace",
+      "project_kind": "medical_video_series",
+      "project_collection_label": "projects",
+      "default_workspace_id": "medcast-workspace",
+      "default_project_id": "series-001",
+      "required_locator_fields": [
+        "workspace_root"
+      ],
+      "optional_locator_fields": []
+    },
+    "runtime": {
+      "runtime_domain_id": "medical_video",
+      "registration_ref": "contracts/domain_descriptor.json"
+    },
+    "progress": {
+      "deliverable_delta_aliases": [],
+      "platform_delta_aliases": []
+    },
+    "routing": {
+      "explicit_aliases": [
+        "opl-medcast",
+        "OPL Med Cast",
+        "医学科普视频"
+      ],
+      "workstream_ids": [],
+      "intent_signals": [
+        "medical_video_production",
+        "patient_education_video"
+      ],
+      "ambiguity_policy": "require_explicit_domain_or_workstream"
+    }
+  },
+  "standard_contract_refs": {
+    "foundry_agent_series": "contracts/foundry_agent_series.json",
+    "foundry_agent_series_policy_release": "contracts/opl-framework/foundry-agent-series-policy-release.json",
+    "stage_manifest": "agent/stages/manifest.json",
+    "stage_control_plane": "opl-generated:family_stage_control_plane",
+    "pack_compiler_input": "contracts/pack_compiler_input.json",
+    "capability_map": "contracts/capability_map.json",
+    "generated_surface_handoff": "contracts/generated_surface_handoff.json",
+    "standard_agent_principles": "contracts/opl-framework/standard-agent-principles.json",
+    "standard_agent_principles_adoption": "contracts/standard-agent-principles-adoption.json"
+  },
+  "authority_boundary": {
+    "opl_can_write_domain_truth": false,
+    "opl_can_write_memory_body": false,
+    "opl_can_authorize_quality_or_export": false,
+    "domain_owns_truth_quality_artifact_memory_and_receipts": true
+  },
+  "kind": "agent",
+  "agent_id": "opl-medcast",
+  "package_id": "opl-medcast",
+  "delivery_domain": "medical_video",
+  "target_brief": "医学科普视频证据、叙事、制作、审看交付与资产沉淀。"
+}

@@ -1,0 +1,122 @@
+{
+  "surface_kind": "opl_domain_pack_compiler_input",
+  "schema_version": 1,
+  "domain_id": "medical_video",
+  "canonical_agent_id": "opl-medcast",
+  "domain_pack_owner": "opl-medcast",
+  "canonical_semantic_pack_root": "agent/",
+  "canonical_semantic_pack_role": "repo_source_declarative_domain_pack",
+  "required_domain_pack_paths": [
+    "agent/knowledge/domain_boundary.md",
+    "agent/primary_skill/SKILL.md",
+    "agent/principles/domain-specialization.md",
+    "agent/principles/opl-standard-agent-principles.md",
+    "agent/professional_skills/medical-video-backends/SKILL.md",
+    "agent/professional_skills/medical-video-content-planner/SKILL.md",
+    "agent/professional_skills/medical-video-director/SKILL.md",
+    "agent/professional_skills/medical-video-release-packager/SKILL.md",
+    "agent/professional_skills/medical-video-series-producer/SKILL.md",
+    "agent/professional_skills/medical-video-visual-qa/SKILL.md",
+    "agent/prompts/asset-curation.md",
+    "agent/prompts/evidence-plan.md",
+    "agent/prompts/media-production.md",
+    "agent/prompts/review-handoff.md",
+    "agent/prompts/story-directing.md",
+    "agent/prompts/visual-review.md",
+    "agent/quality_gates/asset-curation.md",
+    "agent/quality_gates/domain_acceptance.md",
+    "agent/quality_gates/evidence-plan.md",
+    "agent/quality_gates/media-production.md",
+    "agent/quality_gates/review-handoff.md",
+    "agent/quality_gates/story-directing.md",
+    "agent/quality_gates/visual-review.md",
+    "agent/skills/domain_execution.md",
+    "agent/stages/asset-curation.md",
+    "agent/stages/evidence-plan.md",
+    "agent/stages/manifest.json",
+    "agent/stages/media-production.md",
+    "agent/stages/review-handoff.md",
+    "agent/stages/story-directing.md",
+    "agent/stages/visual-review.md",
+    "agent/tools/domain_affordances.md",
+    "contracts/stage_quality_cycle_policy.json",
+    "agent/prompts/stage-quality-cycle-roles.md"
+  ],
+  "source_refs": {
+    "stage_graph_source_ref": "agent/stages/manifest.json",
+    "quality_gate_source_ref": "agent/quality_gates/domain_acceptance.md",
+    "executor_policy_source_ref": "opl-generated:family_stage_control_plane#/stages/0/selected_executor",
+    "owner_receipt_schema_source_ref": "contracts/owner_receipt_contract.json",
+    "authority_functions_source_ref": "runtime/authority_functions/README.md",
+    "generated_surface_handoff_source_ref": "contracts/generated_surface_handoff.json",
+    "capability_map_source_ref": "contracts/capability_map.json",
+    "standard_agent_principles_source_ref": "contracts/opl-framework/standard-agent-principles.json",
+    "standard_agent_principles_adoption_source_ref": "contracts/standard-agent-principles-adoption.json",
+    "primary_skill_source_ref": "agent/primary_skill/SKILL.md"
+  },
+  "capability_map_ref": "contracts/capability_map.json",
+  "standard_stage_pack_conformance": {
+    "version": "standard-stage-pack.v2",
+    "required": true,
+    "enforcement_ref": "opl-generated:family_stage_control_plane#stage_pack_conformance_version"
+  },
+  "standard_agent_pack_abi": {
+    "authority_ref": "contracts/opl-framework/standard-domain-agent-skeleton-contract.json#/agent_pack_contract/standard_agent_pack_abi"
+  },
+  "implementation_profile": {
+    "base_profile_ref": "contracts/opl-framework/standard-agent-implementation-profile.schema.json",
+    "helpers": {
+      "entries": [
+        {
+          "language": "python",
+          "role": "native_helper",
+          "source_roots": [
+            "runtime/native_helpers/"
+          ]
+        }
+      ]
+    }
+  },
+  "generated_surface_owner": "one-person-lab",
+  "declarative_domain_pack": [
+    "domain_truth_schema",
+    "capability_map_refs",
+    "stage_descriptors",
+    "transition_table",
+    "action_metadata",
+    "knowledge_refs",
+    "prompt_refs",
+    "skill_refs",
+    "policy_tables",
+    "quality_rubric_refs",
+    "artifact_authority_contract",
+    "memory_policy",
+    "owner_receipt_schema",
+    "domain_fixtures"
+  ],
+  "minimal_authority_functions": [
+    "quality_or_export_verdict_authorizer",
+    "artifact_mutation_authorizer",
+    "memory_accept_reject_decider",
+    "source_readiness_verdict",
+    "owner_receipt_signer",
+    "domain_specific_native_helper_implementation"
+  ],
+  "generated_surfaces_requested": [
+    "cli",
+    "mcp",
+    "skill",
+    "product_entry_manifest",
+    "domain_handler",
+    "status_read_model",
+    "workbench_drilldown"
+  ],
+  "domain_repo_can_own_generated_surface": false,
+  "marker": "generated_by_opl_standard_domain_agent_scaffold_v1",
+  "authority_boundary": {
+    "opl_can_write_domain_truth": false,
+    "opl_can_write_memory_body": false,
+    "opl_can_authorize_quality_or_export": false,
+    "domain_can_claim_generated_surface_owner": false
+  }
+}

@@ -1,0 +1,9 @@
+.local/
+.evidence/
+.codegraph/
+__pycache__/
+*.pyc
+node_modules/
+.DS_Store
+dist/
+.venv/

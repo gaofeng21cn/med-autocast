@@ -1,0 +1,33 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "required": [
+    "workspace_root"
+  ],
+  "properties": {
+    "workspace_root": {
+      "type": "string",
+      "minLength": 1
+    },
+    "series_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "episode_ids": {
+      "type": "array",
+      "minItems": 1,
+      "uniqueItems": true,
+      "items": {
+        "type": "string",
+        "minLength": 1
+      }
+    },
+    "request_ref": {
+      "type": "string"
+    },
+    "current_manifest_ref": {
+      "type": "string"
+    }
+  },
+  "additionalProperties": false
+}

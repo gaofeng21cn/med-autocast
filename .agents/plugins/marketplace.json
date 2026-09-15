@@ -1,0 +1,20 @@
+{
+  "name": "opl-medcast",
+  "interface": {
+    "displayName": "OPL Med Cast"
+  },
+  "plugins": [
+    {
+      "name": "opl-medcast",
+      "source": {
+        "source": "local",
+        "path": "./plugins/opl-medcast"
+      },
+      "policy": {
+        "installation": "AVAILABLE",
+        "authentication": "ON_INSTALL"
+      },
+      "category": "Productivity"
+    }
+  ]
+}

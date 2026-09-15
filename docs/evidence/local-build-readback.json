@@ -1,0 +1,48 @@
+{
+  "schema": "opl_medcast_local_build_readback/v1",
+  "observed_at": "2026-09-15T04:19:18.312490+00:00",
+  "formal_name": "OPL Med Cast",
+  "technical_id": "opl-medcast",
+  "version": "0.1.0",
+  "scope": "local_candidate_only",
+  "framework_commit": "9b27b96faad5443a36e281d94f2365856de67ed0",
+  "framework_validation_root": ".local/framework-reference",
+  "framework_dependency_isolation": "snapshot_source_with_shared_node_modules",
+  "tests_passed": 14,
+  "standard_agent_check": "passed",
+  "generated_interfaces": "ready",
+  "source_hygiene": "passed",
+  "native_helper_probe": "resolved",
+  "actual_workspace": {
+    "series": 5,
+    "keyframes": 72,
+    "related_rejected_videos": 2,
+    "read_only": true,
+    "inspection_ref": ".local/actual-workspace-inspection.json",
+    "asset_query_ref": ".local/actual-asset-query.json"
+  },
+  "workspace_registration": {
+    "registered": true,
+    "new_errors": [],
+    "baseline_errors": 27,
+    "after_errors": 27
+  },
+  "oma": {
+    "request_id": "medcast-create-20260915",
+    "action": "engineer-agent",
+    "invocations": 1,
+    "admitted": false,
+    "failure_code": "standard_agent_managed_checkout_not_launchable",
+    "observed_error": "Standard Agent installed descriptor and configured native carrier identities disagree.",
+    "configured_selector": "opl-meta-agent@opl-meta-agent",
+    "observed_installed_selector": "opl-meta-agent@opl-meta-agent-local",
+    "foundry_status_readback": "FoundryRun does not exist.",
+    "blueprint_produced": false,
+    "eval_spec_produced": false,
+    "qualified": false
+  },
+  "production_generation_performed": false,
+  "activated": false,
+  "published": false,
+  "git_committed": false
+}

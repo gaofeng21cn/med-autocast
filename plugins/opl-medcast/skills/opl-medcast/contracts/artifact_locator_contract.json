@@ -1,0 +1,8 @@
+{
+  "surface_kind": "artifact_locator_contract",
+  "schema_version": 1,
+  "domain_id": "medical_video",
+  "canonical_artifact_authority": "medical_video",
+  "opl_projection_policy": "locator_lifecycle_and_receipt_refs_only",
+  "marker": "generated_by_opl_standard_domain_agent_scaffold_v1"
+}

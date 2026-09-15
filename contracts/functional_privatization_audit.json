@@ -1,0 +1,142 @@
+{
+  "surface_kind": "functional_privatization_audit",
+  "schema_version": 1,
+  "defaults_profile": "opl.standard-functional-privatization-audit.v1",
+  "domain_id": "medical_video",
+  "marker": "generated_by_opl_standard_domain_agent_scaffold_v1",
+  "opl_owned_replacement_surfaces": [
+    "scheduler_supervision_cadence",
+    "provider_slo_and_wakeup_transport",
+    "stage_attempt_projection_ledger",
+    "ai_selected_stage_route_transport",
+    "workspace_source_intake_shell",
+    "memory_locator_writeback_transport",
+    "artifact_package_lifecycle_shell",
+    "operator_workbench_drilldown_shell",
+    "observability_repair_projection",
+    "generic_persistence_store",
+    "runtime_lifecycle_sqlite_index_contract",
+    "native_helper_generic_envelope",
+    "review_repair_transport",
+    "pack_compiler_generated_surface",
+    "functional_privatization_audit_read_model"
+  ],
+  "opl_generated_surfaces": [
+    "cli",
+    "mcp",
+    "skill",
+    "product_entry_manifest",
+    "domain_handler",
+    "status_read_model",
+    "workbench_drilldown"
+  ],
+  "physical_source_morphology_policy": {
+    "policy_id": "medical_video.physical-source-morphology.v1",
+    "state": "classified_no_generic_runtime_reflow",
+    "required_surface_ids": [
+      "agent_semantic_pack",
+      "domain_handler_targets",
+      "refs_only_adapters",
+      "minimal_authority_functions",
+      "fixture_or_provenance_refs"
+    ],
+    "classification_buckets": [
+      "declarative_domain_pack",
+      "domain_handler_target",
+      "refs_only_adapter",
+      "minimal_authority_function",
+      "provenance_or_fixture"
+    ],
+    "surface_classifications": [
+      {
+        "surface_id": "agent_semantic_pack",
+        "classification": "declarative_domain_pack",
+        "source_refs": [
+          "agent/"
+        ]
+      },
+      {
+        "surface_id": "domain_handler_targets",
+        "classification": "domain_handler_target",
+        "source_refs": [
+          "contracts/action_catalog.json",
+          "contracts/domain_handler_registry.json",
+          "agent/skills/domain_execution.md"
+        ]
+      },
+      {
+        "surface_id": "refs_only_adapters",
+        "classification": "refs_only_adapter",
+        "source_refs": [
+          "contracts/memory_descriptor.json",
+          "contracts/artifact_locator_contract.json",
+          "contracts/owner_receipt_contract.json"
+        ]
+      },
+      {
+        "surface_id": "minimal_authority_functions",
+        "classification": "minimal_authority_function",
+        "source_refs": [
+          "runtime/native_helpers/medcast.py",
+          "runtime/authority_functions/README.md"
+        ]
+      },
+      {
+        "surface_id": "fixture_or_provenance_refs",
+        "classification": "provenance_or_fixture",
+        "source_refs": [
+          "runtime/fixtures/README.md"
+        ]
+      }
+    ],
+    "authority_boundary": {
+      "domain_can_claim_generic_runtime_owner": false,
+      "domain_repo_can_own_generated_surface": false
+    }
+  },
+  "declarative_domain_pack": [
+    "domain_truth_schema",
+    "capability_map_refs",
+    "stage_descriptors",
+    "transition_table",
+    "action_metadata",
+    "knowledge_refs",
+    "prompt_refs",
+    "skill_refs",
+    "policy_tables",
+    "quality_rubric_refs",
+    "artifact_authority_contract",
+    "memory_policy",
+    "owner_receipt_schema",
+    "domain_fixtures"
+  ],
+  "minimal_authority_functions": [
+    "quality_or_export_verdict_authorizer",
+    "artifact_mutation_authorizer",
+    "memory_accept_reject_decider",
+    "source_readiness_verdict",
+    "owner_receipt_signer",
+    "domain_specific_native_helper_implementation"
+  ],
+  "domain_retained_thin_surfaces": [
+    "domain_truth",
+    "domain_transition_spec",
+    "domain_stage_descriptors",
+    "domain_action_metadata",
+    "quality_or_export_verdict",
+    "artifact_authority",
+    "memory_body",
+    "owner_receipt",
+    "typed_blocker",
+    "domain_handler_target_or_opaque_ref_projection_output",
+    "domain_entry_and_tests"
+  ],
+  "modules": [],
+  "authority_boundary": {
+    "opl_can_write_domain_truth": false,
+    "opl_can_write_memory_body": false,
+    "opl_can_authorize_quality_or_export": false,
+    "domain_can_claim_generic_runtime_owner": false,
+    "domain_repo_can_own_generated_surface": false
+  }
+}

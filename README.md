@@ -8,87 +8,64 @@
 
 # OPL Med Cast
 
-Explain the medical evidence. Make the video work.
+**Explain the medical evidence. Make the video work.**
 
-OPL Med Cast is an OPL agent for medical education videos. It helps clinicians and content creators plan a series, develop its stories, organize audiovisual production, review the results, and prepare files for review. Inspected keyframes worth reusing become a reference library for future work.
+OPL Med Cast is a medical education video agent for clinicians, health educators, and medical content creators. Starting with a question patients care about, it helps you review the evidence, plan a series, write narration, design visuals, produce voiceovers and animation, edit and review videos, and prepare accompanying copy.
 
-It follows the organization of OPL Book Forge: the domain agent provides professional methods, while OPL Framework handles shared execution and stage management. The formal name is **OPL Med Cast**; the repository, agent, and package share the technical identifier `opl-medcast`.
+Start with a topic or continue from an existing script, recording, asset collection, or video. Refine one episode, produce a series, or update earlier work while building on what you already have.
 
 <p align="center">
-  <img src="assets/branding/opl-medcast-overview.en.png" alt="OPL Med Cast workflow: medical evidence, story direction, voice and subtitles, animation and editing, visual and motion review, full listening, medical review, review handoff, and asset curation. Author profiles, professional skills, Workbench tools, and recovery support all six stages. Notes emphasize focused revision and reuse of reviewed assets." width="100%" />
+  <img src="assets/branding/opl-medcast-overview.en.png" alt="The six-stage OPL Med Cast workflow, from medical evidence and story design through audiovisual production, review, handoff, and asset curation. Author profiles, professional skills, production tools, and recovery support ongoing work." width="100%" />
 </p>
 
-## Start A Video
+## What You Can Do
 
-Describe the audience, what viewers should understand or do, and the sources, scripts, media, and production workspace already available. For example:
-
-- "Plan a series for patients newly diagnosed with hypertension. Answer one common question per episode and identify the supporting medical evidence."
-- "The narration for this episode is approved. Reuse existing footage, fix scenes that do not match the narration, and create only the missing shots."
-- "Review the current version of this series, organize its videos, subtitles, and narration, and list anything still requiring full listening or medical review."
-
-| Action | Scope |
+| Your goal | How OPL Med Cast helps |
 | --- | --- |
-| `plan-series` | Medical evidence, audience, series boundaries, and episode goals |
-| `produce-episodes` | Story and shot design, media production, editing, and video review |
-| `review-delivery` | Current-version review, review-package preparation, and asset curation |
+| Turn medical knowledge into topics patients can understand | Review evidence, common patient questions, and the limits of what can be said; develop series themes, episode goals, and outlines |
+| Tell a coherent story | Write narration and storyboards, connect each visual to the explanation, and maintain continuity between shots |
+| Produce a video from a script | Coordinate voiceovers, subtitles, animation, and editing; add branding and background music to create a video for review |
+| Identify what needs revision | Check visual meaning, framing, and motion continuity; organize listening feedback and medical review findings |
+| Prepare an episode or series for handoff | Gather videos, subtitles, narration, review records, and accompanying copy for Xiaohongshu and WeChat Channels |
+| Build a useful collection for future work | Organize reviewed keyframes and reusable clips with their sources and usage limits, and look for existing assets before creating more |
 
-These actions connect six stages and can continue from existing work. An episode revision addresses the affected material; unchanged narration reuses its audio and subtitles. See [Architecture](docs/architecture.md) for stage responsibilities.
+## Start With A Request
 
-## Make Production Experience Reusable
+Describe the audience, what viewers should understand, and the material you already have. For example:
 
-**Let the visuals explain the narration.** Design speech and visible events together. Review both individual shots and the continuity of the whole story. When footage falls short, revise the narrative and shot sequence instead of padding the timeline with repeats or fragmented cuts.
+> "Plan an educational series for patients newly diagnosed with hypertension. Answer one common question per episode and identify the medical evidence. Start with the topics and narration for episode one."
 
-**Reuse before generating.** Search the keyframe library and reviewed footage first. Organize assets by purpose and retain provenance, review records, and reuse limits. A useful still does not establish that its generated video passed review. A rejected source stays excluded even if an old usable-range field remains.
+> "The narration for this episode is approved. Reuse existing footage, fix scenes that do not match the explanation, and create only the missing shots."
 
-**Keep delivery status explicit.** Technical checks, visual review, continuous motion, full listening, medical review, and platform upload have separate records. A review package may contain clearly identified pending work; public release still requires the relevant review and authorization.
+> "Organize the current videos, subtitles, and publication copy for this series. List anything still requiring full listening or medical review, then add worthwhile keyframes to the asset library."
 
-## Installation
+For an existing project, provide its folder and identify the current version, what has been approved, and what you want to change.
 
-Install through the standard OPL Package entry:
+## Build On Your Previous Work
+
+**Keep your own style.** Reuse your author information, authorized voice, branding, and presentation preferences to maintain a consistent voice and visual style across a series.
+
+**Make focused revisions.** Reuse audio and subtitles when the narration is unchanged, and focus visual revisions on the affected shots. Updating one episode preserves the others.
+
+**Continue after an interruption.** Use existing files and production records to establish progress, resume unfinished work, and retain earlier versions for reference.
+
+**Know what you are receiving.** Videos, accompanying copy, revision notes, and pending reviews are organized together. You can see which version you have, what has been checked, and whose confirmation is still needed. Medical content receives final confirmation from a qualified professional; platform uploads require your authorization.
+
+## Install And Get Started
+
+Install through OPL:
 
 ```bash
 opl packages install opl-medcast --json
 ```
 
-The primary distribution channel is `ghcr.io/gaofeng21cn/one-person-lab-packages/opl-medcast`. Versions are published independently; `latest-stable` selects the current version. OPL and the native plugin manager handle installation and updates. See the [installation guide](docs/installation.md) for environment requirements.
+Start a new task after installation and tell OPL Med Cast what you want to create. Before producing your first video, configure the required voice and video generation services using the [setup guide](docs/installation.md). Use the [project setup guide](docs/workspace-adapter.md) to continue an existing production project.
 
-## Use A Local Workspace
+## Learn More
 
-The current version includes a [primary Skill](agent/primary_skill/SKILL.md), six [professional Skills](agent/professional_skills/), complete ten-step production methods, templates, and the reusable Workbench tools. Original media, narration, configuration profiles, and publication folders stay in the production workspace. Existing workspace tools take precedence; bundled tools support workspaces without those entrypoints.
+- [Production workflow](docs/production-sop.md): from topics and scripts to video handoff.
+- [Audiovisual review](docs/visual-review-sop.md) and [delivery guide](docs/delivery-sop.md): review, revise, and organize the results.
+- [Keyframe library](docs/keyframe-library.md): collect and reuse valuable visuals.
+- [Current capabilities and validation](docs/status.md): what has been verified and which evaluations remain outstanding.
 
-Run the following commands from this repository, replacing the example path with the actual production workspace. Python 3.10 or later and PyYAML are required.
-
-```bash
-# Inspect workspace configuration and file locations
-python3 runtime/native_helpers/medcast.py inspect --workspace /absolute/medical-workspace
-
-# Find keyframes in the clinical consultation category
-python3 runtime/native_helpers/medcast.py assets --workspace /absolute/medical-workspace --category 05
-```
-
-The `preflight-workbench` command reads native Workbench plans and delivery manifests directly, checking the selected episode, master bytes, source ranges, review records, and both platform texts. `tools` locates executable tools; `workbench_tool.py` invokes an explicitly selected tool with its original effects. See [Workspace integration](docs/workspace-adapter.md) for input formats and a complete example. These helpers neither start media generation nor replace medical or audiovisual judgment.
-
-## Status And Verification
-
-**OCI is the standard OPL Package publication channel.** The source now includes the full Workbench methods and tooling. Native-contract checks and an isolated real composition-to-review-package run are documented in [Workbench parity](docs/workbench-parity.md). Source verification does not update an installed package or constitute independent qualification.
-
-The OPL Meta Agent engineering request was blocked before launch by an installed identity mismatch. It has not produced a blueprint or completed independent qualification. Repository structure and helper checks do not substitute for that work. See [Build status](docs/status.md) for the failure, saved request, and recovery conditions.
-
-Read [AGENTS.md](AGENTS.md) before editing.
-
-| Command | Checks |
-| --- | --- |
-| `scripts/verify.sh fast` | Behavioral tests, professional Skill references, and bundled-file consistency |
-| `scripts/verify.sh full` | The fast checks plus OPL structure, source hygiene, and helper resolution |
-
-Full verification requires a compatible OPL Framework. The script uses `opl` from the environment by default; set `OPL_BIN` to use another location. The verification environment and evidence are recorded in the [build readback](docs/evidence/local-build-readback.json).
-
-## Further Reading
-
-- [Medical video production](docs/production-sop.md)
-- [Media backends and generation tasks](docs/backend-sop.md)
-- [Audiovisual review](docs/visual-review-sop.md) and [review handoff](docs/delivery-sop.md)
-- [Keyframe library](docs/keyframe-library.md) and [interruption recovery](docs/recovery-sop.md)
-- [Architecture and responsibilities](docs/architecture.md), [interface contracts](contracts/), and [method provenance](docs/provenance.md)
-
-Supporting documents are currently in Chinese.
+For development and maintenance, see [AGENTS.md](AGENTS.md) and [Architecture](docs/architecture.md). Supporting guides are currently in Chinese.

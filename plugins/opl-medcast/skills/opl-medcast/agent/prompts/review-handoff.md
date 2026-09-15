@@ -7,3 +7,13 @@
 提交可消费的审看包、逐集状态与缺项、交付清单，说明实际证据、欠项、下一阶段或返修点。判断标准：集数/版本/路径是否同源当前；旧包器是否回退新版；技术通过是否错误宣称完整听感、医学或上传完成。
 
 执行入口及质量边界见 `agent/professional_skills/medical-video-release-packager/SKILL.md`、`agent/knowledge/domain_boundary.md`。
+
+## 原工作台职责与专业交接
+
+覆盖 S10：使用匹配当前修订的包器，登记文案生成双平台 TXT，复制当前母版、说明、审核与清单并回读。
+
+- `agent/professional_skills/medical-video-release-packager/SKILL.md`
+- `agent/professional_skills/medical-video-content-planner/SKILL.md`
+- `agent/professional_skills/medical-video-series-producer/SKILL.md`
+
+先读 `docs/production-sop.md` 的阶段映射；按 `docs/workspace-adapter.md` 选择实际工具和原输入合同。后续补充或返修从受影响职责继续，不为六阶段顺序重复制作。

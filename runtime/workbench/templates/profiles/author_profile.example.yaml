@@ -1,0 +1,56 @@
+schema: medical_video_author_profile/v1
+profile_id: example_author
+display_name: Example Doctor
+language: zh-CN
+audience: adult_patients_and_families
+baseline:
+  version: null
+  author_identity: null
+  professional_scope: []
+  presenter_identity_note: null
+  asset_authorization_refs: []
+  style_reference: null
+  review:
+    identity: pending
+    visual: pending
+    voice: pending
+    style: pending
+    evidence_refs: []
+persona:
+  role: patient_facing_medical_explainer
+  tone: [clear, calm, trustworthy]
+  medical_claim_owner: reviewed_narration_and_subtitles
+voice:
+  preferred_backend_definition: indextts_2_5
+  reference_audio: assets/authors/example_author/voice_reference.wav
+  direction: 自然、清晰、可信
+  language: zh
+visual_identity:
+  enabled: true
+  character_reference: assets/authors/example_author/character_reference.png
+  traits: [describe_stable_visible_traits_here]
+  generated_text_allowed: false
+  generated_logo_allowed: false
+  identity_review_required: true
+brand:
+  enabled: true
+  overlay_text: Example Doctor
+  overlay_method: deterministic_postproduction
+  avatar_usage: approved_standalone_asset_only
+  avatar_source: assets/authors/example_author/avatar.png
+visual_format:
+  requirement: hand_drawn_explainer_animation
+  style: hand_drawn_medical_explainer
+  animation_mode: hand_drawn_patient_explainer_animation
+  presenter_role: companion_and_guide
+  precise_medical_visuals: reviewed_insert_only
+  default_shot_seconds: [5, 10]
+  simple_single_action_max_seconds: 14
+  minimum_generative_duration_ratio: 0.5
+  maximum_static_duration_ratio: 0.25
+audio_mix:
+  background_music: null
+  lyric_free: true
+  target_relative_level_db: [-24, -18]
+  fade_in_seconds: 1.2
+  fade_out_seconds: 2.5

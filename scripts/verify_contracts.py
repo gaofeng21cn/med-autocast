@@ -35,3 +35,15 @@ for path in [plugin_root/'plugin.json',plugin_root/'.codex-plugin/plugin.json']:
     assert plugin['name']==package['codex_surface']['plugin_id']==market['plugins'][0]['name']
     assert plugin['version']==package['version']
 print(json.dumps({'distribution_identity':'passed','version':package['version']}))
+
+# Portable resources must stay reachable after installation, not only in the source workbench.
+for directory in ['agent/professional_skills','docs','runtime/workbench']:
+    for p in (R/directory).rglob('*.md'):
+        for target in re.findall(r'\]\(([^)]+)\)',p.read_text()):
+            target=target.split('#')[0]
+            if target and '://' not in target:
+                assert (p.parent/target).resolve().exists(),('缺失方法资源',p,target)
+import ast
+for p in (R/'runtime').rglob('*.py'):
+    ast.parse(p.read_text(),filename=str(p))
+print(json.dumps({'portable_resource_links':'passed','runtime_syntax':'passed'}))

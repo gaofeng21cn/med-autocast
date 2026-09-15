@@ -35,12 +35,14 @@
       "stage_id": "evidence-plan",
       "stage_kind": "planning",
       "title": "Evidence Plan",
-      "summary": "根据受众问题、现有资料和医学证据组织系列与单集范围；记录结论来源、适用人群、日期与不确定性，不把风险关联讲成因果。",
-      "goal": "根据受众问题、现有资料和医学证据组织系列与单集范围；记录结论来源、适用人群、日期与不确定性，不把风险关联讲成因果。",
+      "summary": "覆盖 S01—S04：作者表达基线、患者需求、事实库与引用、系列边界和代表样片。",
+      "goal": "覆盖 S01—S04：作者表达基线、患者需求、事实库与引用、系列边界和代表样片。",
       "policy_ref": "agent/stages/evidence-plan.md",
       "prompt_ref": "agent/prompts/evidence-plan.md",
       "knowledge_refs": [
-        "agent/knowledge/domain_boundary.md"
+        "agent/knowledge/domain_boundary.md",
+        "docs/production-sop.md",
+        "docs/workspace-adapter.md"
       ],
       "quality_gate_refs": [
         "agent/quality_gates/evidence-plan.md"
@@ -51,7 +53,9 @@
       "requires": [
         "workspace_root",
         "current_request",
-        "skill-ref:agent/professional_skills/medical-video-content-planner/SKILL.md"
+        "skill-ref:agent/professional_skills/medical-video-series-producer/SKILL.md",
+        "skill-ref:agent/professional_skills/medical-video-content-planner/SKILL.md",
+        "skill-ref:agent/professional_skills/medical-video-director/SKILL.md"
       ],
       "ensures": [
         "系列卡、证据表、单集目标与待核问题",
@@ -68,19 +72,23 @@
       },
       "stage_quality_cycle_policy_ref": "contracts/stage_quality_cycle_policy.json#/stages/evidence-plan",
       "skill_refs": [
-        "agent/professional_skills/medical-video-content-planner/SKILL.md"
+        "agent/professional_skills/medical-video-series-producer/SKILL.md",
+        "agent/professional_skills/medical-video-content-planner/SKILL.md",
+        "agent/professional_skills/medical-video-director/SKILL.md"
       ]
     },
     {
       "stage_id": "story-directing",
       "stage_kind": "planning",
       "title": "Story Directing",
-      "summary": "先看已有资产与当前旁白，按整篇观看任务共同设计讲述与画面。为每段写可见事件、解释作用、入出镜承接与准确区间。",
-      "goal": "先看已有资产与当前旁白，按整篇观看任务共同设计讲述与画面。为每段写可见事件、解释作用、入出镜承接与准确区间。",
+      "summary": "覆盖 S05—S06：内容与导演在正式配音前共同收敛整篇故事板和版本绑定的故事包；准备真实基础素材及替代。",
+      "goal": "覆盖 S05—S06：内容与导演在正式配音前共同收敛整篇故事板和版本绑定的故事包；准备真实基础素材及替代。",
       "policy_ref": "agent/stages/story-directing.md",
       "prompt_ref": "agent/prompts/story-directing.md",
       "knowledge_refs": [
-        "agent/knowledge/domain_boundary.md"
+        "agent/knowledge/domain_boundary.md",
+        "docs/production-sop.md",
+        "docs/workspace-adapter.md"
       ],
       "quality_gate_refs": [
         "agent/quality_gates/story-directing.md"
@@ -91,7 +99,9 @@
       "requires": [
         "workspace_root",
         "current_request",
-        "skill-ref:agent/professional_skills/medical-video-director/SKILL.md"
+        "skill-ref:agent/professional_skills/medical-video-content-planner/SKILL.md",
+        "skill-ref:agent/professional_skills/medical-video-director/SKILL.md",
+        "skill-ref:agent/professional_skills/medical-video-visual-qa/SKILL.md"
       ],
       "ensures": [
         "故事包、分镜、旁白、镜头与复用/生成缺口清单",
@@ -108,19 +118,23 @@
       },
       "stage_quality_cycle_policy_ref": "contracts/stage_quality_cycle_policy.json#/stages/story-directing",
       "skill_refs": [
-        "agent/professional_skills/medical-video-director/SKILL.md"
+        "agent/professional_skills/medical-video-content-planner/SKILL.md",
+        "agent/professional_skills/medical-video-director/SKILL.md",
+        "agent/professional_skills/medical-video-visual-qa/SKILL.md"
       ]
     },
     {
       "stage_id": "media-production",
       "stage_kind": "creation",
       "title": "Media Production",
-      "summary": "先恢复原任务、精确输出与唯一写入者。读取部署 profile，复用音轨和已审源。按真实缺口执行已授权工作区后端入口、轮询原任务并验证输出；剪辑前预检当前制作单。",
-      "goal": "先恢复原任务、精确输出与唯一写入者。读取部署 profile，复用音轨和已审源。按真实缺口执行已授权工作区后端入口、轮询原任务并验证输出；剪辑前预检当前制作单。",
+      "summary": "覆盖 S07—S08：配音与校对字幕、实际源片与区间、镜头排时、品牌和混音、唯一通用合成器及构建记录。",
+      "goal": "覆盖 S07—S08：配音与校对字幕、实际源片与区间、镜头排时、品牌和混音、唯一通用合成器及构建记录。",
       "policy_ref": "agent/stages/media-production.md",
       "prompt_ref": "agent/prompts/media-production.md",
       "knowledge_refs": [
-        "agent/knowledge/domain_boundary.md"
+        "agent/knowledge/domain_boundary.md",
+        "docs/production-sop.md",
+        "docs/workspace-adapter.md"
       ],
       "quality_gate_refs": [
         "agent/quality_gates/media-production.md"
@@ -131,7 +145,10 @@
       "requires": [
         "workspace_root",
         "current_request",
-        "skill-ref:agent/professional_skills/medical-video-backends/SKILL.md"
+        "skill-ref:agent/professional_skills/medical-video-backends/SKILL.md",
+        "skill-ref:agent/professional_skills/medical-video-director/SKILL.md",
+        "skill-ref:agent/professional_skills/medical-video-visual-qa/SKILL.md",
+        "skill-ref:agent/professional_skills/medical-video-release-packager/SKILL.md"
       ],
       "ensures": [
         "精确媒体引用、去密回执、剪辑清单、候选成片",
@@ -148,19 +165,24 @@
       },
       "stage_quality_cycle_policy_ref": "contracts/stage_quality_cycle_policy.json#/stages/media-production",
       "skill_refs": [
-        "agent/professional_skills/medical-video-backends/SKILL.md"
+        "agent/professional_skills/medical-video-backends/SKILL.md",
+        "agent/professional_skills/medical-video-director/SKILL.md",
+        "agent/professional_skills/medical-video-visual-qa/SKILL.md",
+        "agent/professional_skills/medical-video-release-packager/SKILL.md"
       ]
     },
     {
       "stage_id": "visual-review",
       "stage_kind": "review",
       "title": "Visual Review",
-      "summary": "背景方式检查完整源区间及成片切点，临界细节看原尺寸逐帧；按需求完成连续动态与完整听感复核，另行记录医学复核。",
-      "goal": "背景方式检查完整源区间及成片切点，临界细节看原尺寸逐帧；按需求完成连续动态与完整听感复核，另行记录医学复核。",
+      "summary": "覆盖 S09，并回溯 S03—S08：源片、当前合成版本、技术、解释对应、连续动态、完整听感和医生医学审核分别记录。",
+      "goal": "覆盖 S09，并回溯 S03—S08：源片、当前合成版本、技术、解释对应、连续动态、完整听感和医生医学审核分别记录。",
       "policy_ref": "agent/stages/visual-review.md",
       "prompt_ref": "agent/prompts/visual-review.md",
       "knowledge_refs": [
-        "agent/knowledge/domain_boundary.md"
+        "agent/knowledge/domain_boundary.md",
+        "docs/production-sop.md",
+        "docs/workspace-adapter.md"
       ],
       "quality_gate_refs": [
         "agent/quality_gates/visual-review.md"
@@ -172,7 +194,9 @@
       "requires": [
         "workspace_root",
         "current_request",
-        "skill-ref:agent/professional_skills/medical-video-visual-qa/SKILL.md"
+        "skill-ref:agent/professional_skills/medical-video-visual-qa/SKILL.md",
+        "skill-ref:agent/professional_skills/medical-video-release-packager/SKILL.md",
+        "skill-ref:agent/professional_skills/medical-video-content-planner/SKILL.md"
       ],
       "ensures": [
         "逐项复核决定、可用区间、待审状态与精确返修目标",
@@ -189,19 +213,23 @@
       },
       "stage_quality_cycle_policy_ref": "contracts/stage_quality_cycle_policy.json#/stages/visual-review",
       "skill_refs": [
-        "agent/professional_skills/medical-video-visual-qa/SKILL.md"
+        "agent/professional_skills/medical-video-visual-qa/SKILL.md",
+        "agent/professional_skills/medical-video-release-packager/SKILL.md",
+        "agent/professional_skills/medical-video-content-planner/SKILL.md"
       ]
     },
     {
       "stage_id": "review-handoff",
       "stage_kind": "packaging",
       "title": "Review Handoff",
-      "summary": "以当前选集、制作单和修订版为准，把母版、字幕、配音与 QA 交付到工作区正式 publish 审看入口。先预检再复制，保留旧交付恢复路径。",
-      "goal": "以当前选集、制作单和修订版为准，把母版、字幕、配音与 QA 交付到工作区正式 publish 审看入口。先预检再复制，保留旧交付恢复路径。",
+      "summary": "覆盖 S10：使用匹配当前修订的包器，登记文案生成双平台 TXT，复制当前母版、说明、审核与清单并回读。",
+      "goal": "覆盖 S10：使用匹配当前修订的包器，登记文案生成双平台 TXT，复制当前母版、说明、审核与清单并回读。",
       "policy_ref": "agent/stages/review-handoff.md",
       "prompt_ref": "agent/prompts/review-handoff.md",
       "knowledge_refs": [
-        "agent/knowledge/domain_boundary.md"
+        "agent/knowledge/domain_boundary.md",
+        "docs/production-sop.md",
+        "docs/workspace-adapter.md"
       ],
       "quality_gate_refs": [
         "agent/quality_gates/review-handoff.md"
@@ -213,7 +241,9 @@
       "requires": [
         "workspace_root",
         "current_request",
-        "skill-ref:agent/professional_skills/medical-video-release-packager/SKILL.md"
+        "skill-ref:agent/professional_skills/medical-video-release-packager/SKILL.md",
+        "skill-ref:agent/professional_skills/medical-video-content-planner/SKILL.md",
+        "skill-ref:agent/professional_skills/medical-video-series-producer/SKILL.md"
       ],
       "ensures": [
         "审看包、逐集状态与缺项、交付清单",
@@ -236,19 +266,23 @@
         "downstream_owner_retains_acceptance": true
       },
       "skill_refs": [
-        "agent/professional_skills/medical-video-release-packager/SKILL.md"
+        "agent/professional_skills/medical-video-release-packager/SKILL.md",
+        "agent/professional_skills/medical-video-content-planner/SKILL.md",
+        "agent/professional_skills/medical-video-series-producer/SKILL.md"
       ]
     },
     {
       "stage_id": "asset-curation",
       "stage_kind": "domain_specific",
       "title": "Asset Curation",
-      "summary": "只收实际查看且值得复用的关键帧，按用途分类，以工作区 catalog 为权威，记录来源、审查范围与复用限制。把实证失败规则补入当前专业 SOP。",
-      "goal": "只收实际查看且值得复用的关键帧，按用途分类，以工作区 catalog 为权威，记录来源、审查范围与复用限制。把实证失败规则补入当前专业 SOP。",
+      "summary": "覆盖反馈维护和跨阶段编排：事实更新追踪受影响集与镜头，恢复原任务，按用途整理有价值的已审关键帧。",
+      "goal": "覆盖反馈维护和跨阶段编排：事实更新追踪受影响集与镜头，恢复原任务，按用途整理有价值的已审关键帧。",
       "policy_ref": "agent/stages/asset-curation.md",
       "prompt_ref": "agent/prompts/asset-curation.md",
       "knowledge_refs": [
-        "agent/knowledge/domain_boundary.md"
+        "agent/knowledge/domain_boundary.md",
+        "docs/production-sop.md",
+        "docs/workspace-adapter.md"
       ],
       "quality_gate_refs": [
         "agent/quality_gates/asset-curation.md"
@@ -260,7 +294,9 @@
       "requires": [
         "workspace_root",
         "current_request",
-        "skill-ref:agent/professional_skills/medical-video-series-producer/SKILL.md"
+        "skill-ref:agent/professional_skills/medical-video-series-producer/SKILL.md",
+        "skill-ref:agent/professional_skills/medical-video-content-planner/SKILL.md",
+        "skill-ref:agent/professional_skills/medical-video-director/SKILL.md"
       ],
       "ensures": [
         "资产索引更新、复用记录与经验修订",
@@ -275,7 +311,9 @@
       },
       "stage_quality_cycle_policy_ref": "contracts/stage_quality_cycle_policy.json#/stages/asset-curation",
       "skill_refs": [
-        "agent/professional_skills/medical-video-series-producer/SKILL.md"
+        "agent/professional_skills/medical-video-series-producer/SKILL.md",
+        "agent/professional_skills/medical-video-content-planner/SKILL.md",
+        "agent/professional_skills/medical-video-director/SKILL.md"
       ]
     }
   ]

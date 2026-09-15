@@ -1,0 +1,295 @@
+"""ComfyUI nodes for strict-staged MiniMax H3 MLX inference."""
+
+from __future__ import annotations
+
+import json
+from pathlib import Path
+
+import numpy as np
+
+if __package__:
+    from .minimax_h3_mlx.comfy_models import TRANSFORMER_REPOS, require_models
+else:
+    from minimax_h3_mlx.comfy_models import TRANSFORMER_REPOS, require_models
+
+
+PACKAGE_ROOT = Path(__file__).resolve().parent
+
+PRESETS = {
+    "Turbo 4 Fast": {"steps": 5, "turbo": True},
+    "Turbo 8 Balanced": {"steps": 9, "turbo": True},
+    "Full 20 Quality": {"steps": 21, "turbo": False},
+}
+
+_RESIDENT_RUNNER_KEY = None
+_RESIDENT_RUNNER = None
+
+
+def _first_block_cache(preset: dict[str, object], enabled: bool) -> str:
+    return "safe" if enabled and not preset["turbo"] else "none"
+
+
+def _memory_mode(profile: str, requested: str, physical_gb: float) -> str:
+    if requested != "auto":
+        return requested
+    if profile == "bf16":
+        return "resident" if physical_gb >= 96.0 else "stream2"
+    if profile == "bf16-pruned":
+        return "resident" if physical_gb >= 96.0 else "stream2"
+    if profile == "4-bit-pruned" and physical_gb < 30.0:
+        return "stream2"
+    return "resident"
+
+
+def _stream_io(memory_mode: str, requested: str, physical_gb: float) -> str | None:
+    if not memory_mode.startswith("stream"):
+        return None
+    if requested != "auto":
+        return requested
+    return "offset" if physical_gb < 30.0 else "mlx"
+
+
+def _clear_resident_runner() -> bool:
+    global _RESIDENT_RUNNER, _RESIDENT_RUNNER_KEY
+    if _RESIDENT_RUNNER is None:
+        return False
+    import gc
+    import mlx.core as mx
+
+    _RESIDENT_RUNNER = None
+    _RESIDENT_RUNNER_KEY = None
+    gc.collect()
+    mx.clear_cache()
+    return True
+
+
+def _resident_runner(key, factory):
+    """Keep one heavyweight MLX pipeline resident without accumulating profiles."""
+    global _RESIDENT_RUNNER, _RESIDENT_RUNNER_KEY
+    if _RESIDENT_RUNNER is not None and _RESIDENT_RUNNER_KEY == key:
+        return _RESIDENT_RUNNER, True
+    _clear_resident_runner()
+    _RESIDENT_RUNNER = factory()
+    _RESIDENT_RUNNER_KEY = key
+    return _RESIDENT_RUNNER, False
+
+
+def _comfy_outputs(result):
+    import torch
+
+    frames = np.ascontiguousarray(result.video)
+    audio = np.ascontiguousarray(result.audio)
+    images = torch.from_numpy(frames).to(torch.float32).div_(255.0)
+    waveform = torch.from_numpy(audio).to(torch.float32).unsqueeze(0)
+    metrics = {
+        "width": int(frames.shape[2]),
+        "height": int(frames.shape[1]),
+        "frames": int(frames.shape[0]),
+        "fps": int(result.fps),
+        "seconds_per_step": round(float(result.seconds_per_step), 3),
+        "total_seconds": round(float(result.total_seconds), 3),
+        "stage_metrics": result.stage_metrics,
+    }
+    return images, {"waveform": waveform, "sample_rate": result.sample_rate}, json.dumps(
+        metrics, indent=2
+    )
+
+
+class MiniMaxH3MLXGenerate:
+    @classmethod
+    def INPUT_TYPES(cls):
+        return {
+            "required": {
+                "prompt": ("STRING", {"multiline": True, "dynamicPrompts": True}),
+                "model_profile": (
+                    list(TRANSFORMER_REPOS),
+                    {
+                        "default": "4-bit-pruned",
+                        "tooltip": "Pruned Core4/Core8/Attention16-MLP8 are the 32/48/64 GB resident tiers.",
+                    },
+                ),
+                "generation_profile": (list(PRESETS), {"default": "Turbo 4 Fast"}),
+                "memory_mode": (
+                    ["auto", "resident", "stream2", "stream5"],
+                    {
+                        "default": "auto",
+                        "tooltip": "Use resident on 96 GB+ performance Macs; use stream2 explicitly for the 36 GB compatibility mode.",
+                    },
+                ),
+                "qwen_precision": (
+                    ["prequantized 8-bit"],
+                    {"default": "prequantized 8-bit"},
+                ),
+                "attention": (
+                    ["sol_attn", "dense"],
+                    {"default": "sol_attn"},
+                ),
+                "width": ("INT", {"default": 864, "min": 256, "max": 1280, "step": 32}),
+                "height": ("INT", {"default": 480, "min": 256, "max": 720, "step": 32}),
+                "duration_seconds": (
+                    "FLOAT",
+                    {"default": 5.0, "min": 5.0, "max": 15.0, "step": 0.1},
+                ),
+                "seed": (
+                    "INT",
+                    {"default": 0, "min": 0, "max": 18446744073709551615},
+                ),
+            },
+            "optional": {
+                "sol_tau": (
+                    "FLOAT",
+                    {"default": 1.3, "min": 0.0, "max": 4.0, "step": 0.05},
+                ),
+                "full20_fbc": (
+                    "BOOLEAN",
+                    {
+                        "default": True,
+                        "tooltip": "Use Safe First Block Cache for Full 20; Turbo modes ignore this setting.",
+                    },
+                ),
+                "stream_io": (
+                    ["auto", "offset", "mlx"],
+                    {
+                        "default": "auto",
+                        "tooltip": "24 GB auto mode uses uncached offset streaming; larger tiers keep standard MLX loading.",
+                    },
+                ),
+            },
+        }
+
+    RETURN_TYPES = ("IMAGE", "AUDIO", "STRING")
+    RETURN_NAMES = ("images", "audio", "stats")
+    OUTPUT_NODE = True
+    FUNCTION = "generate"
+    CATEGORY = "MiniMax H3/MLX"
+    DESCRIPTION = (
+        "Generate synchronized video and audio with MiniMax H3 Turbo4, strict MLX "
+        "component staging, and optional tiled Metal Sol-Attn. Powered by MiniMax H3."
+    )
+
+    def generate(
+        self,
+        prompt,
+        model_profile,
+        generation_profile,
+        memory_mode,
+        qwen_precision,
+        attention,
+        width,
+        height,
+        duration_seconds,
+        seed,
+        sol_tau=1.3,
+        full20_fbc=True,
+        stream_io="auto",
+    ):
+        if width % 32 or height % 32:
+            raise ValueError("MiniMax H3 width and height must be multiples of 32.")
+
+        paths = require_models(model_profile)
+        preset = PRESETS[generation_profile]
+        import os
+
+        physical_gb = os.sysconf("SC_PAGE_SIZE") * os.sysconf("SC_PHYS_PAGES") / 1e9
+        memory_mode = _memory_mode(model_profile, memory_mode, physical_gb)
+        stream_io = _stream_io(memory_mode, stream_io, physical_gb)
+        qwen_stages = 2 if physical_gb < 40.0 else 1
+        transformer = {
+            "resident": paths.transformer,
+            "stream2": paths.streaming_transformer_2,
+            "stream5": paths.streaming_transformer,
+        }[memory_mode]
+        if memory_mode.startswith("stream") and not transformer.is_dir():
+            raise FileNotFoundError(
+                f"Streaming transformer not found: {transformer}. "
+                "Build it with scripts/build_streaming_checkpoint.py."
+            )
+
+        if __package__:
+            from .minimax_h3_mlx.attention_backends import create_attention_backend
+            from .minimax_h3_mlx.staged import StrictStagedTextToVideo
+        else:
+            from minimax_h3_mlx.attention_backends import create_attention_backend
+            from minimax_h3_mlx.staged import StrictStagedTextToVideo
+
+        import comfy.model_management
+
+        keep_models_loaded = memory_mode == "resident" and physical_gb >= 96.0
+
+        def create_runner():
+            backend = create_attention_backend(
+                "torch-mps" if attention == "sol_attn" else "none",
+                tau=sol_tau,
+                start_percent=0.2,
+                end_percent=0.9,
+                min_tokens=4096,
+                sink_conditioning_rows=True,
+                sol_attn_mps_dir=PACKAGE_ROOT / "sol_attn_mps",
+            )
+            return StrictStagedTextToVideo(
+                paths.checkpoint,
+                transformer,
+                lora_path=paths.lora if preset["turbo"] else None,
+                lora_strength=1.0,
+                qwen_dir=paths.qwen,
+                qwen_bits=None,
+                qwen_stages=qwen_stages,
+                stream_io=stream_io,
+                first_block_cache=_first_block_cache(preset, full20_fbc),
+                attention_backend=backend,
+                keep_models_loaded=keep_models_loaded,
+                verbose=True,
+            )
+
+        runner_cache_hit = False
+        if keep_models_loaded:
+            runner_key = (
+                str(paths.checkpoint),
+                str(transformer),
+                str(paths.lora) if preset["turbo"] else None,
+                str(paths.qwen),
+                qwen_stages,
+                attention,
+                float(sol_tau),
+                _first_block_cache(preset, full20_fbc),
+            )
+            if _RESIDENT_RUNNER is None or _RESIDENT_RUNNER_KEY != runner_key:
+                comfy.model_management.unload_all_models()
+                comfy.model_management.soft_empty_cache()
+            runner, runner_cache_hit = _resident_runner(runner_key, create_runner)
+        else:
+            _clear_resident_runner()
+            comfy.model_management.unload_all_models()
+            comfy.model_management.soft_empty_cache()
+            runner = create_runner()
+        result = runner(
+            prompt,
+            duration_seconds=duration_seconds,
+            width=width,
+            height=height,
+            num_inference_steps=preset["steps"],
+            seed=seed,
+            drop_adaln=not keep_models_loaded,
+        )
+        result.stage_metrics["runtime"] = {
+            "memory_mode": memory_mode,
+            "stream_io": stream_io,
+            "models_persistent": keep_models_loaded,
+            "runner_cache_hit": runner_cache_hit,
+        }
+        return _comfy_outputs(result)
+
+
+MiniMaxH3MLXTurbo = MiniMaxH3MLXGenerate
+
+NODE_CLASS_MAPPINGS = {
+    "MiniMaxH3MLXGenerate": MiniMaxH3MLXGenerate,
+    "MiniMaxH3MLXTurbo": MiniMaxH3MLXGenerate,
+}
+NODE_DISPLAY_NAME_MAPPINGS = {
+    "MiniMaxH3MLXGenerate": "MiniMax H3 MLX Generate (Sol-Attn)",
+    "MiniMaxH3MLXTurbo": "MiniMax H3 MLX Turbo (Legacy)",
+}
+
+
+__all__ = ["NODE_CLASS_MAPPINGS", "NODE_DISPLAY_NAME_MAPPINGS"]

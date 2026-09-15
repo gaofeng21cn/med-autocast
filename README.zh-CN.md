@@ -54,7 +54,7 @@ opl packages install opl-medcast --json
 
 ## 在本地工作区使用
 
-当前版本提供[主入口技能](agent/primary_skill/SKILL.md)和六个[专业技能](agent/professional_skills/)，以及三个只读辅助命令。原始媒体、配音、配置档案和发布目录保留在制作工作区；实际生成、剪辑和打包沿用该工作区已经验证的工具。
+当前版本提供[主入口技能](agent/primary_skill/SKILL.md)和六个[专业技能](agent/professional_skills/)，以及完整十阶段制作方法、模板和通用工作台工具。原始媒体、配音、配置档案和发布目录保留在制作工作区；优先沿用工作区已验证的工具，缺少通用入口时使用随包版本。
 
 在本仓根目录执行以下命令，将示例路径替换为实际制作工作区。运行环境需要 Python 3.10 或更新版本，并安装 PyYAML。
 
@@ -66,11 +66,11 @@ python3 runtime/native_helpers/medcast.py inspect --workspace /absolute/medical-
 python3 runtime/native_helpers/medcast.py assets --workspace /absolute/medical-workspace --category 05
 ```
 
-交付预检使用 `preflight` 命令，核对当前制作单、目标集数、母版文件、源片区间和审查记录。输入格式与完整示例见[工作区接入说明](docs/workspace-adapter.md)。这些辅助命令不会启动媒体生成，也不会代替医学或视听质量判断。
+交付预检默认使用 `preflight-workbench`，直接读取原制作单和交付清单，核对当前集、母版字节、源片区间、审核记录及双平台文案。`tools` 定位实际工具，`workbench_tool.py` 显式调用所选工具并保留其原有副作用。输入格式与完整示例见[工作区接入说明](docs/workspace-adapter.md)。只读检查不会启动媒体生成；工具执行依当前请求授权，不能代替医学或视听质量判断。
 
 ## 当前进展与验证
 
-**当前版本按 OPL 标准软件包流程发布到 OCI。** OPL 标准结构与接口生成检查已通过，14 个行为测试通过；已只读接入现有的 5 个系列和 72 张关键帧。
+**正式发布统一通过 OPL 的 OCI 软件包流程。** 当前源码已纳入完整工作台方法与工具；原合同核对及隔离的实际合成—审看交付验证见[能力迁移验收](docs/workbench-parity.md)。源码验证不自动更新已安装软件包，也不代表独立资格通过。
 
 OPL Meta Agent 的工程调用因安装身份不一致而在启动前受阻，尚未产出设计蓝图，也未完成独立资格验证。当前仓库的结构与工具检查不能代替这部分验证。具体断点、已保存的请求和后续恢复条件见[构建状态](docs/status.md)。
 

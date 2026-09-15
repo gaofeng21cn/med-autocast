@@ -88,7 +88,11 @@
       "surface_role": "professional_skill",
       "capability_kind": "professional_skill",
       "stage_ids": [
-        "evidence-plan"
+        "evidence-plan",
+        "story-directing",
+        "visual-review",
+        "review-handoff",
+        "asset-curation"
       ],
       "canonical_owner": "opl-medcast",
       "physical_source_ref": {
@@ -283,7 +287,10 @@
       "surface_role": "professional_skill",
       "capability_kind": "professional_skill",
       "stage_ids": [
-        "story-directing"
+        "evidence-plan",
+        "story-directing",
+        "media-production",
+        "asset-curation"
       ],
       "canonical_owner": "opl-medcast",
       "physical_source_ref": {
@@ -673,6 +680,8 @@
       "surface_role": "professional_skill",
       "capability_kind": "professional_skill",
       "stage_ids": [
+        "story-directing",
+        "media-production",
         "visual-review"
       ],
       "canonical_owner": "opl-medcast",
@@ -868,6 +877,8 @@
       "surface_role": "professional_skill",
       "capability_kind": "professional_skill",
       "stage_ids": [
+        "media-production",
+        "visual-review",
         "review-handoff"
       ],
       "canonical_owner": "opl-medcast",
@@ -1063,6 +1074,8 @@
       "surface_role": "professional_skill",
       "capability_kind": "professional_skill",
       "stage_ids": [
+        "evidence-plan",
+        "review-handoff",
         "asset-curation"
       ],
       "canonical_owner": "opl-medcast",

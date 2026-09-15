@@ -7,6 +7,7 @@ from __future__ import annotations
 import argparse
 import json
 import math
+import sys
 from pathlib import Path
 
 
@@ -191,18 +192,27 @@ def preflight(root: Path, delivery_ref: str, current_ref: str, review_ref: str) 
 def main():
     parser=argparse.ArgumentParser(description=__doc__)
     sub=parser.add_subparsers(dest='command',required=True)
-    for name in ('inspect','assets','preflight'):
+    for name in ('inspect','assets','preflight','tools','preflight-workbench'):
         p=sub.add_parser(name);p.add_argument('--workspace',type=Path,required=True)
         if name=='assets':p.add_argument('--category');p.add_argument('--series')
         if name=='preflight':
             p.add_argument('--delivery',required=True);p.add_argument('--current',required=True);p.add_argument('--source-review',required=True)
+        if name=='preflight-workbench':
+            p.add_argument('--series',required=True);p.add_argument('--episode',required=True)
+            p.add_argument('--plan',required=True);p.add_argument('--master',required=True)
+            p.add_argument('--delivery');p.add_argument('--source-review')
+            p.add_argument('--allow-root',action='append',default=[])
     a=parser.parse_args()
     try:
         root=a.workspace.resolve()
         if not root.is_dir():raise ContractError('workspace 必须为现有目录')
         if a.command=='inspect':result=inspect_workspace(root)
         elif a.command=='assets':result=query_assets(root,a.category,a.series)
-        else:result=preflight(root,a.delivery,a.current,a.source_review)
+        elif a.command=='preflight':result=preflight(root,a.delivery,a.current,a.source_review)
+        else:
+            from workbench_adapter import tool_inventory, preflight_native
+            if a.command=='tools':result=tool_inventory(root)
+            else:result=preflight_native(root,a.series,a.episode,a.plan,a.master,a.delivery,a.source_review,a.allow_root)
         print(json.dumps(result,ensure_ascii=False,indent=2));return 0
     except (ValueError,OSError,TypeError,AttributeError,KeyError) as exc:
         print(json.dumps({'status':'blocked','error':str(exc)},ensure_ascii=False));return 2

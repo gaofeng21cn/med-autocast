@@ -7,3 +7,13 @@
 提交可消费的逐项复核决定、可用区间、待审状态与精确返修目标，说明实际证据、欠项、下一阶段或返修点。判断标准：人物头部与手部、医学细节、运动连续性、字幕和旁白是否一致；静态筛选是否被误记成动态或医学通过。
 
 执行入口及质量边界见 `agent/professional_skills/medical-video-visual-qa/SKILL.md`、`agent/knowledge/domain_boundary.md`。
+
+## 原工作台职责与专业交接
+
+覆盖 S09，并回溯 S03—S08：源片、当前合成版本、技术、解释对应、连续动态、完整听感和医生医学审核分别记录。
+
+- `agent/professional_skills/medical-video-visual-qa/SKILL.md`
+- `agent/professional_skills/medical-video-release-packager/SKILL.md`
+- `agent/professional_skills/medical-video-content-planner/SKILL.md`
+
+先读 `docs/production-sop.md` 的阶段映射；按 `docs/workspace-adapter.md` 选择实际工具和原输入合同。后续补充或返修从受影响职责继续，不为六阶段顺序重复制作。

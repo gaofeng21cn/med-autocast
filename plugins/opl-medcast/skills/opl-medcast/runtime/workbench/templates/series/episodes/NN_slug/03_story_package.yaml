@@ -1,0 +1,47 @@
+# 内容交接模板，字段方法见 docs/01_医学科普内容生产.md。
+# 审核字段是记录约定；现有机器检查不代替内容/医生复核。
+schema: video_story_package/v0
+package_id: null
+topic_id: null
+episode:
+  title: null
+  series_position: null
+audience:
+  group: null
+  situation: null
+  current_misconception: null
+core_question: null
+core_judgement: null
+primary_action: null
+memory_hook: null
+source_refs: []
+fact_whitelist: []
+forbidden_claims: []
+uncertainties: []
+visual_assets: []
+# 每个story_beat按内容文档记录purpose、narration、fact_ids、
+# required_meaning、visual_asset_ids、must_not_imply、action_boundary。
+story_beats: []
+author_profile_ref: null
+target:
+  platform: null
+  duration_preference_seconds: null
+  aspect_ratio: null
+handoff:
+  stage: S06
+  status: draft
+  narration_ref: 01_narration.md
+  visual_treatment_ref: 02_visual_treatment.md
+  narration_sha256: null
+  visual_treatment_sha256: null
+  fact_library_sha256: null
+  author_profile_sha256: null
+  frozen_at: null
+review:
+  content_status: pending
+  visual_clearance: pending
+  medical_status: pending
+  medical_reviewer: null
+  reviewed_at: null
+  evidence_refs: []
+  residual_risks: []

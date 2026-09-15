@@ -1,0 +1,21 @@
+schema: medical_video_release_catalog/v1
+series_id: example_s01
+series_title: 示例系列第一季
+topic_id: example
+episode_count: 1
+updated_at: 2026-09-03
+release_status: video_generation_or_review_required
+platforms: [小红书, 微信视频号]
+episodes:
+  - id: 01_example
+    number: 1
+    title: 示例标题
+    xiaohongshu_title: 示例小红书标题
+    channels_title: 示例视频号标题
+    xiaohongshu_copy: |-
+      只压缩审定旁白和故事包，不新增医学结论。
+    channels_copy: |-
+      只压缩审定旁白和故事包，不新增医学结论。
+    xiaohongshu_tags: [医学科普]
+    channels_tags: [医学科普]
+    pinned_comment: 示例置顶评论

@@ -1,0 +1,5 @@
+schema: medical_video_workbench/v2
+active_profiles:
+  author: profiles/authors/example_author.yaml
+  media_backends: profiles/backends/example_deployment.yaml
+series: {}

@@ -1,0 +1,35 @@
+{
+  "schema": "medical_video_visual_delivery/v4",
+  "episode_id": "NN_episode_slug",
+  "delivery_class": "final_animation",
+  "visual_style": "hand_drawn_medical_explainer",
+  "animation_mode": "hand_drawn_patient_explainer_animation",
+  "author_profile": "example_author",
+  "primary_video_backend": "configured_video_backend_id",
+  "visual_style_review": "pending",
+  "viewer_engagement_review": "pending",
+  "noncontradiction_review": "pending",
+  "audio_visual_alignment_review": "pending",
+  "review_status": "pending",
+  "release_eligible": false,
+  "review_method": "待记录实际审核方法、范围及继承证据",
+  "final_listening_review": "pending",
+  "medical_review": "pending",
+  "segments": [
+    {
+      "segment_id": "S01",
+      "source": "replace-with-reviewed-candidate.mp4",
+      "visual_class": "generative_animation",
+      "backend_id": "configured_video_backend_id",
+      "shot_type": "presenter",
+      "narration_range": [0.0, 8.0],
+      "usable_source_range": [0.0, 8.0],
+      "visual_intent": "待填写画面如何服务同期审定旁白",
+      "review_basis": "待填写真实审核依据",
+      "motion_review": "pending",
+      "audio_visual_alignment_review": "pending",
+      "topic_relation": "relevant_not_literal",
+      "medical_claim_rendered": false
+    }
+  ]
+}

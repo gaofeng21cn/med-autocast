@@ -1,0 +1,25 @@
+schema: medical_video_backend_profile/v1
+profile_id: example_deployment
+catalog: backends/config/media_backends.yaml
+tools:
+  font: null
+video:
+  preferred_video:
+    definition: minimax_h3_api
+    label: User-configured MiniMax H3 API
+    endpoint: ${MINIMAX_VIDEO_API_BASE_URL:-}
+    model: MiniMax-H3
+    capability: contract_documented
+audio:
+  preferred_audio:
+    definition: indextts_2_5
+    label: User-configured IndexTTS runtime
+    kind: indextts
+    device: mps
+    root: ${INDEXTTS_ROOT:-$HOME/ai/index-tts}
+    model_root: ${INDEXTTS_MODEL_ROOT:-$HOME/ai/index-tts/checkpoints}
+    capability: candidate
+policy:
+  default_video: preferred_video
+  default_audio: preferred_audio
+  preserve_remote_4090: false

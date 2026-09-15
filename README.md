@@ -54,7 +54,7 @@ The primary distribution channel is `ghcr.io/gaofeng21cn/one-person-lab-packages
 
 ## Use A Local Workspace
 
-The current version includes a [primary Skill](agent/primary_skill/SKILL.md), six [professional Skills](agent/professional_skills/), and three read-only helper commands. Original media, narration, configuration profiles, and publication folders stay in the production workspace. Generation, editing, and packaging use that workspace's verified tools.
+The current version includes a [primary Skill](agent/primary_skill/SKILL.md), six [professional Skills](agent/professional_skills/), complete ten-step production methods, templates, and the reusable Workbench tools. Original media, narration, configuration profiles, and publication folders stay in the production workspace. Existing workspace tools take precedence; bundled tools support workspaces without those entrypoints.
 
 Run the following commands from this repository, replacing the example path with the actual production workspace. Python 3.10 or later and PyYAML are required.
 
@@ -66,11 +66,11 @@ python3 runtime/native_helpers/medcast.py inspect --workspace /absolute/medical-
 python3 runtime/native_helpers/medcast.py assets --workspace /absolute/medical-workspace --category 05
 ```
 
-The `preflight` command checks the current production manifest, selected episodes, master files, source ranges, and review records. See [Workspace integration](docs/workspace-adapter.md) for input formats and a complete example. These helpers neither start media generation nor replace medical or audiovisual judgment.
+The `preflight-workbench` command reads native Workbench plans and delivery manifests directly, checking the selected episode, master bytes, source ranges, review records, and both platform texts. `tools` locates executable tools; `workbench_tool.py` invokes an explicitly selected tool with its original effects. See [Workspace integration](docs/workspace-adapter.md) for input formats and a complete example. These helpers neither start media generation nor replace medical or audiovisual judgment.
 
 ## Status And Verification
 
-**The current version follows the standard OPL Package publication path through OCI.** OPL structure and generated-interface checks passed, along with 14 behavioral tests. Read-only integration was verified against five existing series and 72 keyframes.
+**OCI is the standard OPL Package publication channel.** The source now includes the full Workbench methods and tooling. Native-contract checks and an isolated real composition-to-review-package run are documented in [Workbench parity](docs/workbench-parity.md). Source verification does not update an installed package or constitute independent qualification.
 
 The OPL Meta Agent engineering request was blocked before launch by an installed identity mismatch. It has not produced a blueprint or completed independent qualification. Repository structure and helper checks do not substitute for that work. See [Build status](docs/status.md) for the failure, saved request, and recovery conditions.
 

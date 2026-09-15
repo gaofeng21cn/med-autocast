@@ -1,0 +1,61 @@
+schema: video_production_plan/v2
+episode_id: NN_episode_slug
+delivery:
+  visual_requirement: hand_drawn_explainer_animation
+  visual_style: hand_drawn_medical_explainer
+  animation_mode: hand_drawn_patient_explainer_animation
+  author_profile: example_author
+  primary_video_backend: configured_video_backend_id
+  content_accuracy_owner: reviewed_narration_and_subtitles
+  generated_visual_contract: relevant_noncontradictory_watchable
+  visual_manifest: visual_delivery_manifest.json
+  static_animatic_allowed_as_final: false
+  minimum_generative_duration_ratio: 0.5
+  maximum_static_duration_ratio: 0.25
+director_contract:
+  visual_design_sop: docs/11_解释对应与叙事连续性SOP.md
+  h3_strategy_reference: docs/12_H3调研与制作策略.md
+  prompt_design_reference: .agents/skills/medical-video-director/references/h3-prompt-design.md
+  prompt_route_validation: pending
+  quality_design:
+    current_format_role: author_and_series_selected_baseline
+    formal_candidate: null
+    formal_route_validation: pending
+    note: 下方608×352仅为模板示例，沿用作者/系列明确选择；新画布需实测，质量升级非阶段前置，字段不自动切换后端
+  visual_event_chain: 待填写具体对象、行动、前后承接，不能用段落标题替代
+  representative_episode_review: pending
+  adjacent_shot_review: pending
+  explanation_text_role: object_labels_only
+  default_shot_seconds: [5, 10]
+  simple_single_action_max_seconds: 14
+  generative_video_roles: [presenter, patient_moment, caregiver_action, care_path]
+  reviewed_insert_role: reviewed_visual_insert
+  literal_narration_rendering_required: false
+  precise_anatomy_required_from_generator: false
+  generated_text_allowed: false
+  series_visual_role: 待填写本篇观看任务及系列位置
+  brand_character_segments: []
+format:
+  width: 608
+  height: 352
+  fps: 24
+  orientation: landscape
+audio:
+  backend: configured_audio_backend_id
+  source: audio/replace-with-actual-reviewed-narration.wav
+  duration_seconds: null
+  master_timeline: true
+subtitles:
+  source: audio/replace-with-actual-aligned-subtitles.srt
+  timing: whisper_word_alignment
+  layout_owner: final_srt
+visual_annotations: []
+visual_timeline:
+- segment_id: S01
+  start: 0.0
+  end: 8.0
+  source: replace-with-reviewed-candidate.mp4
+  source_start: 0.0
+  source_end: 8.0
+  shot_type: presenter
+  topic_relation: describe_how_this_scene_relates_without_claiming_literal_rendering

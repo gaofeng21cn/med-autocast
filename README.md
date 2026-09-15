@@ -15,7 +15,7 @@ OPL Med Cast is an OPL agent for medical education videos. It helps clinicians a
 It follows the organization of OPL Book Forge: the domain agent provides professional methods, while OPL Framework handles shared execution and stage management. The formal name is **OPL Med Cast**; the repository, agent, and package share the technical identifier `opl-medcast`.
 
 <p align="center">
-  <img src="assets/branding/opl-medcast-overview.en.png" alt="OPL Med Cast workflow: medical evidence, story direction, media production, audiovisual review, review handoff, and asset curation. Findings route back for focused revision; reviewed assets feed future work." width="100%" />
+  <img src="assets/branding/opl-medcast-overview.en.png" alt="OPL Med Cast workflow: medical evidence, story direction, voice and subtitles, animation and editing, visual and motion review, full listening, medical review, review handoff, and asset curation. Author profiles, professional skills, Workbench tools, and recovery support all six stages. Notes emphasize focused revision and reuse of reviewed assets." width="100%" />
 </p>
 
 ## Start A Video

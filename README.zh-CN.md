@@ -15,7 +15,7 @@ OPL Med Cast 是面向医学科普视频的 OPL 智能体，帮助医生和内�
 它沿用 OPL Book Forge 的组织方式：专业方法由领域智能体提供，通用执行与阶段管理由 OPL Framework 负责。正式名称为 **OPL Med Cast**，仓库、智能体和软件包统一使用技术标识 `opl-medcast`。
 
 <p align="center">
-  <img src="assets/branding/opl-medcast-overview.en.png" alt="OPL Med Cast 工作流程：医学证据、故事导演、媒体制作、视听复核、审看交付与资产沉淀；发现问题后定向返修，后续创作优先复用已审资产。" width="100%" />
+  <img src="assets/branding/opl-medcast-overview.en.png" alt="OPL Med Cast 六阶段工作流程：医学证据、故事导演、媒体制作、视听复核、审看交付与资产沉淀。制作涵盖配音、字幕、动画与剪辑；复核分别检查画面、连续动态、完整听感和医学内容。作者档案、专业技能、工作台工具与中断恢复支撑全流程，强调定向返修和优先复用已审素材。" width="100%" />
 </p>
 
 ## 开始制作视频

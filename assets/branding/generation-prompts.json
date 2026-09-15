@@ -1,5 +1,5 @@
 {
-  "generator": "built-in image_gen",
+  "generator": "built-in image_gen, unless overridden per asset",
   "reference_style": "OPL Book Forge and Med Auto Grant hand-drawn brand illustrations",
   "reference_assets": [
     "opl-bookforge/assets/branding/opl-bookforge-logo.png",
@@ -16,9 +16,36 @@
     },
     {
       "file": "opl-medcast-overview.en.png",
-      "prompt": "Use case: text-localization. Edit the supplied image, which is the exact target, into English for both README languages. Preserve its detailed composition: white faint blue dotted paper, rounded black outer border, hand-drawn black ink and pencil hatching, navy/teal/amber palette, six numbered tall cards with the same icons, red dashed repair loop, teal dashed reuse loop, three bottom principle cards and footer. Do not simplify the layout. All visible text must be English, spelled accurately, no Chinese characters. Keep brand title \"OPL Med Cast\". Replace subtitle with \"From Medical Evidence to Educational Video\". Card headings and captions left to right: 1 \"Medical Evidence\" / \"Define audience and topics\"; 2 \"Story Direction\" / \"Match narration to visuals\"; 3 \"Media Production\" / \"Reuse assets, fill gaps\"; 4 \"AV Review\" / \"Check quality, track findings\"; 5 \"Review Handoff\" / \"Align versions and files\"; 6 \"Asset Library\" / \"Organize and retain sources\". Use line breaks where needed so headings and captions fit comfortably within cards. Red loop label \"Find issues, revise precisely\"; teal loop label \"Reuse reviewed assets first\". Bottom three cards exactly \"Medical Accuracy\", \"Story Continuity\", \"Review Records\". Footer \"Workflow overview · Review handoff is not public release\". Keep English readable at normal README width, strong contrast, crisp ink, and generous spacing. Preserve icon arrangement and all decorative elements from the reference.",
-      "reference": "User-selected detailed OPL Med Cast workflow illustration",
-      "usage": "Shared by English and Chinese READMEs"
+      "prompt": "Use case: infographic-diagram edit.\nAsset: shared English workflow overview for the OPL Med Cast README.\nImage 1 is the exact edit target. Update its content to reflect the complete Workbench capabilities, while preserving its recognizable OPL hand-drawn visual identity. Keep landscape 16:9 composition, white paper with very faint blue dot grid, rounded black outer frame, bold legible hand lettering, navy/teal/amber pencil hatching, six equal numbered cards in one horizontal row, simple large icons and black left-to-right arrows. High resolution, crisp readable lettering. All text English only.\nKeep title \"OPL Med Cast\" and subtitle \"From Medical Evidence to Educational Video\".\nSix headings remain exactly:\n1 \"Medical Evidence\"\n2 \"Story Direction\"\n3 \"Media Production\"\n4 \"AV Review\"\n5 \"Review Handoff\"\n6 \"Asset Library\"\nUse these exact captions, centered below the icons with comfortable spacing and the indicated line breaks:\n1 \"Define audience\\nand topics\"\n2 \"Match narration\\nto visuals\"\n3 \"Voice & subtitles\\nAnimation & editing\"\n4 \"Visuals & motion\\nFull listening\\nMedical review\"\n5 \"Align versions\\nand files\"\n6 \"Organize and\\nretain sources\"\nKeep icons 1, 2, 5 and 6 recognizable. Card 3 icon: video frame and microphone, with small subtitle lines and a short editing timeline integrated tastefully. Card 4 icon: monitor, magnifier and headphones, with a small medical cross. Allow slightly smaller icons to accommodate captions; no crammed text.\nKeep two feedback routes beneath the cards. Red dashed route starts at card 4 and points back to card 2 with a single arrowhead at card 2, label \"Find issues, revise precisely\". Teal dashed route starts at card 6 and points back to card 2 with a single arrowhead at card 2, label \"Reuse reviewed assets first\". Do not use bidirectional arrowheads.\nReplace the three old bottom principle cards with FOUR equal small support cards, unnumbered, separated from the main flow. Add a small centered row label \"Workflow Support\". Exact four labels left to right:\n\"Author Profiles\"\n\"Professional Skills\"\n\"Workbench Tools\"\n\"Resume & Recovery\"\nPair with simple matching icons: author identity card; handbook and pencil; small toolkit; circular resume arrow around a saved checklist. These are shared supports, not more stages, so no arrows between them.\nFooter exact text: \"Medical Accuracy · Story Continuity · Review Records\".\nPreserve generous whitespace, existing palette and natural hand-drawn character. No Chinese, no OCI/install instructions, no release version, no extra labels, no watermark.",
+      "reference": "Previous English OPL Med Cast overview; preserve the approved OPL hand-drawn style",
+      "usage": "Shared by English and Chinese READMEs",
+      "generator": "imagegen skill CLI using the configured Codex API provider",
+      "model": "gpt-image-2.5",
+      "size": "1536x1024",
+      "quality": "high",
+      "request_parameters": {
+        "endpoint": "/v1/images/edits",
+        "model": "gpt-image-2.5",
+        "size": "1536x1024",
+        "quality": "high",
+        "output_format": "png",
+        "n": 1
+      },
+      "parameter_notes": [
+        "The configured provider rejected size=auto and required an explicit widthxheight value.",
+        "1536x1024, quality=high and output_format=png succeeded with the gpt-image-2.5 model ID. Other size limits were not established by this task.",
+        "Credentials and the provider base URL are read from local Codex configuration at invocation time and are not stored in this repository."
+      ],
+      "refinement_prompts": [
+        "Update this OPL Med Cast diagram in its existing hand-drawn style. Keep the title, subtitle, SIX numbered stage cards with all their headings, illustrations and exact captions, the four Workflow Support cards, and the footer unchanged.\nREDESIGN the entire middle feedback band between the bottoms of the six cards and the Workflow Support heading. Remove EVERY red and teal dashed line and EVERY upward arrow in this band. Restore clean pale dotted paper. Do not leave old arrow tips or colored scraps beneath any card.\nIn the center of this band, place only TWO simple wide hand-drawn rounded text pills, one above the other, with generous whitespace and NO connecting lines or arrows. Upper pill: thin red outline, black text exactly \"Find issues, revise precisely\". Lower pill: thin teal outline, black text exactly \"Reuse reviewed assets first\". These pills are standalone notes and connect to nothing. Do not add icons or arrowheads inside or outside them. The small black forward arrows BETWEEN the six main stage cards stay intact. Main card outlines end cleanly at their bottom border.\nMake the typography crisp, all English lettering verbatim, and retain the original navy, teal, amber pencil illustration style. This is a clean final README illustration. No other changes."
+      ],
+      "visual_review": {
+        "language": "English",
+        "six_stages": true,
+        "production_and_review_capabilities": true,
+        "four_workflow_supports": true,
+        "feedback_notes": "Standalone revision and asset-reuse notes, without return arrows"
+      }
     }
   ]
 }

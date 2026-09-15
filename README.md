@@ -44,14 +44,13 @@ These actions connect six stages and can continue from existing work. An episode
 
 ## Installation
 
-Download the source and plugin bundle from the [release page](https://github.com/gaofeng21cn/opl-medcast/releases/tag/v0.1.0), or install the pinned version with Codex CLI:
+Install through the standard OPL Package entry:
 
 ```bash
-codex plugin marketplace add gaofeng21cn/opl-medcast --ref v0.1.0 --json
-codex plugin add opl-medcast@opl-medcast --json
+opl packages install opl-medcast --json
 ```
 
-Select OPL Med Cast in a new task. The plugin provides professional methods and bundled helpers; hosted stage execution still requires Framework registration and qualification. Media production requires a configured workspace and available backends. See the [installation guide](docs/installation.md) for environment setup and archive usage.
+The primary distribution channel is `ghcr.io/gaofeng21cn/one-person-lab-packages/opl-medcast`. Versions are published independently; `latest-stable` selects the current version. OPL and the native plugin manager handle installation and updates. See the [installation guide](docs/installation.md) for environment requirements.
 
 ## Use A Local Workspace
 
@@ -71,7 +70,7 @@ The `preflight` command checks the current production manifest, selected episode
 
 ## Status And Verification
 
-**Version 0.1.0 is the first public release, distributing source and a Codex plugin. It is not on the OPL stable Package channel.** OPL structure and generated-interface checks passed, along with 14 behavioral tests. Read-only integration was verified against five existing series and 72 keyframes.
+**The current version follows the standard OPL Package publication path through OCI.** OPL structure and generated-interface checks passed, along with 14 behavioral tests. Read-only integration was verified against five existing series and 72 keyframes.
 
 The OPL Meta Agent engineering request was blocked before launch by an installed identity mismatch. It has not produced a blueprint or completed independent qualification. Repository structure and helper checks do not substitute for that work. See [Build status](docs/status.md) for the failure, saved request, and recovery conditions.
 

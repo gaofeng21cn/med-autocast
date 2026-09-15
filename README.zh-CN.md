@@ -44,14 +44,13 @@ OPL Med Cast 是面向医学科普视频的 OPL 智能体，帮助医生和内�
 
 ## 安装
 
-从[版本页面](https://github.com/gaofeng21cn/opl-medcast/releases/tag/v0.1.0)下载源码与插件包，或使用 Codex CLI 安装固定版本：
+通过 OPL 的标准软件包入口安装：
 
 ```bash
-codex plugin marketplace add gaofeng21cn/opl-medcast --ref v0.1.0 --json
-codex plugin add opl-medcast@opl-medcast --json
+opl packages install opl-medcast --json
 ```
 
-在新任务中选择 OPL Med Cast。插件提供专业方法与随包辅助程序；OPL 托管阶段运行仍需 Framework 登记和资格验证。媒体制作还需要已配置的制作工作区及可用后端。详细环境准备和下载包用法见[安装说明](docs/installation.md)。
+正式发布渠道为 `ghcr.io/gaofeng21cn/one-person-lab-packages/opl-medcast`，每个版本独立发布，`latest-stable` 指向当前版本。安装与后续更新由 OPL 和原生插件管理器完成。环境要求见[安装说明](docs/installation.md)。
 
 ## 在本地工作区使用
 
@@ -71,7 +70,7 @@ python3 runtime/native_helpers/medcast.py assets --workspace /absolute/medical-w
 
 ## 当前进展与验证
 
-**0.1.0 为首个公开版本，提供源码和 Codex 插件，尚未进入 OPL 稳定软件包渠道。** OPL 标准结构与接口生成检查已通过，14 个行为测试通过；已只读接入现有的 5 个系列和 72 张关键帧。
+**当前版本按 OPL 标准软件包流程发布到 OCI。** OPL 标准结构与接口生成检查已通过，14 个行为测试通过；已只读接入现有的 5 个系列和 72 张关键帧。
 
 OPL Meta Agent 的工程调用因安装身份不一致而在启动前受阻，尚未产出设计蓝图，也未完成独立资格验证。当前仓库的结构与工具检查不能代替这部分验证。具体断点、已保存的请求和后续恢复条件见[构建状态](docs/status.md)。
 

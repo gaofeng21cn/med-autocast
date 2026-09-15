@@ -4,7 +4,7 @@
   "package_id": "opl-medcast",
   "display_name": "OPL Med Cast",
   "publisher": "one-person-lab",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "source": "first_party_repo_local",
   "carrier_source_role": "codex_plugin_default_carrier_not_package_truth",
   "codex_surface": {
@@ -19,9 +19,22 @@
       "kind": "codex_plugin_manager",
       "plugin_selector": "opl-medcast@opl-medcast",
       "executor_route": "codex_cli",
-      "marketplace_source": "gaofeng21cn/opl-medcast"
+      "marketplace_source": "gaofeng21cn/opl-medcast",
+      "publication_ref": "ghcr.io/gaofeng21cn/one-person-lab-packages/opl-medcast:latest-stable"
     }
   },
   "dependency_profiles": [],
-  "capability_dependencies": []
+  "capability_dependencies": [],
+  "source_repo": "https://github.com/gaofeng21cn/opl-medcast.git",
+  "schema_ref": "one-person-lab/contracts/opl-framework/agent-package-manifest.schema.json",
+  "presentation": {
+    "display_name_i18n": {
+      "zh-CN": "OPL Med Cast",
+      "en-US": "OPL Med Cast"
+    },
+    "description_i18n": {
+      "zh-CN": "医学科普视频规划、制作、视听复核与关键帧资产整理。",
+      "en-US": "Medical education video planning, production, audiovisual review, and keyframe curation."
+    }
+  }
 }

@@ -1,6 +1,6 @@
 [project]
 name = "opl-medcast-helpers"
-version = "0.1.0"
+version = "0.1.1"
 description = "OPL Med Cast read-only workspace and delivery helpers"
 requires-python = ">=3.10"
 dependencies = ["PyYAML>=6,<7"]

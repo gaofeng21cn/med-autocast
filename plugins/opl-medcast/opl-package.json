@@ -21,7 +21,8 @@
       "executor_route": "codex_cli",
       "marketplace_source": "gaofeng21cn/opl-medcast",
       "publication_ref": "ghcr.io/gaofeng21cn/one-person-lab-packages/opl-medcast:latest-stable"
-    }
+    },
+    "plugin_source_path": "."
   },
   "dependency_profiles": [],
   "capability_dependencies": [],

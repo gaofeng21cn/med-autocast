@@ -4,7 +4,7 @@
   "package_id": "opl-medcast",
   "display_name": "OPL Med Cast",
   "publisher": "one-person-lab",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "source": "first_party_repo_local",
   "carrier_source_role": "codex_plugin_default_carrier_not_package_truth",
   "codex_surface": {
@@ -36,6 +36,11 @@
     "description_i18n": {
       "zh-CN": "医学科普视频规划、制作、视听复核与关键帧资产整理。",
       "en-US": "Medical education video planning, production, audiovisual review, and keyframe curation."
-    }
+    },
+    "session_routing_summary_i18n": {
+      "en-US": "Plan evidence-based medical education videos, direct their stories, review audiovisual quality, and curate reusable keyframes.",
+      "zh-CN": "规划循证医学科普视频，设计叙事与镜头，复核视听质量并整理可复用关键帧。"
+    },
+    "home_shortcuts": []
   }
 }

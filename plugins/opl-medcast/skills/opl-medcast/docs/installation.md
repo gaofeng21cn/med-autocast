@@ -1,6 +1,6 @@
 # 安装与环境准备
 
-0.1.0 通过 GitHub 预览版分发源码与 Codex 插件。市场名称与插件名称均为 opl-medcast，选择器固定为 opl-medcast@opl-medcast。需要支持插件市场的 Codex CLI。
+0.1.0 通过 GitHub Release分发源码与 Codex 插件。市场名称与插件名称均为 opl-medcast，选择器固定为 opl-medcast@opl-medcast。需要支持插件市场的 Codex CLI。
 
 ```bash
 codex plugin marketplace add gaofeng21cn/opl-medcast --ref v0.1.0 --json

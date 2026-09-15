@@ -42,7 +42,7 @@ These actions connect six stages and can continue from existing work. An episode
 
 **Keep delivery status explicit.** Technical checks, visual review, continuous motion, full listening, medical review, and platform upload have separate records. A review package may contain clearly identified pending work; public release still requires the relevant review and authorization.
 
-## Install The Preview
+## Installation
 
 Download the source and plugin bundle from the [release page](https://github.com/gaofeng21cn/opl-medcast/releases/tag/v0.1.0), or install the pinned version with Codex CLI:
 
@@ -71,7 +71,7 @@ The `preflight` command checks the current production manifest, selected episode
 
 ## Status And Verification
 
-**Version 0.1.0 is the first public preview, distributing source and a Codex plugin. It is not on the OPL stable Package channel.** OPL structure and generated-interface checks passed, along with 14 behavioral tests. Read-only integration was verified against five existing series and 72 keyframes.
+**Version 0.1.0 is the first public release, distributing source and a Codex plugin. It is not on the OPL stable Package channel.** OPL structure and generated-interface checks passed, along with 14 behavioral tests. Read-only integration was verified against five existing series and 72 keyframes.
 
 The OPL Meta Agent engineering request was blocked before launch by an installed identity mismatch. It has not produced a blueprint or completed independent qualification. Repository structure and helper checks do not substitute for that work. See [Build status](docs/status.md) for the failure, saved request, and recovery conditions.
 

@@ -1,4 +1,4 @@
-"""Build versioned preview archives from an annotated, clean source commit."""
+"""Build versioned release archives from an annotated, clean source commit."""
 import hashlib
 import json
 from pathlib import Path
@@ -40,7 +40,7 @@ with zipfile.ZipFile(plugin, 'w', compression=zipfile.ZIP_DEFLATED) as archive:
         'codex plugin add opl-medcast@opl-medcast --json\n\n'
         'Python helpers require Python >=3.10 and PyYAML >=6,<7.\n'
         'Helper: plugins/opl-medcast/skills/opl-medcast/runtime/native_helpers/medcast.py\n'
-        'Preview only; OPL hosted activation and independent qualification remain pending.\n'
+        'OPL hosted activation and independent qualification remain pending.\n'
         'Source: https://github.com/gaofeng21cn/opl-medcast/tree/' + tag + '\n')
 checksums = output / 'SHA256SUMS'
 checksums.write_text(''.join(f'{hashlib.sha256(p.read_bytes()).hexdigest()}  {p.name}\n' for p in [source, plugin]))

@@ -15,7 +15,7 @@ OPL Med Cast 是面向医学科普视频的 OPL 智能体，帮助医生和内�
 它沿用 OPL Book Forge 的组织方式：专业方法由领域智能体提供，通用执行与阶段管理由 OPL Framework 负责。正式名称为 **OPL Med Cast**，仓库、智能体和软件包统一使用技术标识 `opl-medcast`。
 
 <p align="center">
-  <img src="assets/branding/opl-medcast-overview.zh-CN.png" alt="OPL Med Cast 工作流程：医学证据、故事导演、媒体制作、视听复核、审看交付与资产沉淀；发现问题后定向返修，后续创作优先复用已审资产。" width="100%" />
+  <img src="assets/branding/opl-medcast-overview.en.png" alt="OPL Med Cast 工作流程：医学证据、故事导演、媒体制作、视听复核、审看交付与资产沉淀；发现问题后定向返修，后续创作优先复用已审资产。" width="100%" />
 </p>
 
 ## 开始制作视频
@@ -42,7 +42,7 @@ OPL Med Cast 是面向医学科普视频的 OPL 智能体，帮助医生和内�
 
 **交付状态说清楚。** 技术检查、画面复核、连续动态、完整听审、医学复核和平台上传分别记录。审看包可以附带明确的待审项，公开发布仍需相应审查与授权。
 
-## 安装预览版
+## 安装
 
 从[版本页面](https://github.com/gaofeng21cn/opl-medcast/releases/tag/v0.1.0)下载源码与插件包，或使用 Codex CLI 安装固定版本：
 
@@ -71,7 +71,7 @@ python3 runtime/native_helpers/medcast.py assets --workspace /absolute/medical-w
 
 ## 当前进展与验证
 
-**0.1.0 为首个公开预览版本，提供源码和 Codex 插件，尚未进入 OPL 稳定软件包渠道。** OPL 标准结构与接口生成检查已通过，14 个行为测试通过；已只读接入现有的 5 个系列和 72 张关键帧。
+**0.1.0 为首个公开版本，提供源码和 Codex 插件，尚未进入 OPL 稳定软件包渠道。** OPL 标准结构与接口生成检查已通过，14 个行为测试通过；已只读接入现有的 5 个系列和 72 张关键帧。
 
 OPL Meta Agent 的工程调用因安装身份不一致而在启动前受阻，尚未产出设计蓝图，也未完成独立资格验证。当前仓库的结构与工具检查不能代替这部分验证。具体断点、已保存的请求和后续恢复条件见[构建状态](docs/status.md)。
 

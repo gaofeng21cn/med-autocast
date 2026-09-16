@@ -69,3 +69,8 @@ opl packages install opl-medcast --json
 - [当前能力与验证范围](docs/status.md)：了解已验证的能力及仍待完成的验收。
 
 开发与维护请阅读 [AGENTS.md](AGENTS.md)和[架构说明](docs/architecture.md)。
+
+## 许可
+
+Apache License 2.0，详见 [LICENSE](LICENSE)。Copyright 2026 FengGao Lab
+contributors。

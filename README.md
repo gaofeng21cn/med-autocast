@@ -69,3 +69,8 @@ Start a new task after installation and tell OPL Med Cast what you want to creat
 - [Current capabilities and validation](docs/status.md): what has been verified and which evaluations remain outstanding.
 
 For development and maintenance, see [AGENTS.md](AGENTS.md) and [Architecture](docs/architecture.md). Supporting guides are currently in Chinese.
+
+## License
+
+Apache License 2.0. See [LICENSE](LICENSE). Copyright 2026 FengGao Lab
+contributors.

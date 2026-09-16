@@ -8,9 +8,19 @@ import unittest
 from pathlib import Path
 from types import SimpleNamespace
 
-from PIL import ImageFont
-from build_timeline_review import checked_record, protect_outputs, sample_times, words, wrap
 from workbench_config import resolve_font
+
+# Pillow, and therefore the timeline review helpers, ship in the optional
+# `workbench` extra. Without it the module cannot import at all, which used to
+# surface as an opaque loader error on every `scripts/verify.sh fast` run.
+try:
+    from PIL import ImageFont
+    from build_timeline_review import checked_record, protect_outputs, sample_times, words, wrap
+except ModuleNotFoundError as error:
+    raise unittest.SkipTest(
+        'timeline review checks need the optional workbench extra '
+        f"(pip install -e '.[workbench]'): {error}",
+    ) from error
 
 
 class TimelineReviewTests(unittest.TestCase):

@@ -68,7 +68,11 @@ Start a new task after installation and tell OPL Med Cast what you want to creat
 - [Keyframe library](docs/keyframe-library.md): collect and reuse valuable visuals.
 - [Current capabilities and validation](docs/status.md): what has been verified and which evaluations remain outstanding.
 
-For development and maintenance, see [AGENTS.md](AGENTS.md) and [Architecture](docs/architecture.md). Supporting guides are currently in Chinese.
+For development and maintenance, see [AGENTS.md](AGENTS.md), [Project](docs/project.md),
+[Architecture](docs/architecture.md), [Invariants](docs/invariants.md) and
+[Decisions](docs/decisions.md). Backend operations and source attribution are in
+[Backend SOP](docs/backend-sop.md) and [Provenance](docs/provenance.md).
+Supporting guides are currently in Chinese.
 
 ## License
 

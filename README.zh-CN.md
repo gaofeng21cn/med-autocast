@@ -68,7 +68,9 @@ opl packages install opl-medcast --json
 - [关键帧素材库](docs/keyframe-library.md)：如何积累和复用有价值的画面。
 - [当前能力与验证范围](docs/status.md)：了解已验证的能力及仍待完成的验收。
 
-开发与维护请阅读 [AGENTS.md](AGENTS.md)和[架构说明](docs/architecture.md)。
+开发与维护请阅读 [AGENTS.md](AGENTS.md)、[项目说明](docs/project.md)、[架构说明](docs/architecture.md)、
+[不变量](docs/invariants.md)和[关键决策](docs/decisions.md)；后端操作与来源适配见
+[媒体后端 SOP](docs/backend-sop.md)和[来源与适配](docs/provenance.md)。
 
 ## 许可
 

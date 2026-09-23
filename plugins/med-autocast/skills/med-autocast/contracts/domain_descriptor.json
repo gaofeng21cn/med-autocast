@@ -9,6 +9,11 @@
     "workspace_binding": {
       "locator_surface_kind": "med_autocast_workspace",
       "default_profile_id": "one_off",
+      "shared_resources": [
+        { "path": "shared/sources", "role": "source_intake" },
+        { "path": "shared/memory", "role": "memory_root" },
+        { "path": "shared/style_system", "role": "style_system" }
+      ],
       "workspace_kind": "medical_video_workspace",
       "project_kind": "medical_video_series",
       "project_collection_label": "projects",

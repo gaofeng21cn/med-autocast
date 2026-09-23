@@ -1,6 +1,6 @@
 [project]
 name = "med-autocast-helpers"
-version = "0.2.0"
+version = "0.2.1"
 description = "Med Auto Cast read-only workspace and delivery helpers"
 requires-python = ">=3.10"
 dependencies = ["PyYAML>=6,<7"]

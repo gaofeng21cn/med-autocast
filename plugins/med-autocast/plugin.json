@@ -1,7 +1,7 @@
 {
   "$schema": "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json",
   "name": "med-autocast",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "description": "Med Auto Cast standard domain Agent plugin.",
   "author": {
     "name": "Med Auto Cast"

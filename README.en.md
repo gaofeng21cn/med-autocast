@@ -10,7 +10,7 @@
 
 **Explain the medical evidence. Make the video work.**
 
-Med Auto Cast is a medical education video agent for clinicians, health educators, and medical content creators. Starting with a question patients care about, it helps you review the evidence, plan a series, write narration, design visuals, produce voiceovers and animation, edit and review videos, and prepare accompanying copy.
+Med Auto Cast (MAC) is a medical education video agent for clinicians, health educators, and medical content creators. Starting with a question patients care about, it helps you review the evidence, plan a series, write narration, design visuals, produce voiceovers and animation, edit and review videos, and prepare accompanying copy.
 
 Start with a topic or continue from an existing script, recording, asset collection, or video. Refine one episode, produce a series, or update earlier work while building on what you already have.
 

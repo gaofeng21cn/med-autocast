@@ -1,6 +1,6 @@
 # Med Auto Cast
 
-正式名称为 Med Auto Cast，仓库、Agent 和 Package 技术标识为 `med-autocast`，领域为 `medical_video`。Med Auto 是医学智能体系列品牌，OPL 持有标准与发布体系；以 OPL Book Forge 为结构参考。
+正式名称为 Med Auto Cast，展示缩写为 MAC；仓库、Agent 和 Package 技术标识为 `med-autocast`，领域为 `medical_video`。Med Auto 是医学智能体系列品牌，OPL 持有标准与发布体系；以 OPL Book Forge 为结构参考。
 
 - agent/与contracts/持有医学科普工作流、质量判断和领域合同；OPL持有执行、评测、版本、激活与回滚。
 - 原始视频、关键帧、旁白、发布包和本机配置属于制作工作区，不复制进源码仓库。凭据只从工作区登记来源解析。

@@ -1,80 +1,78 @@
 <p align="center">
-  <img src="assets/branding/medautocast-logo.png" alt="Med Auto Cast logo" width="132" />
+  <img src="assets/branding/medautocast-logo.png" alt="Med Auto Cast 标志" width="132" />
 </p>
 
 <p align="center">
-  <a href="./README.md"><strong>English</strong></a> | <a href="./README.zh-CN.md">中文</a>
+  <a href="./README.md"><strong>中文</strong></a> | <a href="./README.en.md">English</a>
 </p>
 
 # Med Auto Cast
 
-**Explain the medical evidence. Make the video work.**
+**把医学证据讲清楚，把科普视频做好。**
 
-Med Auto Cast is a medical education video agent for clinicians, health educators, and medical content creators. Starting with a question patients care about, it helps you review the evidence, plan a series, write narration, design visuals, produce voiceovers and animation, edit and review videos, and prepare accompanying copy.
+Med Auto Cast 是面向医生、健康教育工作者和医学内容创作者的科普视频智能体。从一个患者关心的问题出发，帮助你查清依据、规划系列、编写旁白、设计画面，完成配音、动画、剪辑和成片复核，并整理视频与配套文案。
 
-Start with a topic or continue from an existing script, recording, asset collection, or video. Refine one episode, produce a series, or update earlier work while building on what you already have.
+你可以从选题开始，也可以带着已有脚本、配音、素材或成片继续制作。单集打磨、整季制作和旧内容修订，都能沿用已有成果。
 
 <p align="center">
-  <img src="assets/branding/medautocast-overview.en.png" alt="The six-stage Med Auto Cast workflow, from medical evidence and story design through audiovisual production, review, handoff, and asset curation. Author profiles, professional skills, production tools, and recovery support ongoing work." width="100%" />
+  <img src="assets/branding/medautocast-overview.en.png" alt="Med Auto Cast 从医学证据、故事设计、视听制作和复核，到交付与素材整理的六阶段流程；作者档案、专业技能、制作工具和中断恢复支撑持续创作。" width="100%" />
 </p>
 
-## What You Can Do
+## 能为你做什么
 
-| Your goal | How Med Auto Cast helps |
+| 你想完成的工作 | Med Auto Cast 提供的帮助 |
 | --- | --- |
-| Turn medical knowledge into topics patients can understand | Review evidence, common patient questions, and the limits of what can be said; develop series themes, episode goals, and outlines |
-| Tell a coherent story | Write narration and storyboards, connect each visual to the explanation, and maintain continuity between shots |
-| Produce a video from a script | Coordinate voiceovers, subtitles, animation, and editing; add branding and background music to create a video for review |
-| Identify what needs revision | Check visual meaning, framing, and motion continuity; organize listening feedback and medical review findings |
-| Prepare an episode or series for handoff | Gather videos, subtitles, narration, review records, and accompanying copy for Xiaohongshu and WeChat Channels |
-| Build a useful collection for future work | Organize reviewed keyframes and reusable clips with their sources and usage limits, and look for existing assets before creating more |
+| 把医学知识变成患者听得懂的选题 | 梳理医学依据、患者常见疑问与表达边界，形成系列主题、单集目标和内容提纲 |
+| 把观点讲成完整的故事 | 编写旁白、设计故事板，让每个画面对应讲述内容，保持镜头之间的连贯性 |
+| 从脚本制作视频 | 组织配音、字幕、动画与剪辑，加入品牌元素和背景音乐，形成可供审看的成片 |
+| 找出成片需要修改的地方 | 检查画面与旁白是否对应、构图是否合适、动态是否连贯，整理听审与医学复核意见 |
+| 整理单集或整季交付 | 汇集视频、字幕、配音、审看记录，以及小红书和微信视频号的配套文案 |
+| 让好素材在后续创作中继续发挥作用 | 分类整理已审关键帧和可复用片段，保留来源与使用限制，制作前优先查找已有素材 |
 
-## Start With A Request
+## 直接这样开始
 
-Describe the audience, what viewers should understand, and the material you already have. For example:
+说明讲给谁听、希望观众理解什么，以及手头已有的资料。例如：
 
-> "Plan an educational series for patients newly diagnosed with hypertension. Answer one common question per episode and identify the medical evidence. Start with the topics and narration for episode one."
+> “面向刚确诊高血压的患者，规划一个科普系列。每集回答一个常见问题，标明医学依据，先给我选题和第一集旁白。”
 
-> "The narration for this episode is approved. Reuse existing footage, fix scenes that do not match the explanation, and create only the missing shots."
+> “这一集的配音已经确认。请复用现有素材，修正画面与旁白不对应的地方，只补充缺少的镜头。”
 
-> "Organize the current videos, subtitles, and publication copy for this series. List anything still requiring full listening or medical review, then add worthwhile keyframes to the asset library."
+> “整理这一季的当前成片、字幕和发布文案，列出还需要完整听审或医学复核的内容，再把值得复用的关键帧归入素材库。”
 
-For an existing project, provide its folder and identify the current version, what has been approved, and what you want to change.
+已有项目可以直接提供所在文件夹，并说明当前版本、已确认的内容和这次要修改的部分。
 
-## Build On Your Previous Work
+## 持续制作时，保留你的积累
 
-**Keep your own style.** Reuse your author information, authorized voice, branding, and presentation preferences to maintain a consistent voice and visual style across a series.
+**保持个人风格。** 沿用你的作者信息、已授权声音、品牌元素和呈现偏好，让同一系列的表达与视觉风格保持一致。
 
-**Make focused revisions.** Reuse audio and subtitles when the narration is unchanged, and focus visual revisions on the affected shots. Updating one episode preserves the others.
+**有针对性地修改。** 旁白没有变化时复用原配音和字幕；画面需要调整时集中处理相关镜头。更新一集时保留其他集的成果。
 
-**Continue after an interruption.** Use existing files and production records to establish progress, resume unfinished work, and retain earlier versions for reference.
+**中断后接着做。** 根据已有文件和制作记录确认进度，继续未完成的工作，保留旧版本供回看。
 
-**Know what you are receiving.** Videos, accompanying copy, revision notes, and pending reviews are organized together. You can see which version you have, what has been checked, and whose confirmation is still needed. Medical content receives final confirmation from a qualified professional; platform uploads require your authorization.
+**交付时看得清楚。** 视频、配套文案、修改意见和待审项一起整理。你能知道当前拿到的是哪一版、已经检查了什么、还需要谁确认。医学内容由专业人员最终确认，平台上传按你的授权进行。
 
-## Install And Get Started
+## 安装与开始使用
 
-Install through OPL:
+通过 OPL 安装：
 
 ```bash
 opl packages install med-autocast --json
 ```
 
-Start a new task after installation and tell Med Auto Cast what you want to create. Before producing your first video, configure the required voice and video generation services using the [setup guide](docs/installation.md). Use the [project setup guide](docs/workspace-adapter.md) to continue an existing production project.
+安装后新建任务，告诉 Med Auto Cast 你的制作目标。首次制作视频前，需按[安装与环境准备](docs/installation.md)配置所需的配音与视频生成服务；已有制作项目可按[项目接入说明](docs/workspace-adapter.md)继续使用。
 
-## Learn More
+## 进一步了解
 
-- [Production workflow](docs/production-sop.md): from topics and scripts to video handoff.
-- [Audiovisual review](docs/visual-review-sop.md) and [delivery guide](docs/delivery-sop.md): review, revise, and organize the results.
-- [Keyframe library](docs/keyframe-library.md): collect and reuse valuable visuals.
-- [Current capabilities and validation](docs/status.md): what has been verified and which evaluations remain outstanding.
+- [制作流程](docs/production-sop.md)：从选题、脚本到成片交付。
+- [视听复核](docs/visual-review-sop.md)与[交付说明](docs/delivery-sop.md)：如何审看、修订并整理成果。
+- [关键帧素材库](docs/keyframe-library.md)：如何积累和复用有价值的画面。
+- [当前能力与验证范围](docs/status.md)：了解已验证的能力及仍待完成的验收。
 
-For development and maintenance, see [AGENTS.md](AGENTS.md), [Project](docs/project.md),
-[Architecture](docs/architecture.md), [Invariants](docs/invariants.md) and
-[Decisions](docs/decisions.md). Backend operations and source attribution are in
-[Backend SOP](docs/backend-sop.md) and [Provenance](docs/provenance.md).
-Supporting guides are currently in Chinese.
+开发与维护请阅读 [AGENTS.md](AGENTS.md)、[项目说明](docs/project.md)、[架构说明](docs/architecture.md)、
+[不变量](docs/invariants.md)和[关键决策](docs/decisions.md)；后端操作与来源适配见
+[媒体后端 SOP](docs/backend-sop.md)和[来源与适配](docs/provenance.md)。
 
-## License
+## 许可
 
-Apache License 2.0. See [LICENSE](LICENSE). Copyright 2026 FengGao Lab
-contributors.
+Apache License 2.0，详见 [LICENSE](LICENSE)。Copyright 2026 FengGao Lab
+contributors。

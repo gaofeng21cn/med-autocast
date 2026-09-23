@@ -1,26 +1,26 @@
 <p align="center">
-  <img src="assets/branding/opl-medcast-logo.png" alt="OPL Med Cast 标志" width="132" />
+  <img src="assets/branding/medautocast-logo.png" alt="Med Auto Cast 标志" width="132" />
 </p>
 
 <p align="center">
   <a href="./README.md">English</a> | <a href="./README.zh-CN.md"><strong>中文</strong></a>
 </p>
 
-# OPL Med Cast
+# Med Auto Cast
 
 **把医学证据讲清楚，把科普视频做好。**
 
-OPL Med Cast 是面向医生、健康教育工作者和医学内容创作者的科普视频智能体。从一个患者关心的问题出发，帮助你查清依据、规划系列、编写旁白、设计画面，完成配音、动画、剪辑和成片复核，并整理视频与配套文案。
+Med Auto Cast 是面向医生、健康教育工作者和医学内容创作者的科普视频智能体。从一个患者关心的问题出发，帮助你查清依据、规划系列、编写旁白、设计画面，完成配音、动画、剪辑和成片复核，并整理视频与配套文案。
 
 你可以从选题开始，也可以带着已有脚本、配音、素材或成片继续制作。单集打磨、整季制作和旧内容修订，都能沿用已有成果。
 
 <p align="center">
-  <img src="assets/branding/opl-medcast-overview.en.png" alt="OPL Med Cast 从医学证据、故事设计、视听制作和复核，到交付与素材整理的六阶段流程；作者档案、专业技能、制作工具和中断恢复支撑持续创作。" width="100%" />
+  <img src="assets/branding/medautocast-overview.en.png" alt="Med Auto Cast 从医学证据、故事设计、视听制作和复核，到交付与素材整理的六阶段流程；作者档案、专业技能、制作工具和中断恢复支撑持续创作。" width="100%" />
 </p>
 
 ## 能为你做什么
 
-| 你想完成的工作 | OPL Med Cast 提供的帮助 |
+| 你想完成的工作 | Med Auto Cast 提供的帮助 |
 | --- | --- |
 | 把医学知识变成患者听得懂的选题 | 梳理医学依据、患者常见疑问与表达边界，形成系列主题、单集目标和内容提纲 |
 | 把观点讲成完整的故事 | 编写旁白、设计故事板，让每个画面对应讲述内容，保持镜头之间的连贯性 |
@@ -56,10 +56,10 @@ OPL Med Cast 是面向医生、健康教育工作者和医学内容创作者的�
 通过 OPL 安装：
 
 ```bash
-opl packages install opl-medcast --json
+opl packages install med-autocast --json
 ```
 
-安装后新建任务，告诉 OPL Med Cast 你的制作目标。首次制作视频前，需按[安装与环境准备](docs/installation.md)配置所需的配音与视频生成服务；已有制作项目可按[项目接入说明](docs/workspace-adapter.md)继续使用。
+安装后新建任务，告诉 Med Auto Cast 你的制作目标。首次制作视频前，需按[安装与环境准备](docs/installation.md)配置所需的配音与视频生成服务；已有制作项目可按[项目接入说明](docs/workspace-adapter.md)继续使用。
 
 ## 进一步了解
 

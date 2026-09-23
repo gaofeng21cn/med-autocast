@@ -1,14 +1,14 @@
 {
-  "name": "opl-medcast",
+  "name": "med-autocast",
   "interface": {
-    "displayName": "OPL Med Cast"
+    "displayName": "Med Auto Cast"
   },
   "plugins": [
     {
-      "name": "opl-medcast",
+      "name": "med-autocast",
       "source": {
         "source": "local",
-        "path": "./plugins/opl-medcast"
+        "path": "./plugins/med-autocast"
       },
       "policy": {
         "installation": "AVAILABLE",

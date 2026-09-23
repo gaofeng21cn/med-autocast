@@ -4,15 +4,15 @@ import json
 import tempfile
 import unittest
 from pathlib import Path
-spec=importlib.util.spec_from_file_location('medcast',Path(__file__).resolve().parents[1]/'runtime/native_helpers/medcast.py')
+spec=importlib.util.spec_from_file_location('med_autocast',Path(__file__).resolve().parents[1]/'runtime/native_helpers/med_autocast.py')
 m=importlib.util.module_from_spec(spec);spec.loader.exec_module(m)
 
 class PreflightTest(unittest.TestCase):
     def setUp(self):
         self.temp=tempfile.TemporaryDirectory();self.addCleanup(self.temp.cleanup);self.root=Path(self.temp.name)
         for name in ['master.mp4','old.mp4','voice.wav','captions.srt','source.mp4','evidence.json']:(self.root/name).write_text('fixture only')
-        self.current={'schema':'opl_medcast_current_selection/v1','series_id':'s1','revision':'r2','episode_ids':['01'],'master_refs':{'01':'master.mp4'}}
-        self.delivery={'schema':'opl_medcast_delivery/v1','series_id':'s1','revision':'r2','intent':'review','episodes':[{'episode_id':'01','master_ref':'master.mp4','narration_ref':'voice.wav','subtitles_ref':'captions.srt','shots':[{'source_id':'shot1','source_ref':'source.mp4','source_range':[0,3]}],'reviews':{}}]}
+        self.current={'schema':'med_autocast_current_selection/v1','series_id':'s1','revision':'r2','episode_ids':['01'],'master_refs':{'01':'master.mp4'}}
+        self.delivery={'schema':'med_autocast_delivery/v1','series_id':'s1','revision':'r2','intent':'review','episodes':[{'episode_id':'01','master_ref':'master.mp4','narration_ref':'voice.wav','subtitles_ref':'captions.srt','shots':[{'source_id':'shot1','source_ref':'source.mp4','source_range':[0,3]}],'reviews':{}}]}
         self.sources={'shot1':{'accepted':True,'source_ref':'source.mp4','usable_range':[0,6]}}
     def run_check(self):
         for n,d in [('current',self.current),('delivery',self.delivery),('sources',self.sources)]: (self.root/f'{n}.json').write_text(json.dumps(d))

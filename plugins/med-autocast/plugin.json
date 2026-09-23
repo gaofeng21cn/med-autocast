@@ -1,0 +1,31 @@
+{
+  "$schema": "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json",
+  "name": "med-autocast",
+  "version": "0.2.0",
+  "description": "Med Auto Cast standard domain Agent plugin.",
+  "author": {
+    "name": "Med Auto Cast"
+  },
+  "keywords": [
+    "opl",
+    "domain-agent"
+  ],
+  "extensions": {
+    "com.openai": {
+      "interface": {
+        "displayName": "Med Auto Cast",
+        "shortDescription": "Med Auto Cast domain Agent for Codex.",
+        "longDescription": "Provides the Med Auto Cast primary Skill while OPL hosts generated interfaces, Workspace Skill generations, and runtime orchestration.",
+        "developerName": "Med Auto Cast",
+        "category": "Productivity",
+        "capabilities": [
+          "Interactive",
+          "Write"
+        ],
+        "defaultPrompt": [
+          "Use Med Auto Cast to select and run the next domain Stage."
+        ]
+      }
+    }
+  }
+}

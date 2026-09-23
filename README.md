@@ -1,26 +1,26 @@
 <p align="center">
-  <img src="assets/branding/opl-medcast-logo.png" alt="OPL Med Cast logo" width="132" />
+  <img src="assets/branding/medautocast-logo.png" alt="Med Auto Cast logo" width="132" />
 </p>
 
 <p align="center">
   <a href="./README.md"><strong>English</strong></a> | <a href="./README.zh-CN.md">中文</a>
 </p>
 
-# OPL Med Cast
+# Med Auto Cast
 
 **Explain the medical evidence. Make the video work.**
 
-OPL Med Cast is a medical education video agent for clinicians, health educators, and medical content creators. Starting with a question patients care about, it helps you review the evidence, plan a series, write narration, design visuals, produce voiceovers and animation, edit and review videos, and prepare accompanying copy.
+Med Auto Cast is a medical education video agent for clinicians, health educators, and medical content creators. Starting with a question patients care about, it helps you review the evidence, plan a series, write narration, design visuals, produce voiceovers and animation, edit and review videos, and prepare accompanying copy.
 
 Start with a topic or continue from an existing script, recording, asset collection, or video. Refine one episode, produce a series, or update earlier work while building on what you already have.
 
 <p align="center">
-  <img src="assets/branding/opl-medcast-overview.en.png" alt="The six-stage OPL Med Cast workflow, from medical evidence and story design through audiovisual production, review, handoff, and asset curation. Author profiles, professional skills, production tools, and recovery support ongoing work." width="100%" />
+  <img src="assets/branding/medautocast-overview.en.png" alt="The six-stage Med Auto Cast workflow, from medical evidence and story design through audiovisual production, review, handoff, and asset curation. Author profiles, professional skills, production tools, and recovery support ongoing work." width="100%" />
 </p>
 
 ## What You Can Do
 
-| Your goal | How OPL Med Cast helps |
+| Your goal | How Med Auto Cast helps |
 | --- | --- |
 | Turn medical knowledge into topics patients can understand | Review evidence, common patient questions, and the limits of what can be said; develop series themes, episode goals, and outlines |
 | Tell a coherent story | Write narration and storyboards, connect each visual to the explanation, and maintain continuity between shots |
@@ -56,10 +56,10 @@ For an existing project, provide its folder and identify the current version, wh
 Install through OPL:
 
 ```bash
-opl packages install opl-medcast --json
+opl packages install med-autocast --json
 ```
 
-Start a new task after installation and tell OPL Med Cast what you want to create. Before producing your first video, configure the required voice and video generation services using the [setup guide](docs/installation.md). Use the [project setup guide](docs/workspace-adapter.md) to continue an existing production project.
+Start a new task after installation and tell Med Auto Cast what you want to create. Before producing your first video, configure the required voice and video generation services using the [setup guide](docs/installation.md). Use the [project setup guide](docs/workspace-adapter.md) to continue an existing production project.
 
 ## Learn More
 

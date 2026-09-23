@@ -14,7 +14,7 @@ for p in [R/'agent/primary_skill/SKILL.md',*sorted((R/'agent/professional_skills
     for target in re.findall(r'\]\(([^)]+)\)',body):
         if '://' not in target:assert (p.parent/target.split('#')[0]).resolve().is_file(),(p,target)
 primary=R/'agent/primary_skill/SKILL.md'
-carrier=R/'plugins/opl-medcast/skills/opl-medcast'
+carrier=R/'plugins/med-autocast/skills/med-autocast'
 assert primary.read_bytes()==(carrier/'SKILL.md').read_bytes(),'主Skill载体未同步'
 # Shipped method copies must be byte-identical to current source and contain no stale files.
 for dirname in ['agent','contracts','docs','runtime']:
@@ -26,10 +26,10 @@ print(json.dumps({'status':'passed','stages':len(manifest['stages']),'profession
 # Distribution identifiers and versions must agree before creating a release.
 package=json.loads((R/'contracts/opl_agent_package_manifest.json').read_text())
 market=json.loads((R/'.agents/plugins/marketplace.json').read_text())
-plugin_root=R/'plugins/opl-medcast'
-assert market['name']=='opl-medcast'
-assert market['plugins'][0]['source']['path']=='./plugins/opl-medcast'
-assert package['codex_surface']['configured_codex_plugin_carrier']['plugin_selector']=='opl-medcast@opl-medcast'
+plugin_root=R/'plugins/med-autocast'
+assert market['name']=='med-autocast'
+assert market['plugins'][0]['source']['path']=='./plugins/med-autocast'
+assert package['codex_surface']['configured_codex_plugin_carrier']['plugin_selector']=='med-autocast@med-autocast'
 for path in [plugin_root/'plugin.json',plugin_root/'.codex-plugin/plugin.json']:
     plugin=json.loads(path.read_text())
     assert plugin['name']==package['codex_surface']['plugin_id']==market['plugins'][0]['name']

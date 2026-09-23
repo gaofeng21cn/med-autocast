@@ -21,7 +21,8 @@
       "executor_route": "codex_cli",
       "marketplace_source": "gaofeng21cn/med-autocast",
       "publication_ref": "ghcr.io/gaofeng21cn/one-person-lab-packages/med-autocast:latest-stable"
-    }
+    },
+    "plugin_source_path": "."
   },
   "dependency_profiles": [],
   "capability_dependencies": [],

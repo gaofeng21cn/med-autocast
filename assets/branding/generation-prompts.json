@@ -1,50 +1,22 @@
 {
-  "generator": "built-in image_gen, unless overridden per asset",
-  "reference_style": "OPL Book Forge and Med Auto Grant hand-drawn brand illustrations",
-  "reference_assets": [
-    "opl-bookforge/assets/branding/opl-bookforge-logo.png",
-    "opl-bookforge/assets/branding/opl-bookforge-overview-v2.png"
-  ],
+  "product": "Med Auto Cast",
+  "method": "Built-in image_gen edit; existing family icon retained",
   "assets": [
     {
-      "file": "opl-medcast-logo.png",
-      "prompt": "Use case: logo-brand. Create a new companion brand icon for OPL Med Cast in the same OPL family as the supplied OPL Book Forge logo. Input image is STYLE REFERENCE ONLY, not a subject to reproduce. Square 1024x1024 PNG. Match its white softly rounded paper tile, barely visible pale blue dotted notebook grid, black hand-drawn graphite outlines, pencil hatching, navy blue / turquoise / sky blue segmented circular ring with a small amber accent. Replace the book and pen with a simple medical education video symbol: a navy outlined rectangular video frame with a clear turquoise play triangle, and a small stethoscope gently curving around its lower edge. Balanced bold silhouette readable at 132px. Keep generous inner whitespace. No text, no letters, no wordmark, no book, no pen, no watermark. Professionally restrained and recognizable as the same family."
+      "file": "medautocast-logo.png",
+      "method": "Existing text-free video and stethoscope icon retained"
     },
     {
-      "file": "opl-medcast-overview.zh-CN.png",
-      "prompt": "Create a NEW Chinese workflow infographic for OPL Med Cast, using the supplied Book Forge diagram ONLY as a stylistic reference, not an editing target. Landscape 16:9. White paper, faint pale blue dot grid, thin rounded black outside border, bold black hand-lettered title, navy/teal/amber pencil hatching and simple marker outlines, matching the OPL family. Design a clean layout with much LESS TEXT than the reference. Exact top title \"OPL Med Cast\", subtitle \"从医学证据到科普视频\". Six equal rounded cards in ONE horizontal row, numbered 1 to 6, with a single large icon and one heading each, connected by simple black left-to-right arrows. Exact headings in order: \"医学证据\", \"故事设计\", \"视听制作\", \"质量复核\", \"审看交付\", \"素材积累\". Icons respectively: evidence documents and magnifier; storyboard and pencil; video player and microphone; headphones and magnifier; folder with video/audio/subtitles; organized picture library. NO small captions inside cards. Below the cards, one wide light teal box containing two simple lines of Chinese text, exact text: \"已有素材优先复用\" and \"发现问题定向返修\". No arrows into or out of this box. Footer centered: \"医学准确 · 叙事连贯 · 审查留痕\". No other text. No looping arrows, no complicated routing lines, no green approval badges, no English except brand title. All Chinese must be clearly written, correctly formed, natural, and free of pseudo-characters. Large readable labels. Generous whitespace and polished pencil-illustration style."
-    },
-    {
-      "file": "opl-medcast-overview.en.png",
-      "prompt": "Use case: infographic-diagram edit.\nAsset: shared English workflow overview for the OPL Med Cast README.\nImage 1 is the exact edit target. Update its content to reflect the complete Workbench capabilities, while preserving its recognizable OPL hand-drawn visual identity. Keep landscape 16:9 composition, white paper with very faint blue dot grid, rounded black outer frame, bold legible hand lettering, navy/teal/amber pencil hatching, six equal numbered cards in one horizontal row, simple large icons and black left-to-right arrows. High resolution, crisp readable lettering. All text English only.\nKeep title \"OPL Med Cast\" and subtitle \"From Medical Evidence to Educational Video\".\nSix headings remain exactly:\n1 \"Medical Evidence\"\n2 \"Story Direction\"\n3 \"Media Production\"\n4 \"AV Review\"\n5 \"Review Handoff\"\n6 \"Asset Library\"\nUse these exact captions, centered below the icons with comfortable spacing and the indicated line breaks:\n1 \"Define audience\\nand topics\"\n2 \"Match narration\\nto visuals\"\n3 \"Voice & subtitles\\nAnimation & editing\"\n4 \"Visuals & motion\\nFull listening\\nMedical review\"\n5 \"Align versions\\nand files\"\n6 \"Organize and\\nretain sources\"\nKeep icons 1, 2, 5 and 6 recognizable. Card 3 icon: video frame and microphone, with small subtitle lines and a short editing timeline integrated tastefully. Card 4 icon: monitor, magnifier and headphones, with a small medical cross. Allow slightly smaller icons to accommodate captions; no crammed text.\nKeep two feedback routes beneath the cards. Red dashed route starts at card 4 and points back to card 2 with a single arrowhead at card 2, label \"Find issues, revise precisely\". Teal dashed route starts at card 6 and points back to card 2 with a single arrowhead at card 2, label \"Reuse reviewed assets first\". Do not use bidirectional arrowheads.\nReplace the three old bottom principle cards with FOUR equal small support cards, unnumbered, separated from the main flow. Add a small centered row label \"Workflow Support\". Exact four labels left to right:\n\"Author Profiles\"\n\"Professional Skills\"\n\"Workbench Tools\"\n\"Resume & Recovery\"\nPair with simple matching icons: author identity card; handbook and pencil; small toolkit; circular resume arrow around a saved checklist. These are shared supports, not more stages, so no arrows between them.\nFooter exact text: \"Medical Accuracy · Story Continuity · Review Records\".\nPreserve generous whitespace, existing palette and natural hand-drawn character. No Chinese, no OCI/install instructions, no release version, no extra labels, no watermark.",
-      "reference": "Previous English OPL Med Cast overview; preserve the approved OPL hand-drawn style",
-      "usage": "Shared by English and Chinese READMEs",
-      "generator": "imagegen skill CLI using the configured Codex API provider",
-      "model": "gpt-image-2.5",
-      "size": "1536x1024",
-      "quality": "high",
-      "request_parameters": {
-        "endpoint": "/v1/images/edits",
-        "model": "gpt-image-2.5",
-        "size": "1536x1024",
-        "quality": "high",
-        "output_format": "png",
-        "n": 1
-      },
-      "parameter_notes": [
-        "The configured provider rejected size=auto and required an explicit widthxheight value.",
-        "1536x1024, quality=high and output_format=png succeeded with the gpt-image-2.5 model ID. Other size limits were not established by this task.",
-        "Credentials and the provider base URL are read from local Codex configuration at invocation time and are not stored in this repository."
-      ],
-      "refinement_prompts": [
-        "Update this OPL Med Cast diagram in its existing hand-drawn style. Keep the title, subtitle, SIX numbered stage cards with all their headings, illustrations and exact captions, the four Workflow Support cards, and the footer unchanged.\nREDESIGN the entire middle feedback band between the bottoms of the six cards and the Workflow Support heading. Remove EVERY red and teal dashed line and EVERY upward arrow in this band. Restore clean pale dotted paper. Do not leave old arrow tips or colored scraps beneath any card.\nIn the center of this band, place only TWO simple wide hand-drawn rounded text pills, one above the other, with generous whitespace and NO connecting lines or arrows. Upper pill: thin red outline, black text exactly \"Find issues, revise precisely\". Lower pill: thin teal outline, black text exactly \"Reuse reviewed assets first\". These pills are standalone notes and connect to nothing. Do not add icons or arrowheads inside or outside them. The small black forward arrows BETWEEN the six main stage cards stay intact. Main card outlines end cleanly at their bottom border.\nMake the typography crisp, all English lettering verbatim, and retain the original navy, teal, amber pencil illustration style. This is a clean final README illustration. No other changes."
-      ],
+      "file": "medautocast-overview.en.png",
+      "method": "Built-in image_gen edit",
+      "source": "Previous English six-stage workflow illustration",
+      "prompt": "Use case: text-localization / precise-object-edit. Asset: final English workflow infographic for the Med Auto Cast GitHub README. Image 1 is the EDIT TARGET. Change only the large top title from exactly 'OPL Med Cast' to exactly 'Med Auto Cast'. Preserve its hand-lettered black ink style, centered position, size hierarchy, teal underline, surrounding decorative strokes, white dotted paper, all six stage cards, icons, arrows, captions, two feedback notes, four Workflow Support cards, subtitle 'From Medical Evidence to Educational Video', and footer. Every other word must remain verbatim and fully readable. No Chinese, no extra text, no new elements, no watermark. Output a crisp full-frame landscape PNG.",
       "visual_review": {
+        "title": "Med Auto Cast",
         "language": "English",
         "six_stages": true,
-        "production_and_review_capabilities": true,
         "four_workflow_supports": true,
-        "feedback_notes": "Standalone revision and asset-reuse notes, without return arrows"
+        "feedback_notes": "Standalone revision and asset-reuse notes"
       }
     }
   ]

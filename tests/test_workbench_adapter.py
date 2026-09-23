@@ -99,7 +99,7 @@ class NativeContractTests(unittest.TestCase):
 
     def test_local_script_precedence_and_workspace_cwd(self):
         scripts=self.root/'scripts';scripts.mkdir()
-        (scripts/'workbench_config.py').write_text("from pathlib import Path\nimport os\nassert Path.cwd()==Path(os.environ['OPL_MEDCAST_WORKSPACE_ROOT'])\n")
+        (scripts/'workbench_config.py').write_text("from pathlib import Path\nimport os\nassert Path.cwd()==Path(os.environ['MED_AUTOCAST_WORKSPACE_ROOT'])\n")
         item=next(t for t in tool_inventory(self.root)['tools'] if t['name']=='workbench_config')
         self.assertEqual(item['implementation'],'workspace')
         self.assertEqual(run_tool(self.root,'workbench_config',[]),0)

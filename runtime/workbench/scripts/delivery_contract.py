@@ -73,6 +73,12 @@ def animation_gate(episode_dir: Path, plan: dict) -> dict:
         delivery.get("maximum_static_duration_ratio", MAX_STATIC_SEGMENT_RATIO)
     )
     primary_backend = delivery.get("primary_video_backend")
+    javascript_primary = (
+        plan.get("animation", {}).get("renderer") == "javascript"
+        or primary_backend == "js_animation_local"
+    )
+    if javascript_primary:
+        minimum_generative_ratio = 0.0
     legacy_primary_generator = delivery.get("primary_generator")
     if not primary_backend and not legacy_primary_generator:
         violations.append("missing_primary_video_backend")
@@ -173,7 +179,13 @@ def animation_gate(episode_dir: Path, plan: dict) -> dict:
             and not declared.get("backend_id")
         ):
             violations.append(f"generative_backend_not_recorded:{segment_id}")
-        elif declared_class in DETERMINISTIC_ANIMATION_CLASSES and declared.get("supporting_explainer_only") is not True:
+        elif (
+            javascript_primary
+            and declared_class in DETERMINISTIC_ANIMATION_CLASSES
+            and declared.get("backend_id") != primary_backend
+        ):
+            violations.append(f"javascript_backend_mismatch:{segment_id}")
+        elif not javascript_primary and declared_class in DETERMINISTIC_ANIMATION_CLASSES and declared.get("supporting_explainer_only") is not True:
             violations.append(f"deterministic_animation_not_declared_supporting:{segment_id}")
 
         if not source.is_file():
@@ -223,7 +235,7 @@ def animation_gate(episode_dir: Path, plan: dict) -> dict:
         violations.append("empty_visual_timeline")
     if not animated_segments:
         violations.append("no_animated_visual_segments")
-    if not generative_segments:
+    if not javascript_primary and not generative_segments:
         violations.append("no_generative_animation_segments")
     if generative_duration_ratio < minimum_generative_ratio:
         violations.append("generative_animation_not_primary_by_duration")
@@ -240,13 +252,15 @@ def animation_gate(episode_dir: Path, plan: dict) -> dict:
         "manifest": str(manifest_path),
         "animated_segments": animated_segments,
         "generative_segments": generative_segments,
-        "deterministic_supporting_segments": deterministic_segments,
+        "deterministic_segments": deterministic_segments,
+        "deterministic_supporting_segments": [] if javascript_primary else deterministic_segments,
         "static_segments": static_segments,
         "static_segment_ratio": round(static_ratio, 6),
         "maximum_static_segment_ratio": maximum_static_ratio,
         "generative_duration_ratio": round(generative_duration_ratio, 6),
         "minimum_generative_duration_ratio": minimum_generative_ratio,
-        "deterministic_supporting_duration_ratio": round(deterministic_duration_ratio, 6),
+        "deterministic_duration_ratio": round(deterministic_duration_ratio, 6),
+        "deterministic_supporting_duration_ratio": 0.0 if javascript_primary else round(deterministic_duration_ratio, 6),
         "source_evidence": source_evidence,
         "violations": sorted(set(violations)),
     }

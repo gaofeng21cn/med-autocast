@@ -4,6 +4,14 @@ catalog: backends/config/media_backends.yaml
 tools:
   font: null
 video:
+  js_animation_local:
+    definition: javascript_animation
+    label: 本地 JavaScript/SVG/Canvas 动画
+    kind: javascript_animation
+    mode: local
+    device: cpu_or_mps
+    runtime: node20_playwright_ffmpeg
+    capability: reference_prototype
   preferred_video:
     definition: minimax_h3_api
     label: User-configured MiniMax H3 API
@@ -11,6 +19,14 @@ video:
     model: MiniMax-H3
     capability: contract_documented
 audio:
+  edge_tts_local:
+    definition: edge_tts
+    label: Edge TTS XiaoyiNeural 本地保底
+    kind: edge_tts
+    mode: network_client
+    device: cpu
+    voice: zh-CN-XiaoyiNeural
+    capability: configured_requires_network_verification
   preferred_audio:
     definition: indextts_2_5
     label: User-configured IndexTTS runtime
@@ -20,6 +36,6 @@ audio:
     model_root: ${INDEXTTS_MODEL_ROOT:-$HOME/ai/index-tts/checkpoints}
     capability: candidate
 policy:
-  default_video: preferred_video
-  default_audio: preferred_audio
+  default_video: js_animation_local
+  default_audio: edge_tts_local
   preserve_remote_4090: false

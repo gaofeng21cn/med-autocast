@@ -85,6 +85,11 @@ class NativeContractTests(unittest.TestCase):
         (self.publish/'video.mp4').write_bytes(b'old')
         with self.assertRaisesRegex(ValueError,'字节'):self.check()
 
+    def test_js_delivery_cannot_skip_asset_admission(self):
+        self.plan['animation'] = {'renderer': 'javascript'}
+        self.dump('productions/s/01_example/review/production_plan.yaml',self.plan)
+        with self.assertRaisesRegex(ValueError,'文件引用'):self.check()
+
     def test_stale_platform_copy_is_rejected(self):
         (self.publish/'微信视频号文案.txt').write_text('旧稿')
         with self.assertRaisesRegex(ValueError,'文案'):self.check()

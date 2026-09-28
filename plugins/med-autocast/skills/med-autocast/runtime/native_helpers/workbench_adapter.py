@@ -16,6 +16,10 @@ TOOLS = {
     'workbench_config': ('read_only', '配置、作者覆盖、依赖和资产校验'),
     'media_backend': ('network_read', '后端解析和按需服务诊断；不生成媒体'),
     'render_series_tts': ('generate', '已审旁白配音与逐段回执'),
+    'render_edge_tts': ('generate', '整篇 Edge 保底旁白、固定参数、响度归一化；听感待审'),
+    'audio_baseline': ('write', '整轨与场景响度检测；不推断情绪通过'),
+    'check_animation_assets': ('read_only', '动画素材来源、医学用途、审核引用与镜头覆盖'),
+    'render_javascript_animation': ('write', '素材准入后执行本地 JS 定帧渲染与合成'),
     'transcribe_series_whisper': ('write', 'ASR 辅助对齐；不覆盖审定医学文字'),
     'build_episode_timelines': ('write', '审定字幕、节拍和制作单'),
     'queue_h3_shots': ('generate', 'H3 提交、原任务轮询、官方提示直通'),
@@ -109,6 +113,15 @@ def preflight_native(root: Path, series: str, episode: str, plan_ref: str,
     if len(catalog_entries) != 1:
         raise ValueError('文案目录缺少本集或集号重复')
     debt, checked = [], []
+    if (plan.get('animation', {}).get('renderer') == 'javascript'
+            or plan.get('delivery', {}).get('primary_video_backend') == 'js_animation_local'):
+        import importlib.util
+        spec = importlib.util.spec_from_file_location('animation_asset_admission', BUNDLE / 'scripts/check_animation_assets.py')
+        admission_module = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(admission_module)
+        admission = admission_module.check_assets(path(plan.get('animation', {}).get('asset_manifest'), plan_path.parent))
+        if admission['status'] != 'passed':
+            raise ValueError('动画素材未准入：' + ', '.join(admission['pending']))
     reviews = read_object(path(source_review_ref)) if source_review_ref else {}
     # Native source-review files may use either a direct ID map or a shots map.
     reviews = reviews.get('shots', reviews)
@@ -206,7 +219,7 @@ def preflight_native(root: Path, series: str, episode: str, plan_ref: str,
     if not review.get('production_plan') and 'segments' not in review:
         debt.append({'review':'current_plan_binding','status':'needs_evidence','reason':'需回读当前构建记录；母版字节一致不单独证明制作单被实际使用'})
     # Series summaries cannot approve a newly selected episode revision.
-    claims = {key: review.get(key, 'pending') for key in ('technical_qa', 'sampled_semantic_review', 'full_motion_review', 'full_listening', 'medical_review')}
+    claims = {key: review.get(key, 'pending') for key in ('technical_qa', 'sampled_semantic_review', 'full_motion_review', 'full_listening', 'tone_consistency', 'medical_review')}
     return {'schema': 'med_autocast_native_preflight/v1', 'status': 'passed', 'read_only': True,
             'series_id': series, 'episode_id': episode, 'plan': str(plan_path), 'master': str(master),
             'delivery': str(delivery_path), 'checked_shots': len(checked), 'sources': checked,

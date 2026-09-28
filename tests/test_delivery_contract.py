@@ -13,6 +13,31 @@ from delivery_contract import animation_gate, release_eligible
 
 
 class DeliveryContractTests(unittest.TestCase):
+    @patch("delivery_contract.sampled_frame_hashes", return_value=["a", "b"])
+    def test_javascript_primary_accepts_reviewed_motion_and_rejects_bad_evidence(self, hashes):
+        with tempfile.TemporaryDirectory() as temporary:
+            episode, plan = self.make_episode(
+                Path(temporary), ["deterministic_animation"], backend="js_animation_local"
+            )
+            plan["animation"] = {"renderer": "javascript"}
+            path = episode / "visual_delivery_manifest.json"
+            manifest = json.loads(path.read_text())
+            segment = manifest["segments"][0]
+            segment.pop("supporting_explainer_only")
+            segment["backend_id"] = "js_animation_local"
+            path.write_text(json.dumps(manifest))
+            self.assertEqual(animation_gate(episode, plan)["status"], "passed")
+            hashes.return_value = ["same", "same"]
+            self.assertIn("undeclared_static_source:B01", animation_gate(episode, plan)["violations"])
+            hashes.return_value = ["a", "b"]
+            segment.pop("backend_id")
+            path.write_text(json.dumps(manifest))
+            self.assertIn("javascript_backend_mismatch:B01", animation_gate(episode, plan)["violations"])
+            segment["backend_id"] = "js_animation_local"
+            segment["motion_review"] = "pending"
+            path.write_text(json.dumps(manifest))
+            self.assertIn("watchable_motion_not_approved:B01", animation_gate(episode, plan)["violations"])
+
     def make_episode(
         self,
         root: Path,

@@ -46,3 +46,8 @@ python3 runtime/native_helpers/med_autocast.py preflight-workbench --workspace /
 按[安装与迁移](../runtime/workbench/docs/10_安装与迁移.md)初始化核心环境，并从随包 runtime/workbench/templates 复制作者、后端及系列模板。`runtime/workbench` 是通用核心来源，不含私人档案、媒体或权重；新工作区可复制核心 scripts、backends、templates、依赖清单，再登记自己的 workbench.yaml。已有工作区不整体覆盖，先保留并核对本机改动。
 
 核心依赖 PyYAML、Pillow、FFmpeg/ffprobe、ImageMagick 与配置字体；Python 3.11 以上。GPU、IndexTTS、Whisper、MLX/CUDA 的环境与模型保持独立。随包部署脚本只在明确安装/迁移任务中运行，不因一次检查自动安装模型或重启服务。
+# JS 动画与旁白基线入口
+
+工具分发器新增 `check_animation_assets`、`render_javascript_animation`、`render_edge_tts` 和 `audio_baseline`，仍优先使用工作区实现。以工作区 `.venv/bin/python runtime/native_helpers/workbench_tool.py --workspace <工作区> --name <工具> -- <参数>` 调用；`runtime/native_helpers` 路径相对 Med Auto Cast 源码或安装后的 Skill 根。Edge 需要联网，FFmpeg 与 JS 渲染在本机执行。
+
+输入字段和质量边界见 [素材准入与配音基线](../runtime/workbench/docs/13_素材准入与配音基线.md)。JS 制作单以 `animation.asset_manifest` 关联清单（相对制作单目录）；`preflight-workbench` 对 JS 制作单也执行素材准入。`tone_consistency` 与 `full_listening` 分开保留，响度通过不能批准语气。

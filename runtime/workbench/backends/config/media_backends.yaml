@@ -6,6 +6,19 @@ purpose: >-
 
 definitions:
   video:
+    javascript_animation:
+      label: 本地 JavaScript 医学动画
+      provider: local
+      kind: javascript_animation
+      protocol: browser_frame_capture
+      runtime: node20_playwright_ffmpeg
+      capabilities:
+        deterministic_timeline: true
+        svg_canvas_animation: true
+        reviewed_image_assets: true
+        local_render: true
+        audio_sync: true
+      implementation_docs: docs/12_JS动画默认技术路线.md
     minimax_h3_comfyui:
       label: MiniMax H3 ComfyUI
       provider: minimax
@@ -44,6 +57,18 @@ definitions:
       gateway_mode: deferred_until_native_video_support
       implementation_docs: docs/08_云视频API接入.md
   audio:
+    edge_tts:
+      label: Edge TTS XiaoyiNeural
+      provider: microsoft
+      kind: edge_tts
+      protocol: edge_tts_cli
+      voice: zh-CN-XiaoyiNeural
+      capabilities:
+        chinese: true
+        local_client: true
+        network_required: true
+        reference_voice: false
+      implementation_docs: docs/12_JS动画默认技术路线.md
     indextts_2_5:
       label: IndexTTS 2.5
       provider: index-tts

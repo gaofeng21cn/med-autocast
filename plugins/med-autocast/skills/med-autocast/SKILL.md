@@ -24,7 +24,7 @@ description: 使用 Med Auto Cast 规划、制作、修订和审查医学科普�
 
 专业 Skill 及 SOP 可按当前任务选择加载，不要求用户重复批准已授权的本地工作。部署、生产媒体生成与发布须符合当前请求范围。详见 `docs/production-sop.md`、`docs/workspace-adapter.md`。
 
-默认纸剧场先把医学素材转为患者问题地图，再规划系列故事圣经和每集可见事件。导演交接动作、阅读停留、分层资产与字幕避让的分镜；粗动态分镜、透明素材和可 seek 的 JS 预览均可在编码前返修。方法与模板见 `runtime/workbench/docs/15_纸剧场系列策划与制作.md`，不以文档齐全或联系表替代叙事和听感审核。
+默认纸剧场先把医学素材转为患者问题地图，再规划系列故事圣经和每集 `episode_blueprint`。blueprint 必须包含锚点物件、开场误读、beat_form、读取顺序、因果事件、分层资产和结尾行动；导演再交接动作、阅读停留、blocking、分层资产与字幕避让的分镜。粗动态分镜、透明素材和可 seek 的 JS 预览均可在编码前返修。方法与质量门见 `runtime/workbench/docs/15_纸剧场系列策划与制作.md`、`runtime/workbench/docs/16_纸剧场前置策划与质量门.md`，不以文档齐全或联系表替代叙事和听感审核。
 
 六阶段与原十阶段职责映射见 `docs/production-sop.md`。完整专业方法、模板和通用工具随包存于 `runtime/workbench/`；已有工作区优先使用原入口。默认交付预检使用 `med_autocast.py preflight-workbench`，直接读取原制作单和交付清单，不另外维护 Med Auto Cast 制作状态。
 

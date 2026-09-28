@@ -6,7 +6,7 @@
 
 提交可消费的系列卡、证据表、单集目标与待核问题，说明实际证据、欠项、下一阶段或返修点。判断标准：证据是否支持脚本结论；生活建议是否明确适用边界；系列是否有重复与漏项。
 
-默认纸剧场还提交系列故事圣经：每集患者任务、锚点物件、可见事件、认知转折、结尾行动与跨集变化。事实只引用事实库，品牌从作者/系列档案读取；方法见 `runtime/workbench/docs/15_纸剧场系列策划与制作.md`。
+默认纸剧场还提交系列故事圣经和每集 `episode_blueprint`：患者任务、开场误读、锚点物件、beat_form、读取顺序、因果事件、认知转折、分层资产、结尾行动与跨集变化。事实只引用事实库，品牌从作者/系列档案读取；方法见 `runtime/workbench/docs/15_纸剧场系列策划与制作.md`、`runtime/workbench/docs/16_纸剧场前置策划与质量门.md`。
 
 执行入口及质量边界见 `agent/professional_skills/medical-video-content-planner/SKILL.md`、`agent/knowledge/domain_boundary.md`。
 

@@ -70,18 +70,21 @@ audio_mix:
     backend.parent.mkdir(parents=True)
     shutil.copyfile(SOURCE / 'templates/profiles/backend_profile.example.yaml', backend)
     shutil.copyfile(SOURCE / 'templates/workbench.example.yaml', target / 'workbench.yaml')
-    for name in ('content', 'productions', 'publish', 'assets'):
+    for name in ('content', 'profiles', 'assets', 'productions', 'publish',
+                 'deliveries', 'archive', 'work', 'output', 'tmp'):
         (target / name).mkdir(exist_ok=True)
     (target / 'README.md').write_text('''# 医学动画工作台
 
-先运行 `bash scripts/setup_workbench.sh --check`。告诉 Med Auto Cast 主题、受众和时长即可开始；默认本机 JS 手绘拼贴、不露脸、Edge 声音。推荐提供授权声线使用 IndexTTS，也可以跳过。
+先运行 `bash scripts/setup_workbench.sh --check`。告诉 Med Auto Cast 主题、受众和时长即可开始；首步先建立作者/医生形象、品牌识别和声音基线，再进入纸剧场分镜与素材准备。默认本机 JS 手绘拼贴；有授权参考声线时使用本机 IndexTTS，Edge TTS 只在没有专用声线或用户明确跳过时保底。
 
-- content：医学来源、脚本与分镜。
-- assets：已审、授权或生成的可分层素材。
-- productions：动画项目、旁白与审看记录。
-- publish：可观看的审看包；不代表已获医学发布批准。
+- content：医学事实、患者问题地图、系列和单集故事包。
+- profiles：作者/医生、品牌、声线和部署档案。
+- assets：已审、授权或生成的稳定可分层素材。
+- productions：按系列/单集保存分镜、素材、JS、候选、QA 和 final。
+- publish：当前审看/发布入口；不代表已获医学发布批准。
+- deliveries：内部交接记录；archive：历史只读候选；work/output/tmp：运行态、批量输出和可重建临时文件。
 
-角色、语气和医学审核从 pending 开始；不使用技术 smoke 代替质量样片。
+新单集顺序是“患者问题地图 -> 系列故事圣经 -> episode_blueprint/beat grid -> 粗动态分镜 -> 透明分层素材准入 -> JS 实现 -> 连续预览 -> QA -> 编码”。角色、语气和医学审核从 pending 开始；不使用技术 smoke 代替质量样片。
 ''', encoding='utf-8')
     (target / '.gitignore').write_text('.venv/\nnode_modules/\n__pycache__/\noutputs/\n.env\n', encoding='utf-8')
     return {'status': 'initialized', 'workspace': str(target), 'author_baseline': 'pending',

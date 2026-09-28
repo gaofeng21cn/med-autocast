@@ -24,9 +24,9 @@ metadata:
 
 ## 开始时
 
-1. 在工作台根目录读取 `workbench.yaml`、`README.md` 和 `docs/04_医学科普视频系列SOP.md`。
+1. 在工作台根目录读取 `workbench.yaml`、`README.md`、`docs/04_医学科普视频系列SOP.md` 和 `docs/17_工作台目录结构与资产生命周期.md`。按目录职责区分内容、制作、稳定资产、运行态、交付和历史文件。
 2. 先确定目标 `series_id`，再从 `workbench.yaml.series` 读取该系列作者及目录，未覆盖的作者继承当前档案；运行 `python3 scripts/workbench_config.py validate --series <series_id> --pretty`，不从历史对话猜配置。多系列入口优先传 `--series`，不自行拼接生产目录。
-3. 按[十阶段SOP](../../../runtime/workbench/docs/04_医学科普视频系列SOP.md#0-十阶段流程与交接)从真实文件、QA和manifest重建当前阶段与缺口；README和workbench状态只是摘要。交付已完成但医学待审可以并存，不能恢复到旧的整季生成任务。
+3. 按[十阶段SOP](../../../runtime/workbench/docs/04_医学科普视频系列SOP.md#0-十阶段流程与交接)从真实文件、QA和manifest重建当前阶段与缺口；README和workbench状态只是摘要。交付已完成但医学待审可以并存，不能恢复到旧的整季生成任务。新建内容与制作使用系列/单集目录；旧的扁平历史路径只按已有引用读取，未经引用检查不得批量搬迁。
 
 恢复按 [系列 SOP 第 9 节](../../../runtime/workbench/docs/04_医学科普视频系列SOP.md#9-失败恢复)：先读精简checkpoint，不导入旧对话媒体或base64；核对当前应处理清单、原进程、后端任务ID/history和精确输出，确认没有同一任务仍在写入，再从最近完整产物继续。对话 `/v1/responses` 断流不能证明 H3/TTS 失败，不重复排队。
 

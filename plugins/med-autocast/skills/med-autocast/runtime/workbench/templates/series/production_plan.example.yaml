@@ -39,7 +39,7 @@ format:
   fps: 24
   orientation: landscape
 audio:
-  backend: edge_tts_local  # 有授权声线时由作者档案选择 IndexTTS
+  backend: selected_from_author_profile  # 有授权声线走作者档案的 IndexTTS；无基线时才选 Edge
   source: audio/replace-with-actual-reviewed-narration.wav
   duration_seconds: null
   master_timeline: true

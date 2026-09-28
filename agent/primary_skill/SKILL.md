@@ -15,7 +15,7 @@ description: 使用 Med Auto Cast 规划、制作、修订和审查医学科普�
 
 首次准备本地环境由智能体按`docs/installation.md`调用随包 `runtime/workbench/scripts/setup_workbench.sh --workspace <新目录>`；先检查已有工作区，不能覆盖其专用实现。环境就绪、作者基线、真实语音/成片验收分开；可选模型不阻断核心安装。
 
-1. 以 `workspace_root` 定位制作工作台，读取 workbench.yaml 与当前选集制作单。用仓库的 `runtime/native_helpers/med_autocast.py inspect --workspace <绝对路径>` 只读检查可用路径；不要把当前 cwd 当作制作工作区。
+1. 以 `workspace_root` 定位制作工作台，读取 workbench.yaml、`runtime/workbench/docs/17_工作台目录结构与资产生命周期.md` 与当前选集制作单。用仓库的 `runtime/native_helpers/med_autocast.py inspect --workspace <绝对路径>` 只读检查可用路径；不要把当前 cwd 当作制作工作区。
 2. 新作者或新系列先由 `medical-video-series-producer` 核对作者表达基线、系列登记与完整样片依据；执行原 `workbench_config validate --series`。选题与证据交 `agent/professional_skills/medical-video-content-planner/SKILL.md`；故事、画面解释与时间轴交 `medical-video-director`；真实媒体缺口交 `medical-video-backends`。具体路径见 `agent/stages/manifest.json`。
 3. S07/S08 由导演、后端与 `medical-video-release-packager` 共同完成配音、字幕、选段、品牌、混音和合成；具体工具见 `docs/workspace-adapter.md`。成片和候选交 `medical-video-visual-qa`，交付交 `medical-video-release-packager`，跨阶段恢复与资产沉淀交 `medical-video-series-producer`，均位于 `agent/professional_skills/`。
 4. 先复用已审资产和未变音轨。精简恢复原任务，保留单一 writer。每项通过状态必须对应真实证据；技术、静态、连续动态、完整听感、医学与上传分开。交付到 publish 表示审看入口，不能据此宣称已上传或可公开发布。
@@ -24,7 +24,7 @@ description: 使用 Med Auto Cast 规划、制作、修订和审查医学科普�
 
 专业 Skill 及 SOP 可按当前任务选择加载，不要求用户重复批准已授权的本地工作。部署、生产媒体生成与发布须符合当前请求范围。详见 `docs/production-sop.md`、`docs/workspace-adapter.md`。
 
-默认纸剧场先把医学素材转为患者问题地图，再规划系列故事圣经和每集 `episode_blueprint`。blueprint 是创意交接，不是机器表单：导演先写视觉处理稿、风格帧和带声音事件的分镜，再做完整粗动态分镜；观众在隐藏说明文字后仍应看见物件的因果变化。随后准备透明分层素材、逐镜实现、连续预览和返修，最后才编码全片。可用 HyperFrames storyboard/Studio 或本地 HTML 预览做导演审片面；静帧、联系表和代码检查只辅助定位故障，不定义视频质量。方法见 `runtime/workbench/docs/15_纸剧场系列策划与制作.md`、`runtime/workbench/docs/16_纸剧场前置策划与质量门.md`。
+默认纸剧场先把医学素材转为患者问题地图，再规划系列故事圣经和每集 `episode_blueprint`。blueprint 是创意交接，不是机器表单：导演先写视觉处理稿、风格帧和带声音事件的分镜，再做完整粗动态分镜；观众在隐藏说明文字后仍应看见物件的因果变化。随后准备透明分层素材、逐镜实现、连续预览和返修，最后才编码全片。新系列使用 `content/<topic>/` 与 `productions/<series>/<episode>/` 的分层结构；`work/`、`output/`、`deliveries/` 和 `archive/` 分别承担运行态、批量输出、交接记录和历史只读用途，不能互相充当制作权威。可用 HyperFrames storyboard/Studio 或本地 HTML 预览做导演审片面；静帧、联系表和代码检查只辅助定位故障，不定义视频质量。方法见 `runtime/workbench/docs/15_纸剧场系列策划与制作.md`、`runtime/workbench/docs/16_纸剧场前置策划与质量门.md`、`runtime/workbench/docs/17_工作台目录结构与资产生命周期.md`。
 
 六阶段与原十阶段职责映射见 `docs/production-sop.md`。完整专业方法、模板和通用工具随包存于 `runtime/workbench/`；已有工作区优先使用原入口。默认交付预检使用 `med_autocast.py preflight-workbench`，直接读取原制作单和交付清单，不另外维护 Med Auto Cast 制作状态。
 

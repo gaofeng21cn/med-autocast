@@ -14,7 +14,7 @@ description: 使用 Med Auto Cast 规划、制作、修订和审查医学科普�
 3. S07/S08 由导演、后端与 `medical-video-release-packager` 共同完成配音、字幕、选段、品牌、混音和合成；具体工具见 `docs/workspace-adapter.md`。成片和候选交 `medical-video-visual-qa`，交付交 `medical-video-release-packager`，跨阶段恢复与资产沉淀交 `medical-video-series-producer`，均位于 `agent/professional_skills/`。
 4. 先复用已审资产和未变音轨。精简恢复原任务，保留单一 writer。每项通过状态必须对应真实证据；技术、静态、连续动态、完整听感、医学与上传分开。交付到 publish 表示审看入口，不能据此宣称已上传或可公开发布。
 
-新视频默认本地 JS 动画与手绘拼贴风格，视频模型为显式备选。先用 `check_animation_assets` 检查素材，再通过 `render_javascript_animation` 渲染；ImageGen 素材由当前会话的 ImageGen Skill 生成并登记，网上素材须保留来源许可。旁白优先授权声线，Edge 保底使用 `render_edge_tts` 整篇合成和固定参数；`audio_baseline` 的响度结果不能代替完整语气审听。具体输入见 `runtime/workbench/docs/13_素材准入与配音基线.md`。
+新视频先执行作者/医生基线：确定作者档案、医生形象是否露脸、参考声线、表达方向和医疗身份边界，再进入内容和导演阶段。默认视频走本地 JS 动画与叙事性手绘拼贴，视频模型为显式备选；先用 `check_animation_assets` 检查正确且可分层的素材，再通过 `render_javascript_animation` 渲染。`Dr.咩` 基线默认使用本机 IndexTTS 2.5 和作者参考音频；只有没有用户声线基线时，才使用 Edge TTS `zh-CN-XiaoyiNeural` 作为保底技术测试。ImageGen 素材由当前会话的 ImageGen Skill 生成并登记，网上素材须保留来源许可；`audio_baseline` 的响度结果不能代替完整语气审听。具体输入见 `runtime/workbench/docs/13_素材准入与配音基线.md`。
 
 专业 Skill 及 SOP 可按当前任务选择加载，不要求用户重复批准已授权的本地工作。部署、生产媒体生成与发布须符合当前请求范围。详见 `docs/production-sop.md`、`docs/workspace-adapter.md`。
 

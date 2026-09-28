@@ -37,5 +37,6 @@ audio:
     capability: candidate
 policy:
   default_video: js_animation_local
-  default_audio: edge_tts_local
+  # 只有作者没有授权声线基线时才使用 Edge TTS 保底；实际作者档案优先。
+  default_audio: indextts_local_mac
   preserve_remote_4090: false

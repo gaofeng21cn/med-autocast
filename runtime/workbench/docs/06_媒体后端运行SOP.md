@@ -6,7 +6,7 @@
 
 ## 1. 默认选择
 
-视频和音频默认值只从当前部署档案的 `policy.default_video` 与 `policy.default_audio` 读取。新工作台默认视频为本地 `javascript_animation`，默认旁白为 `edge_tts`；用户声线和作者档案优先级在制作单中显式记录。Skill、SOP 和能力目录都不另设默认。后端不可达不授权静默切换。
+视频和音频默认值只从当前部署档案的 `policy.default_video` 与 `policy.default_audio` 读取。新工作台默认视频为本地 `javascript_animation`；旁白先读取作者/医生基线，已有授权声线时使用作者档案登记的本机 IndexTTS，只有未设定用户声线基线时才使用 `edge_tts` 保底。实际选择和基线版本在制作单中显式记录。Skill、SOP 和能力目录都不另设默认。后端不可达不授权静默切换。
 
 ## 2. 开工检查
 

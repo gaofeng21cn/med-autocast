@@ -69,6 +69,20 @@ try {
     }
     frames.push({...point, file:filename, ...state, subtitleOverlaps:overlaps});
   }
+  const motionStrips=[];
+  for (let index=0;index<cuts.length-1;index++) {
+    const start=cuts[index],end=cuts[index+1],span=end-start,files=[];
+    for (let pose=0;pose<12;pose++) {
+      const time=Math.min(timeline.duration-1/30,start+span*(pose+.25)/12);
+      await page.evaluate(t=>window.__seek(t),time);
+      const filename=`strip-s${index+1}-${String(pose).padStart(2,'0')}.png`;
+      await page.locator('#film').screenshot({path:path.join(output,filename)});
+      files.push(filename);
+    }
+    const sheet=`strip-s${index+1}.jpg`;
+    execFileSync('ffmpeg',['-y','-loglevel','error','-pattern_type','glob','-i',path.join(output,`strip-s${index+1}-*.png`),'-vf','scale=400:-1,tile=4x3:padding=8:margin=8:color=white','-frames:v','1',path.join(output,sheet)]);
+    motionStrips.push({scene:index+1,from:start,to:end,frames:files,sheet});
+  }
   if (frames.length) {
     const first = frames[Math.floor(frames.length/2)];
     await page.evaluate(time => window.__seek(time), first.time);
@@ -79,7 +93,7 @@ try {
     if (!sequential.equals(randomAccess)) errors.push(`乱序 seek 不确定: ${first.time.toFixed(3)}s`);
   }
   execFileSync('ffmpeg', ['-y','-loglevel','error','-pattern_type','glob','-i',path.join(output,'*.png'),'-vf',`scale=400:-1,tile=5x${Math.ceil(frames.length/5)}:padding=8:margin=8:color=white`,'-frames:v','1',path.join(output,'contact.jpg')]);
-  const report = {status:errors.length ? 'failed' : 'previewed', project, output, duration:timeline.duration, scenes:cuts.length-1, frames, errors, contact_sheet:path.join(output,'contact.jpg'), release_eligible:false};
+  const report = {status:errors.length ? 'failed' : 'previewed', project, output, duration:timeline.duration, scenes:cuts.length-1, frames, motionStrips, errors, contact_sheet:path.join(output,'contact.jpg'), release_eligible:false};
   await fs.writeFile(path.join(output,'preview.json'), JSON.stringify(report,null,2));
   console.log(JSON.stringify({status:report.status, output, frames:frames.length, errors, contact_sheet:report.contact_sheet}));
   if (errors.length) process.exitCode = 1;

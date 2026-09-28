@@ -48,6 +48,7 @@ try {
   await page.evaluate(async()=>{
     await document.fonts.ready;
     await Promise.all([...document.images].map(img=>img.decode()));
+    if(window.__ready) await window.__ready;
     if(typeof window.__seek!=='function') throw Error('动画必须提供 window.__seek(t)');
   });
   const args=['-v','error','-f','image2pipe','-vcodec','png','-framerate',String(fps),'-i','pipe:0','-i',voice,'-map','0:v','-map','1:a','-t',String(duration),'-c:v','libx264','-crf','18','-preset','medium','-pix_fmt','yuv420p','-c:a','aac','-b:a','192k','-movflags','+faststart',path.join(temp,'video.mp4')];

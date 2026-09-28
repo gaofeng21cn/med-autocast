@@ -24,7 +24,7 @@ description: 使用 Med Auto Cast 规划、制作、修订和审查医学科普�
 
 专业 Skill 及 SOP 可按当前任务选择加载，不要求用户重复批准已授权的本地工作。部署、生产媒体生成与发布须符合当前请求范围。详见 `docs/production-sop.md`、`docs/workspace-adapter.md`。
 
-默认纸剧场先把医学素材转为患者问题地图，再规划系列故事圣经和每集 `episode_blueprint`。blueprint 是创意交接，不是机器表单：导演先写视觉处理稿、风格帧和带声音事件的分镜，再做完整粗动态分镜；每集先冻结可操作的视觉锚点、坐标和落点，先通过“去文字审片”确认物件关系成立，再加入短标签。观众在隐藏说明文字后仍应看见物件的因果变化；无物理来源、无动作职责的大色块和文字承托不得进入镜头。随后准备透明分层素材、逐镜实现、连续预览和返修，最后才编码全片。新系列使用 `content/<topic>/` 与 `productions/<series>/<episode>/` 的分层结构；`work/`、`output/`、`deliveries/` 和 `archive/` 分别承担运行态、批量输出、交接记录和历史只读用途，不能互相充当制作权威。预览必须同时产出联系表和每镜固定 12 姿态 strip，导演据此检查准备、动作、落点、重量和切点；透明素材出现图册残片时必须回到单件生成或合法素材准入，不能靠遮挡卡片掩盖。可用 HyperFrames storyboard/Studio 或本地 HTML 预览做导演审片面；静帧、联系表和代码检查只辅助定位故障，不定义视频质量。方法见 `runtime/workbench/docs/15_纸剧场系列策划与制作.md`、`runtime/workbench/docs/16_纸剧场前置策划与质量门.md`、`runtime/workbench/docs/17_工作台目录结构与资产生命周期.md`。
+默认纸剧场先把医学素材转为患者问题地图，再规划系列故事圣经和每集 `episode_blueprint`。blueprint 是创意交接，不是机器表单：导演先写视觉处理稿、风格帧和带声音事件的分镜，再做完整粗动态分镜；观众在隐藏说明文字后仍应看见物件的因果变化。随后准备透明分层素材、逐镜实现、连续预览和返修，最后才编码全片。新系列使用 `content/<topic>/` 与 `productions/<series>/<episode>/` 的分层结构；`work/`、`output/`、`deliveries/` 和 `archive/` 分别承担运行态、批量输出、交接记录和历史只读用途，不能互相充当制作权威。预览必须同时产出联系表和每镜固定 12 姿态 strip，导演据此检查准备、动作、落点、重量和切点；透明素材出现图册残片时必须回到单件生成或合法素材准入，不能靠遮挡卡片掩盖。可用 HyperFrames storyboard/Studio 或本地 HTML 预览做导演审片面；静帧、联系表和代码检查只辅助定位故障，不定义视频质量。方法见 `runtime/workbench/docs/15_纸剧场系列策划与制作.md`、`runtime/workbench/docs/16_纸剧场前置策划与质量门.md`、`runtime/workbench/docs/17_工作台目录结构与资产生命周期.md`。
 
 六阶段与原十阶段职责映射见 `docs/production-sop.md`。完整专业方法、模板和通用工具随包存于 `runtime/workbench/`；已有工作区优先使用原入口。默认交付预检使用 `med_autocast.py preflight-workbench`，直接读取原制作单和交付清单，不另外维护 Med Auto Cast 制作状态。
 

@@ -37,13 +37,14 @@ try {
   browser = await chromium.launch(browserLaunchOptions);
   const page = await browser.newPage({viewport:{width,height},deviceScaleFactor:1});
   page.on('pageerror',e=>errors.push(e.message));
-  page.on('requestfailed',request=>errors.push(`资源加载失败: ${request.url()}`));
+  page.on('requestfailed',request=>{ if(request.resourceType()!=='media') errors.push(`资源加载失败: ${request.url()}`); });
   page.on('response',response=>{
     if(response.status()>=400 && new URL(response.url()).pathname!=='/favicon.ico') {
       errors.push(`资源 HTTP ${response.status()}: ${response.url()}`);
     }
   });
   await page.goto(`http://127.0.0.1:${server.address().port}/${entry}`,{waitUntil:'networkidle',timeout:30000});
+  await page.addStyleTag({content:'button, [role="button"] { visibility: hidden !important; }'});
   await page.evaluate(async()=>{
     await document.fonts.ready;
     await Promise.all([...document.images].map(img=>img.decode()));
@@ -59,7 +60,7 @@ try {
   for(let frame=0;frame<frames;frame++) {
     await page.evaluate(t=>window.__seek(t),frame/fps);
     if(errors.length) throw Error(errors.join('\n'));
-    const png=await page.screenshot({type:'png'});
+    const png=await page.locator('#film').screenshot({type:'png'});
     if(pipeError || encoder.exitCode!==null) throw Error(fferror||String(pipeError||'编码提前结束'));
     if(!encoder.stdin.write(png)) await once(encoder.stdin,'drain');
     if(frame===0 || frame===Math.floor(frames/2) || frame===frames-1) await fs.writeFile(path.join(temp,`frame-${frame}.png`),png);

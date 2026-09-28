@@ -1,0 +1,40 @@
+# 语义分镜输入；实际音频产生后校准时间，不以估计时长覆盖制作单。
+schema: paper_theatre_storyboard/v1
+status: draft
+episode_id: null
+series_bible_ref: ../../07_paper_theatre_bible.md
+author_profile_ref: null
+logline: null
+anchor_prop: null
+visual_arc: null
+asset_plan: []
+# asset_id、职责、透明层/锚点、来源许可、医学参考、可复用范围、待审项。
+shots:
+  - shot_id: S01
+    beat_ids: []
+    fact_ids: []
+    narration_ref: 01_narration.md
+    estimated_duration_seconds: null
+    visual_intent: null
+    framing: null
+    reading_order: []
+    action_start: null
+    action_change: null
+    action_result: null
+    carry_to_next: null
+    asset_ids: []
+    layer_order: []
+    subtitle_safe_zone: null
+    motion_envelope_notes: null
+    events: []
+    must_not_imply: []
+review:
+  story_logic: pending
+  blocking: pending
+  asset_alpha_and_color: pending
+  exact_first_frame: pending
+  subtitle_clearance: pending
+  continuous_motion: pending
+  full_listening: pending
+  medical_review: pending
+  evidence_refs: []

@@ -51,6 +51,6 @@ python3 runtime/native_helpers/med_autocast.py preflight-workbench --workspace /
 核心依赖 PyYAML、Pillow、FFmpeg/ffprobe、ImageMagick 与配置字体；Python 3.11 以上。GPU、IndexTTS、Whisper、MLX/CUDA 的环境与模型保持独立。随包部署脚本只在明确安装/迁移任务中运行，不因一次检查自动安装模型或重启服务。
 # JS 动画与旁白基线入口
 
-工具分发器新增 `check_animation_assets`、`render_javascript_animation`、`render_edge_tts` 和 `audio_baseline`，仍优先使用工作区实现。以工作区 `.venv/bin/python runtime/native_helpers/workbench_tool.py --workspace <工作区> --name <工具> -- <参数>` 调用；`runtime/native_helpers` 路径相对 Med Auto Cast 源码或安装后的 Skill 根。Edge 需要联网，FFmpeg 与 JS 渲染在本机执行。
+工具分发器提供 `check_animation_assets`、`render_javascript_animation`、`render_edge_tts` 和 `audio_baseline`，通常优先使用工作区实现；`render_javascript_animation --preview` 会调用随包预览器，以兼容尚无预览选项的旧工作台。以工作区 `.venv/bin/python runtime/native_helpers/workbench_tool.py --workspace <工作区> --name <工具> -- <参数>` 调用；`runtime/native_helpers` 路径相对 Med Auto Cast 源码或安装后的 Skill 根。JS 项目先调用 `render_javascript_animation --preview --review-candidate` 生成逐镜姿态与联系表，返修后再编码 MP4；旧工作台的完整编码使用 `--bundled` 明确选择随包通用渲染器。预览不需要音轨，但使用工作区安装的 Playwright。Edge 需要联网，FFmpeg 与 JS 渲染在本机执行。
 
 输入字段和质量边界见 [素材准入与配音基线](../runtime/workbench/docs/13_素材准入与配音基线.md)。JS 制作单以 `animation.asset_manifest` 关联清单（相对制作单目录）；`preflight-workbench` 对 JS 制作单也执行素材准入。`tone_consistency` 与 `full_listening` 分开保留，响度通过不能批准语气。

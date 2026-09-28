@@ -9,7 +9,12 @@ let runtime;
 try {
   runtime = require('playwright');
 } catch (error) {
-  throw new Error(`工作区缺少 Playwright，请执行 bash ${JSON.stringify(path.join(root, 'scripts/setup_workbench.sh'))}`, {cause:error});
+  const shared = process.env.MED_AUTOCAST_PLAYWRIGHT_ROOT;
+  if (shared) {
+    runtime = createRequire(path.join(shared, 'package.json'))('playwright');
+  } else {
+    throw new Error(`工作区缺少 Playwright，请为该工作区安装依赖或设置 MED_AUTOCAST_PLAYWRIGHT_ROOT 指向已安装的本机运行时`, {cause:error});
+  }
 }
 export const chromium = runtime.chromium;
 export const browserLaunchOptions = {headless:true, ...(process.env.CHROME_PATH ? {executablePath:process.env.CHROME_PATH} : {})};

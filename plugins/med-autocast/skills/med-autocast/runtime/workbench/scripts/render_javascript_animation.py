@@ -40,6 +40,8 @@ def main() -> None:
     parser.add_argument("--height", type=int, default=720)
     parser.add_argument("--asset-manifest", type=Path, default=Path("asset_manifest.json"))
     parser.add_argument("--check-only", action="store_true")
+    parser.add_argument("--preview", action="store_true", help="Capture storyboard poses and contact sheet without encoding MP4")
+    parser.add_argument("--preview-output", type=Path, help="Directory for preview evidence")
     parser.add_argument("--review-candidate", action="store_true",
                         help="Render pending assets for review; rejected or invalid assets still block")
     args = parser.parse_args()
@@ -52,10 +54,21 @@ def main() -> None:
         raise SystemExit(f"Asset admission blocked: {exc}") from exc
     if admission["status"] != "passed" and not args.review_candidate:
         raise SystemExit(json.dumps(admission, ensure_ascii=False))
+    if args.preview and args.output:
+        raise SystemExit("--preview 使用 --preview-output 指定目录，不能同时传 --output")
     admission["render_mode"] = "review_candidate" if args.review_candidate else "approved_assets"
     admission["release_eligible"] = False
     if args.check_only:
         print(json.dumps(admission, ensure_ascii=False))
+        return
+    if args.preview:
+        output_dir = args.preview_output.resolve() if args.preview_output else project / "qa" / "preview"
+        config = {"project_root": str(project), "entry": args.html_entry,
+                  "output": str(output_dir), "width": args.width, "height": args.height}
+        with tempfile.TemporaryDirectory(prefix="med-animation-preview-") as temporary:
+            config_path = Path(temporary) / "preview.json"
+            config_path.write_text(json.dumps(config))
+            run(["node", str(Path(__file__).with_name("preview_local_animation.mjs")), str(config_path)], project)
         return
     render_entry = project / args.render_entry
     mux_entry = project / args.mux_entry

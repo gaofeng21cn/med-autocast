@@ -21,7 +21,7 @@ TOOLS = {
     'render_edge_tts': ('generate', '整篇 Edge 保底旁白、固定参数、响度归一化；听感待审'),
     'audio_baseline': ('write', '整轨与场景响度检测；不推断情绪通过'),
     'check_animation_assets': ('read_only', '动画素材来源、医学用途、审核引用与镜头覆盖'),
-    'render_javascript_animation': ('write', '素材准入后执行本地 JS 定帧渲染与合成'),
+    'render_javascript_animation': ('write', '素材准入后先 --preview 检查定帧与联系表，再执行本地 JS 渲染与合成'),
     'transcribe_series_whisper': ('write', 'ASR 辅助对齐；不覆盖审定医学文字'),
     'build_episode_timelines': ('write', '审定字幕、节拍和制作单'),
     'queue_h3_shots': ('generate', 'H3 提交、原任务轮询、官方提示直通'),
@@ -56,7 +56,9 @@ def run_tool(root: Path, name: str, arguments: list[str], bundled=False) -> int:
     if name not in TOOLS:
         raise ValueError('未知工作台工具')
     local = root / 'scripts' / (name + '.py')
-    script = BUNDLE / 'scripts' / (name + '.py') if bundled or not local.is_file() else local
+    # The shared preview contract is absent from older workbench renderers.
+    use_bundle = bundled or (name == 'render_javascript_animation' and '--preview' in arguments)
+    script = BUNDLE / 'scripts' / (name + '.py') if use_bundle or not local.is_file() else local
     env = dict(os.environ, MED_AUTOCAST_WORKSPACE_ROOT=str(root),
                MED_AUTOCAST_HELPERS_ROOT=str(Path(__file__).resolve().parent),
                PYTHONDONTWRITEBYTECODE='1')

@@ -23,6 +23,10 @@ visual_assets: []
 # required_meaning、visual_asset_ids、must_not_imply、action_boundary。
 story_beats: []
 author_profile_ref: null
+paper_theatre:
+  series_bible_ref: ../../07_paper_theatre_bible.md
+  storyboard_ref: 04_paper_storyboard.yaml
+  visual_status: draft
 target:
   platform: null
   duration_preference_seconds: null

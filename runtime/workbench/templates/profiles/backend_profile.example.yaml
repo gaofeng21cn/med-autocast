@@ -27,16 +27,17 @@ audio:
     device: cpu
     voice: zh-CN-XiaoyiNeural
     capability: configured_requires_network_verification
-  preferred_audio:
+  indextts_local_mac:
     definition: indextts_2_5
-    label: User-configured IndexTTS runtime
+    label: 用户独立配置的本机 IndexTTS
     kind: indextts
     device: mps
-    root: ${INDEXTTS_ROOT:-$HOME/ai/index-tts}
-    model_root: ${INDEXTTS_MODEL_ROOT:-$HOME/ai/index-tts/checkpoints}
+    root: ${INDEXTTS_ROOT:-$HOME/ai/index-tts-mac}
+    python: ${INDEXTTS_PYTHON:-$HOME/ai/index-tts-mac/.venv/bin/python}
+    model_root: ${INDEXTTS_MODEL_ROOT:-$HOME/ai/index-tts-mac/checkpoints}
     capability: candidate
 policy:
   default_video: js_animation_local
   # 只有作者没有授权声线基线时才使用 Edge TTS 保底；实际作者档案优先。
-  default_audio: indextts_local_mac
+  default_audio: edge_tts_local
   preserve_remote_4090: false

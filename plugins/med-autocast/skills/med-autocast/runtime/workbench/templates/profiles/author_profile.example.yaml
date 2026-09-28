@@ -21,6 +21,7 @@ persona:
   tone: [clear, calm, trustworthy]
   medical_claim_owner: reviewed_narration_and_subtitles
 voice:
+  mode: auto  # 推荐 reference；用户明确跳过专用声线时设置 edge，保留原 reference_audio
   preferred_backend_definition: indextts_2_5
   reference_audio: assets/authors/example_author/voice_reference.wav
   direction: 自然、清晰、可信
@@ -40,13 +41,16 @@ brand:
   avatar_source: assets/authors/example_author/avatar.png
 visual_format:
   requirement: hand_drawn_explainer_animation
-  style: hand_drawn_medical_explainer
+  style: hand_drawn_collage
   animation_mode: hand_drawn_patient_explainer_animation
   presenter_role: companion_and_guide
   precise_medical_visuals: reviewed_insert_only
   default_shot_seconds: [5, 10]
   simple_single_action_max_seconds: 14
-  minimum_generative_duration_ratio: 0.5
+  width: 1280
+  height: 720
+  fps: 24
+  minimum_generative_duration_ratio: 0.0
   maximum_static_duration_ratio: 0.25
 audio_mix:
   background_music: null

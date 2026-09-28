@@ -75,19 +75,29 @@ def production_root_for(series_id: str | None, explicit: Path | None) -> Path:
     raise ValueError("Pass --series or --production-root")
 
 
-def resolve_font(explicit: Path | None = None) -> Path:
-    if explicit:
-        font = explicit
-    else:
-        workbench = load_workbench()
-        profile = load_yaml(active_profile_path("media_backends", workbench))
-        value = os.environ.get("WORKBENCH_FONT") or profile.get("tools", {}).get("font")
-        if not value:
-            raise ValueError("Set WORKBENCH_FONT, deployment tools.font, or --font")
-        font = workspace_path(os.path.expandvars(os.path.expanduser(value)))
-    if not font.is_file():
-        raise ValueError(f"Font not found: {font}")
-    return font.resolve()
+def resolve_font(explicit: Path | None = None, root: Path = ROOT) -> Path:
+    """Prefer explicit configuration; otherwise discover a known Chinese font."""
+    value = str(explicit) if explicit else os.environ.get("WORKBENCH_FONT")
+    if not value and (root / "workbench.yaml").is_file():
+        workbench = load_workbench(root / "workbench.yaml")
+        profile = load_yaml(active_profile_path("media_backends", workbench, root))
+        value = (profile.get("tools") or {}).get("font")
+    if value:
+        font = workspace_path(os.path.expandvars(os.path.expanduser(value)), root)
+        if not font.is_file():
+            raise ValueError(f"Font not found: {font}")
+        return font.resolve()
+    candidates = [
+        Path("/System/Library/Fonts/PingFang.ttc"),
+        Path("/System/Library/Fonts/STHeiti Medium.ttc"),
+        Path("/usr/share/fonts/opentype/noto/NotoSansCJK-Regular.ttc"),
+        Path("/usr/share/fonts/noto-cjk/NotoSansCJK-Regular.ttc"),
+        Path(os.environ.get("WINDIR", "C:/Windows")) / "Fonts/msyh.ttc",
+    ]
+    for font in candidates:
+        if font.is_file():
+            return font.resolve()
+    raise ValueError("安装中文字体或设置 WORKBENCH_FONT / 部署档案 tools.font")
 
 
 def active_profile_path(kind: str, workbench: dict[str, Any], root: Path = ROOT) -> Path:
@@ -157,6 +167,38 @@ def load_backend_profile(
     return path, effective
 
 
+def select_audio_backend(author: dict, backends: dict, explicit: str | None = None) -> str:
+    """Preserve an author's reference voice; never silently fall back to Edge."""
+    choices = backends.get("audio", {})
+    voice = author.get("voice", {})
+    default = backends.get("policy", {}).get("default_audio")
+    mode = voice.get("mode", "auto")
+    if mode not in ("auto", "reference", "edge"):
+        raise ValueError("voice.mode 必须是 auto、reference 或 edge")
+    if mode == "reference" and not voice.get("reference_audio"):
+        raise ValueError("reference 模式需要授权参考音频；可显式选择 edge 跳过")
+    if explicit:
+        selected = explicit
+    elif mode == "edge":
+        matches = [key for key, spec in choices.items() if spec.get("definition") == "edge_tts"]
+        selected = default if default in matches else matches[0] if len(matches) == 1 else None
+        if not selected:
+            raise ValueError("请登记唯一 Edge TTS 后端，或在部署默认值中指定它")
+    elif voice.get("reference_audio"):
+        definition = voice.get("preferred_backend_definition") or "indextts_2_5"
+        matches = [key for key, spec in choices.items() if spec.get("definition") == definition]
+        selected = voice.get("backend") or (default if default in matches else matches[0] if len(matches) == 1 else None)
+        if not selected:
+            raise ValueError("作者已有声线基线，请配置匹配后端或 voice.backend；也可显式选择 voice.mode: edge")
+    else:
+        selected = default
+    if selected not in choices:
+        raise ValueError(f"Unknown audio backend: {selected!r}")
+    if voice.get("reference_audio") and mode != "edge" and choices[selected].get("definition") == "edge_tts":
+        raise ValueError("已有参考声线，不静默换成 Edge；用户选择跳过时设置 voice.mode: edge，原音频保留")
+    return selected
+
+
 def validate(root: Path = ROOT, series_id: str | None = None) -> dict[str, Any]:
     workbench_path = root / "workbench.yaml"
     errors: list[str] = []
@@ -199,6 +241,8 @@ def validate(root: Path = ROOT, series_id: str | None = None) -> dict[str, Any]:
     ):
         if not value:
             continue
+        if field_path == "voice.reference_audio" and author.get("voice", {}).get("mode") == "edge":
+            continue
         path = workspace_path(value, root)
         exists = path.is_file()
         assets.append({"field": field_path, "path": str(path), "exists": exists})
@@ -212,11 +256,16 @@ def validate(root: Path = ROOT, series_id: str | None = None) -> dict[str, Any]:
             errors.append(f"backend_policy_missing:default_{media}")
         elif default_id not in backends.get(media, {}):
             errors.append(f"backend_default_unknown:{media}:{default_id}")
+    try:
+        selected_audio = select_audio_backend(author, backends)
+    except ValueError as exc:
+        selected_audio = None
+        errors.append(str(exc))
     preferred_audio_definition = author.get("voice", {}).get("preferred_backend_definition")
     available_audio_definitions = {
         spec.get("definition") for spec in backends.get("audio", {}).values()
     }
-    if preferred_audio_definition and preferred_audio_definition not in available_audio_definitions:
+    if author.get("voice", {}).get("mode") != "edge" and preferred_audio_definition and preferred_audio_definition not in available_audio_definitions:
         errors.append(
             f"author_preferred_audio_definition_unavailable:{preferred_audio_definition}"
         )
@@ -236,6 +285,7 @@ def validate(root: Path = ROOT, series_id: str | None = None) -> dict[str, Any]:
             "profile_id": backends.get("profile_id"),
             "default_video": policy.get("default_video"),
             "default_audio": policy.get("default_audio"),
+            "selected_audio": selected_audio,
             "video_instances": sorted(backends.get("video", {})),
             "audio_instances": sorted(backends.get("audio", {})),
         },

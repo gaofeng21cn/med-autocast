@@ -1,0 +1,9 @@
+{
+  "name": "med-autocast-workbench-runtime",
+  "private": true,
+  "version": "0.2.1",
+  "description": "Local browser runtime for Med Auto Cast JavaScript animation rendering",
+  "dependencies": {
+    "playwright": "1.63.0"
+  }
+}

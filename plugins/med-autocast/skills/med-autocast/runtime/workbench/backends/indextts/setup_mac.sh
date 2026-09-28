@@ -15,7 +15,7 @@ if [[ "${1:-}" == "--skip-models" ]]; then
 fi
 
 if [[ "$(uname -m)" != "arm64" ]]; then
-  echo "This script is for Apple Silicon; use the existing CUDA environment on the 4090." >&2
+  echo "此安装入口仅支持 Apple Silicon；其他平台请按 IndexTTS 上游要求独立配置，不要求固定远端服务器。" >&2
   exit 2
 fi
 command -v uv >/dev/null 2>&1 || { echo "uv is required (brew install uv)." >&2; exit 2; }

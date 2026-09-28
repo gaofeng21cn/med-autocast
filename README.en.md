@@ -14,6 +14,8 @@ Med Auto Cast (MAC) is a medical education video agent for clinicians, health ed
 
 Start with a topic or continue from an existing script, recording, asset collection, or video. Refine one episode, produce a series, or update earlier work while building on what you already have.
 
+New productions default to local JavaScript animation in a hand-drawn collage style. The agent prepares medically grounded, layered assets and designs shots around the narration. Video models are used only when explicitly selected in the production plan. With an authorized reference voice, local IndexTTS is recommended; without one, or when the creator explicitly skips it, Edge TTS `zh-CN-XiaoyiNeural` is available and requires a network connection for synthesis.
+
 <p align="center">
   <img src="assets/branding/medautocast-overview.en.png" alt="The six-stage Med Auto Cast workflow, from medical evidence and story design through audiovisual production, review, handoff, and asset curation. Author profiles, professional skills, production tools, and recovery support ongoing work." width="100%" />
 </p>
@@ -39,6 +41,8 @@ Describe the audience, what viewers should understand, and the material you alre
 
 > "Organize the current videos, subtitles, and publication copy for this series. List anything still requiring full listening or medical review, then add worthwhile keyframes to the asset library."
 
+> "Set up a workbench in the empty folder I specify and make an approximately two-minute hand-drawn collage animation for patients with pituitary tumors. Establish the author identity and voice baseline before producing a watchable review cut."
+
 For an existing project, provide its folder and identify the current version, what has been approved, and what you want to change.
 
 ## Build On Your Previous Work
@@ -59,7 +63,9 @@ Install through OPL:
 opl packages install med-autocast --json
 ```
 
-Start a new task after installation and tell Med Auto Cast what you want to create. Before producing your first video, configure the required voice and video generation services using the [setup guide](docs/installation.md). Use the [project setup guide](docs/workspace-adapter.md) to continue an existing production project.
+Start a new task after installation and give Med Auto Cast a production folder, topic, audience, and approximate length. Following the [setup guide](docs/installation.md), the agent can initialize an empty workbench, install local JavaScript production dependencies, and check the browser, Chinese fonts, and the selected voice environment. A video model, remote GPU, and NAS are not required for the default route. A new author can start without an on-screen presenter or avatar; their identity and voice choice still need to be established before production. Use the [project setup guide](docs/workspace-adapter.md) to continue an existing production project.
+
+Source changes and the in-repository plugin carrier reach ordinary installed users only after a subsequent OCI package release and installation. See [current capabilities and validation](docs/status.md) for the exact qualification boundary.
 
 ## Learn More
 

@@ -1,4 +1,5 @@
 schema: medical_video_workbench/v2
+# 复制此模板后，先运行 bash scripts/setup_workbench.sh，再登记作者和系列。
 active_profiles:
   author: profiles/authors/example_author.yaml
   media_backends: profiles/backends/example_deployment.yaml

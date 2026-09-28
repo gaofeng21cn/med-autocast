@@ -19,7 +19,7 @@ try:
 except ImportError:  # pragma: no cover - doctor reports the missing dependency
     yaml = None
 
-from workbench_config import load_backend_profile
+from workbench_config import load_backend_profile, load_author_profile, select_audio_backend
 
 
 ROOT = Path(os.environ.get("MED_AUTOCAST_WORKSPACE_ROOT", Path(__file__).resolve().parents[1])).resolve()
@@ -223,6 +223,7 @@ def main() -> None:
     )
     parser.add_argument("--media", choices=("video", "audio"), default="video")
     parser.add_argument("--backend")
+    parser.add_argument("--series", help="按目标系列的作者档案选择声音基线")
     parser.add_argument("--pretty", action="store_true")
     args = parser.parse_args()
     config = load_config(args.profile)
@@ -236,7 +237,11 @@ def main() -> None:
     elif args.command == "doctor":
         output = doctor(config)
     else:
-        backend = args.backend or config.get("policy", {}).get(f"default_{args.media}")
+        if args.media == "audio":
+            _, author = load_author_profile(series_id=args.series)
+            backend = select_audio_backend(author, config, args.backend)
+        else:
+            backend = args.backend or config.get("policy", {}).get("default_video")
         choices = config.get(args.media, {})
         if backend not in choices:
             raise SystemExit(

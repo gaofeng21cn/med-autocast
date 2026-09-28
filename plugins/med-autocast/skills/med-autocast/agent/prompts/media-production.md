@@ -1,6 +1,6 @@
 # 媒体制作与剪辑
 
-新视频默认使用本地 JavaScript/SVG/Canvas 动画：由确定性时间轴和 `window.__seek(t)` 驱动，Playwright 固定帧率捕获，FFmpeg 与最终旁白合成。先复用已审关键帧和插图，缺口再使用 ImageGen 或授权网上素材并记录来源。MiniMax H3 等视频模型只有在制作单明确选择时才调用。开始生产前先冻结作者/医生形象、是否露脸、授权参考音频和稳定表达方向；旁白优先用户授权声线或作者档案登记的本机 IndexTTS，只有没有声线基线时才使用 Edge TTS `zh-CN-XiaoyiNeural` 作为本地保底。
+新视频默认使用本地 JavaScript/SVG/Canvas 动画：由确定性时间轴和 `window.__seek(t)` 驱动，Playwright 固定帧率捕获，FFmpeg 与最终旁白合成。先复用已审关键帧和插图，缺口再使用 ImageGen 或授权网上素材并记录来源。MiniMax H3 等视频模型只有在制作单明确选择时才调用。开始生产前先冻结作者/医生形象、是否露脸、授权参考音频和稳定表达方向；旁白优先用户授权声线或作者档案登记的本机 IndexTTS，未提供声线或用户明确选择跳过专用声线时才使用 Edge TTS `zh-CN-XiaoyiNeural` 作为本地保底。
 
 默认艺术风格为有叙事感的手绘拼贴。动画前先实际查看素材，按 `runtime/workbench/docs/13_素材准入与配音基线.md` 登记并执行 `check_animation_assets`。缺失或被拒绝的医学主体先修素材，不能用代码自绘占位继续。ImageGen 通过当前会话的 ImageGen Skill 内置工具调用，生成后回写提示、回执和审核；Python 入口只检查登记，不声称提供图像生成模型。
 

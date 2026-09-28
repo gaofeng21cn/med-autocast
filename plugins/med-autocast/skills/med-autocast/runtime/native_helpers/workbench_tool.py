@@ -12,7 +12,7 @@ def main():
     parser.add_argument('arguments',nargs=argparse.REMAINDER)
     a=parser.parse_args()
     root=a.workspace.resolve()
-    if not (root/'workbench.yaml').is_file():
+    if a.name != 'environment_check' and not (root/'workbench.yaml').is_file():
         parser.error('workspace 必须包含 workbench.yaml')
     args=a.arguments[1:] if a.arguments[:1]==['--'] else a.arguments
     return run_tool(root,a.name,args,a.bundled)

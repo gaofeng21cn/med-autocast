@@ -9,7 +9,7 @@ from pathlib import Path
 
 import yaml
 
-from workbench_config import load_author_profile, load_backend_profile, production_root_for, series_paths
+from workbench_config import load_author_profile, load_backend_profile, production_root_for, series_paths, select_audio_backend
 
 
 EPISODE_RE = re.compile(r"^(\d{2})_(.+)$")
@@ -281,7 +281,10 @@ def build_plan(
     author: dict,
     video_backend: str,
     audio_backend: str,
+    javascript_primary: bool | None = None,
 ) -> dict:
+    if javascript_primary is None:
+        javascript_primary = video_backend == "js_animation_local"
     timeline = []
     beats = manifest["beats"]
     for index, beat in enumerate(beats):
@@ -293,15 +296,20 @@ def build_plan(
                 "end": round(visual_end, 6),
                 "source": f"unassigned_{beat['id'].lower()}.mp4",
                 "source_start": 0.0,
-                "source_end": 14.0,
+                "source_end": round(visual_end - float(beat["start"]), 6),
                 "purpose": beat["title"],
                 "shot_type": "director_to_assign",
                 "topic_relation": beat["title"],
                 "planning_status": "requires_capability_first_director_cut",
             }
         )
+    audio_source = manifest.get("audio_source")
+    if not audio_source:
+        if author.get("voice", {}).get("mode") == "edge" or audio_backend == "edge_tts_local":
+            raise ValueError("Edge 时间轴需显式提供 manifest.audio_source 或 --audio-source，不能复用 IndexTTS 文件名")
+        audio_source = "audio/local_voice/index-tts25-narration.wav"
     visual_format = author["visual_format"]
-    return {
+    plan = {
         "schema": "video_production_plan/v2",
         "episode_id": episode_id,
         "delivery": {
@@ -322,18 +330,18 @@ def build_plan(
             ),
         },
         "director_contract": {
-            "default_shot_seconds": visual_format["default_shot_seconds"],
-            "simple_single_action_max_seconds": visual_format["simple_single_action_max_seconds"],
+            "default_shot_seconds": visual_format.get("default_shot_seconds", [5, 10]),
+            "simple_single_action_max_seconds": visual_format.get("simple_single_action_max_seconds", 14),
             "generative_video_roles": ["presenter", "patient_moment", "caregiver_action", "care_path"],
             "reviewed_insert_role": "reviewed_visual_insert",
             "literal_narration_rendering_required": False,
             "precise_anatomy_required_from_generator": False,
             "generated_text_allowed": False,
         },
-        "format": {"width": 608, "height": 352, "fps": 24, "orientation": "landscape"},
+        "format": {"width": visual_format.get("width", 1280 if javascript_primary else 608), "height": visual_format.get("height", 720 if javascript_primary else 352), "fps": visual_format.get("fps", 24), "orientation": "landscape"},
         "audio": {
             "backend": audio_backend,
-            "source": "audio/local_voice/index-tts25-narration.wav",
+            "source": audio_source,
             "duration_seconds": round(float(manifest["duration"]), 6),
             "master_timeline": True,
         },
@@ -349,6 +357,14 @@ def build_plan(
         "visual_timeline": timeline,
     }
 
+    if javascript_primary:
+        plan["delivery"]["minimum_generative_duration_ratio"] = 0.0
+        plan["director_contract"].pop("generative_video_roles", None)
+        plan["animation"] = {"renderer": "javascript", "project_root": "animation",
+                             "entry": "index.html", "asset_manifest": "animation/asset_manifest.json",
+                             "seek_api": "window.__seek"}
+    return plan
+
 
 def main() -> None:
     parser = argparse.ArgumentParser()
@@ -359,6 +375,7 @@ def main() -> None:
     parser.add_argument("--author-profile", type=Path)
     parser.add_argument("--video-backend")
     parser.add_argument("--audio-backend")
+    parser.add_argument("--audio-source", help="实际音频路径，相对单集目录；批量时各集采用相同相对路径")
     args = parser.parse_args()
     args.production_root = production_root_for(args.series, args.production_root)
     terms_path = args.subtitle_terms
@@ -376,7 +393,7 @@ def main() -> None:
     video_backend = args.video_backend or backends.get("policy", {}).get("default_video")
     if video_backend not in backends.get("video", {}):
         raise SystemExit(f"Unknown video backend: {video_backend!r}")
-    audio_backend = args.audio_backend or backends.get("policy", {}).get("default_audio")
+    audio_backend = select_audio_backend(author, backends, args.audio_backend)
     if audio_backend not in backends.get("audio", {}):
         raise SystemExit(f"Unknown default audio backend: {audio_backend!r}")
 
@@ -389,6 +406,8 @@ def main() -> None:
         if not manifest_path.is_file():
             continue
         manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+        if args.audio_source:
+            manifest["audio_source"] = args.audio_source
         alignment_path = episode_dir / "audio/local_voice/whisper-alignment.json"
         alignment = json.loads(alignment_path.read_text(encoding="utf-8")) if alignment_path.is_file() else None
         cues = build_cues(manifest, alignment)
@@ -403,6 +422,7 @@ def main() -> None:
             author,
             video_backend,
             audio_backend,
+            backends["video"][video_backend].get("kind") == "javascript_animation",
         )
         (episode_dir / "production_plan.yaml").write_text(
             yaml.safe_dump(plan, allow_unicode=True, sort_keys=False), encoding="utf-8"

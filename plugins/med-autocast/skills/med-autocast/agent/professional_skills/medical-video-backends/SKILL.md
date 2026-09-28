@@ -10,13 +10,19 @@ metadata:
 以显式 `workspace_root` 定位制作数据，按目标系列解析作者覆盖和后端档案。OPL 持有阶段运行；本 Skill 保留原工作台专业职责。下文 `scripts/`、`backends/`、`content/`、`productions/`、`work/`、`publish/` 均相对制作工作区，方法链接相对本 Skill。工具通过 [工作台工具接入](../../../docs/workspace-adapter.md) 定位：优先使用现有工作区入口，缺少通用工具时使用随包工具；不得默默替换工作区的专用修订入口。案例中的疾病、尺寸和作者选择只适用于对应案例。
 
 
-这个 Skill 负责从工作台已经登记的本地、局域网和云端后端中选择合适路径，提交生成任务，并把结果验收到可交给剪辑和视觉 QA 的程度。生产前先读取作者/医生基线，确认参考音频和表达方向。新视频默认走本地 JavaScript/SVG/Canvas 动画与手绘拼贴：先查已审关键帧与插图库，缺口再用 ImageGen 或授权网上素材补齐；有 `Dr.咩` 等作者声线时默认走本机 IndexTTS 2.5，只有无声线基线时才使用 Edge TTS `zh-CN-XiaoyiNeural`。按[十阶段SOP](../../../runtime/workbench/docs/04_医学科普视频系列SOP.md#0-十阶段流程与交接)，S06仅按需确认能力和具体替代，S07接收已审故事包/生成计划并产出实际媒体与回执；选题、故事设计或文档更新不触发模型调用。MiniMax H3 等视频模型保留为显式备选。
+这个 Skill 负责从工作台已经登记的本地、局域网和云端后端中选择合适路径，提交生成任务，并把结果验收到可交给剪辑和视觉 QA 的程度。生产前先读取作者/医生基线，确认参考音频和表达方向。新视频默认走本地 JavaScript/SVG/Canvas 动画与手绘拼贴：先查已审关键帧与插图库，缺口再用 ImageGen 或授权网上素材补齐；有 `Dr.咩` 等作者声线时默认走本机 IndexTTS 2.5，未设定声线或用户明确跳过时才使用 Edge TTS `zh-CN-XiaoyiNeural`。按[十阶段SOP](../../../runtime/workbench/docs/04_医学科普视频系列SOP.md#0-十阶段流程与交接)，S06仅按需确认能力和具体替代，S07接收已审故事包/生成计划并产出实际媒体与回执；选题、故事设计或文档更新不触发模型调用。MiniMax H3 等视频模型保留为显式备选。
 
 始终先读 `workbench.yaml` 的 `active_profiles.media_backends`、`backends/config/media_backends.yaml` 和 `docs/05_多后端本地与远程运行.md`。能力目录定义可移植协议，部署档案定义当前机器可用的实例与默认选择，两者不可互相取代。实际生产再读 `docs/06_媒体后端运行SOP.md`；使用云供应商时读 `docs/08_云视频API接入.md`；只有诊断当前机器或复核性能时才读 `docs/local/`。
 
+## 首次环境准备
+
+使用[安装说明](../../../docs/installation.md)中的随包 setup_workbench 与 environment_check 帮助新用户准备环境。新建空目录自动生成有效档案和安装独立依赖；已有工作区先只读检查，再按授权增量修复。先确认 Python/Node/FFmpeg/中文字体与真实浏览器启动，使用 smoke_local_animation 验证短编码链路；这些证据不批准素材、医生基线或医学内容。IndexTTS/Whisper/视频模型单独准备，缺少可选项不把核心安装判失败。Edge 合成必须联网，不能称为离线 TTS。
+
 ## 选择方法
 
-新 JS 动画先按[素材准入与配音基线](../../../runtime/workbench/docs/13_素材准入与配音基线.md)完成作者/医生基线、准备和查看素材，再执行 `check_animation_assets` 与 `render_javascript_animation`。ImageGen 由当前会话对应 Skill 内置工具生成并登记。IndexTTS 使用同一参考音频、模型和情绪参数贯穿全篇，禁止逐场切换情绪指令；Edge 仅作为无声线基线时的整篇保底。`audio_baseline` 只检测响度，语气和完整听感须另审。
+用户明确跳过专用声线时，用 `configure_voice --mode edge` 保留参考音频并记录选择；服务故障不构成静默换声线授权。
+
+新 JS 动画先按[素材准入与配音基线](../../../runtime/workbench/docs/13_素材准入与配音基线.md)完成作者/医生基线、准备和查看素材，再执行 `check_animation_assets` 与 `render_javascript_animation`。ImageGen 由当前会话对应 Skill 内置工具生成并登记。IndexTTS 使用同一参考音频、模型和情绪参数贯穿全篇，禁止逐场切换情绪指令；Edge 可在无声线或用户明确跳过时作为整篇旁白。`audio_baseline` 只检测响度，语气和完整听感须另审。
 
 1. 先解析用户显式指定的后端；没有指定时使用登记表当前默认值。不要在 Skill 中硬编码默认后端、端口或路径，也不要因某个服务暂时不可达而静默切换。
 2. 根据任务所需的文生、图生、首尾帧、参考图/视频/音频、分辨率、时长、音轨、隐私、成本和时延选择后端。后端不支持的字段必须显式拒绝或降级说明，不能悄悄忽略。

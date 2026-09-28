@@ -10,6 +10,7 @@ python3 runtime/native_helpers/med_autocast.py tools --workspace /absolute/works
 python3 runtime/native_helpers/med_autocast.py assets --workspace /absolute/workspace --category 05
 python3 runtime/native_helpers/workbench_tool.py --workspace /absolute/workspace --name workbench_config -- validate --series SERIES --pretty
 python3 runtime/native_helpers/workbench_tool.py --workspace /absolute/workspace --name media_backend -- resolve --media video --pretty
+python3 runtime/native_helpers/workbench_tool.py --workspace /absolute/workspace --name environment_check -- --pretty
 ```
 
 `inspect`、`tools`、`assets` 和预检只读。`workbench_tool.py` 同步调用一个明确工具，不创建队列或调度器；其效果与原工具一致。所有调用的 cwd 都是制作工作区，默认优先原 `scripts/`；缺少通用脚本才使用随包版本。`--bundled` 显式选择随包版本。工具接收的剩余参数原样传递；生成、下载、合成、检查输出和打包需处于本次授权范围。
@@ -18,6 +19,8 @@ python3 runtime/native_helpers/workbench_tool.py --workspace /absolute/workspace
 | --- | --- | --- |
 | 配置、作者、目录、字体 | workbench_config | validate；show 可能含本机信息，不回显敏感配置 |
 | 后端选择、诊断 | media_backend | resolve；确需服务诊断才 doctor，不生成媒体 |
+| 作者声音选择 | configure_voice | 用户明确选择 reference 或 edge，保留参考音频、重置声音待审 |
+| 本机环境诊断 | environment_check | 区分核心依赖、JS 渲染、IndexTTS、Edge fallback 和 Whisper；只读 |
 | 配音、ASR、字幕与节拍 | render_series_tts、transcribe_series_whisper、build_episode_timelines | 审定旁白为权威；ASR 不改医学文字；依赖独立模型环境 |
 | H3 提交、批量调用、输出下载 | queue_h3_shots、render_series_h3、fetch_h3_receipt | 官方提示直通、原任务恢复、回执绑定；不重复提交 |
 | 合成和系列构建 | build_episode_video、build_series_videos | 前者是通用合成器；后者仅用于匹配的根制作单/final 合同，支持 --episode |
@@ -43,7 +46,7 @@ python3 runtime/native_helpers/med_autocast.py preflight-workbench --workspace /
 
 ## 新工作区与迁移
 
-按[安装与迁移](../runtime/workbench/docs/10_安装与迁移.md)初始化核心环境，并从随包 runtime/workbench/templates 复制作者、后端及系列模板。`runtime/workbench` 是通用核心来源，不含私人档案、媒体或权重；新工作区可复制核心 scripts、backends、templates、依赖清单，再登记自己的 workbench.yaml。已有工作区不整体覆盖，先保留并核对本机改动。
+按[安装与迁移](../runtime/workbench/docs/10_安装与迁移.md)初始化核心环境，并从随包 runtime/workbench/templates 复制作者、后端及系列模板。`runtime/workbench` 是通用核心来源，不含私人档案、媒体或权重；新工作区可复制核心 scripts、backends、templates、依赖清单，再登记自己的 workbench.yaml；推荐直接执行 `bash runtime/workbench/scripts/setup_workbench.sh --workspace <新建空目录>` 自动完成初始化和依赖安装。已有工作区不整体覆盖，先保留并核对本机改动。
 
 核心依赖 PyYAML、Pillow、FFmpeg/ffprobe、ImageMagick 与配置字体；Python 3.11 以上。GPU、IndexTTS、Whisper、MLX/CUDA 的环境与模型保持独立。随包部署脚本只在明确安装/迁移任务中运行，不因一次检查自动安装模型或重启服务。
 # JS 动画与旁白基线入口

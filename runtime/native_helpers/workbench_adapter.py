@@ -15,6 +15,8 @@ BUNDLE = Path(__file__).resolve().parents[1] / 'workbench'
 TOOLS = {
     'workbench_config': ('read_only', '配置、作者覆盖、依赖和资产校验'),
     'media_backend': ('network_read', '后端解析和按需服务诊断；不生成媒体'),
+    'configure_voice': ('write', '显式选择参考声线或 Edge，保留参考音频并重置声线待审'),
+    'environment_check': ('read_only', '本地核心、JS 渲染和可选媒体依赖诊断'),
     'render_series_tts': ('generate', '已审旁白配音与逐段回执'),
     'render_edge_tts': ('generate', '整篇 Edge 保底旁白、固定参数、响度归一化；听感待审'),
     'audio_baseline': ('write', '整轨与场景响度检测；不推断情绪通过'),

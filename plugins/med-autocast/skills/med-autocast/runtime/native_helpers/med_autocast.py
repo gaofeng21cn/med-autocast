@@ -59,7 +59,7 @@ def inspect_workspace(root: Path) -> dict:
             if ref:
                 p = local_path(root, ref, exists=False)
                 locations[key] = {'ref': ref, 'exists': p.exists()}
-        series.append({'series_id': sid, 'declared_status': item.get('status'), 'episode_count': item.get('episode_count'), 'locations': locations})
+        series.append({'series_id': sid, 'declared_status': item.get('status'), 'episode_count': item.get('episode_count'), 'locations': locations, 'projects': item.get('episodes', {})})
     scripts = {name: (root/'scripts'/name).is_file() for name in ('media_backend.py','workbench_config.py','build_release_packages.py','build_keyframe_library.py')}
     return {'schema': 'med_autocast_workspace_inspection/v1', 'read_only': True,
             'workspace_root': str(root.resolve()), 'profiles': profile_readback, 'series': series,

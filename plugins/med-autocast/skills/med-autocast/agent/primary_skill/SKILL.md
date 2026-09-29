@@ -28,6 +28,11 @@ description: 使用 Med Auto Cast 规划、制作、修订和审查医学科普�
 
 八个交接点的完整顺序和返修优先级见 `runtime/workbench/docs/18_纸剧场导演流程与质量框架.md`：先收敛患者任务、故事卡、处理稿和 animatic，再准入透明单件，最后写逐镜 JS。去文字审片、视觉负担预算和线段/色带物理来源是默认动画门；不能用脚本复杂度、标签堆叠或随机抖动补足没有视觉事件的镜头。
 
-六阶段与原十阶段职责映射见 `docs/production-sop.md`。完整专业方法、模板和通用工具随包存于 `runtime/workbench/`；已有工作区优先使用原入口。默认交付预检使用 `med_autocast.py preflight-workbench`，直接读取原制作单和交付清单，不另外维护 Med Auto Cast 制作状态。
+六阶段与原十阶段职责映射见 `docs/production-sop.md`。完整专业方法、模板和通用工具随包存于 `runtime/workbench/`；旧制作单保留原入口；纸剧场统一使用随包 paper_project，避免预览和正式渲染调用不同版本。默认交付预检使用 `med_autocast.py preflight-workbench`，直接读取原制作单和交付清单，不另外维护 Med Auto Cast 制作状态。
 
 新用户只需提供主题、受众与大致时长；其余由智能体完成。首步默认建立品牌识别、医生形象和授权声线基线；已有系列复用其作者档案中的人物、声线与品牌出场方式。人物基线不要求每集出镜；某集仅用固定品牌印记仍属于该系列，不记录为跳过形象。用户也可显式跳过人物基线或专用声线，制作通用纸剧场；只有无专用声线或明确跳过时才用 Edge，记录 `voice.mode: edge` 并重置声音待审。不得因专用声线后端故障静默切换。工具入口为 `configure_voice --mode edge|reference`。按 `runtime/workbench/docs/14_新用户首片SOP.md` 完成首片。
+
+
+新建或重构代码动画采用 `runtime/workbench/templates/animation/paper_theatre/` 的 TypeScript/Canvas 镜头模块，方法见 `runtime/workbench/docs/19_纸剧场模块架构与镜头打磨.md`。先做导演与 animatic，再准入透明素材；素材清单持有路径和连接点，score 持有事件时间，镜头持有构图与相机，播放器只装配。独立镜头预览、动作样本与版本对照用于持续打磨，不把复用解释为固定构图或故事。保持单集版本冻结和自定义镜头出口；通用模板不含医生、疾病和品牌。
+
+纸剧场实际操作统一走 `paper_project`，按 `runtime/workbench/docs/20_纸剧场单集工具与局部返修.md` 执行初始化/接入、素材台、精确声段配音、真实时码、ASR 辅助字幕、邻镜预览、混音、导出和审看交付。用 `library` 查询跨集纸件；医生品牌来自工作区。新工具减少搬运，不代替导演判断或视觉探索。

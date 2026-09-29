@@ -1,6 +1,8 @@
 """Native Workbench contracts and explicit tool dispatch; no second scheduler."""
+
 from __future__ import annotations
 
+import hashlib
 import filecmp
 import json
 import math
@@ -11,72 +13,132 @@ import sys
 
 import yaml
 
-BUNDLE = Path(__file__).resolve().parents[1] / 'workbench'
+BUNDLE = Path(__file__).resolve().parents[1] / "workbench"
 TOOLS = {
-    'workbench_config': ('read_only', '配置、作者覆盖、依赖和资产校验'),
-    'media_backend': ('network_read', '后端解析和按需服务诊断；不生成媒体'),
-    'configure_voice': ('write', '显式选择参考声线或 Edge，保留参考音频并重置声线待审'),
-    'environment_check': ('read_only', '本地核心、JS 渲染和可选媒体依赖诊断'),
-    'render_series_tts': ('generate', '已审旁白配音与逐段回执'),
-    'render_edge_tts': ('generate', '整篇 Edge 保底旁白、固定参数、响度归一化；听感待审'),
-    'audio_baseline': ('write', '整轨与场景响度检测；不推断情绪通过'),
-    'check_animation_assets': ('read_only', '动画素材来源、医学用途、审核引用与镜头覆盖'),
-    'render_javascript_animation': ('write', '素材准入后先 --preview 检查定帧与联系表，再执行本地 JS 渲染与合成'),
-    'transcribe_series_whisper': ('write', 'ASR 辅助对齐；不覆盖审定医学文字'),
-    'build_episode_timelines': ('write', '审定字幕、节拍和制作单'),
-    'queue_h3_shots': ('generate', 'H3 提交、原任务轮询、官方提示直通'),
-    'render_series_h3': ('generate', '按系列调用 H3 镜头队列'),
-    'fetch_h3_receipt': ('download', '按原回执下载精确输出'),
-    'build_episode_video': ('write', '唯一通用合成器：字幕、品牌、画布、混音'),
-    'build_series_videos': ('write', '系列或指定单集合成与原动画合同'),
-    'qa_series_videos': ('write', '技术 QA 与所选范围联系表'),
-    'build_timeline_review': ('write', '同期画面、PCM、SRT、可选 ASR 联合定位'),
-    'build_controlled_visuals': ('write', '确定性图示素材；仍须解释与视觉准入审查'),
-    'build_handdrawn_pulse_animation': ('write', '手绘脉冲动画素材；不自动认定为合格成片'),
-    'generate_gentle_bgm': ('write', '确定性无歌词背景音乐'),
-    'package_review': ('write', '原制作单的单集审看包、双平台文案与字节回读'),
-    'build_release_packages': ('write', '原正式 final 合同与双平台文案'),
-    'build_keyframe_library': ('write', '已审目录校验及 HTML、CSV、缩略图投影'),
+    "paper_project": (
+        "write",
+        "单集初始化/登记、素材、配音、构建、窗口审片、混音、导出和审看交付",
+    ),
+    "render_narration": (
+        "generate",
+        "按明确旁白输入和声段生成；自动选择登记的独立声音环境",
+    ),
+    "workbench_config": ("read_only", "配置、作者覆盖、依赖和资产校验"),
+    "media_backend": ("network_read", "后端解析和按需服务诊断；不生成媒体"),
+    "configure_voice": ("write", "显式选择参考声线或 Edge，保留参考音频并重置声线待审"),
+    "environment_check": ("read_only", "本地核心、JS 渲染和可选媒体依赖诊断"),
+    "render_series_tts": ("generate", "已审旁白配音与逐段回执"),
+    "render_edge_tts": (
+        "generate",
+        "整篇 Edge 保底旁白、固定参数、响度归一化；听感待审",
+    ),
+    "audio_baseline": ("write", "整轨与场景响度检测；不推断情绪通过"),
+    "check_animation_assets": (
+        "read_only",
+        "动画素材来源、医学用途、审核引用与镜头覆盖",
+    ),
+    "render_javascript_animation": (
+        "write",
+        "素材准入后先 --preview 检查定帧与联系表，再执行本地 JS 渲染与合成",
+    ),
+    "transcribe_series_whisper": ("write", "ASR 辅助对齐；不覆盖审定医学文字"),
+    "build_episode_timelines": ("write", "审定字幕、节拍和制作单"),
+    "queue_h3_shots": ("generate", "显式备选 H3 提交、原任务轮询、官方提示直通"),
+    "render_series_h3": ("generate", "显式备选：按系列调用 H3 镜头队列"),
+    "fetch_h3_receipt": ("download", "按原回执下载精确输出"),
+    "build_episode_video": ("write", "旧制作单合成器：字幕、品牌、画布、混音"),
+    "build_series_videos": ("write", "系列或指定单集合成与原动画合同"),
+    "qa_series_videos": ("write", "技术 QA 与所选范围联系表"),
+    "build_timeline_review": ("write", "同期画面、PCM、SRT、可选 ASR 联合定位"),
+    "build_controlled_visuals": ("write", "确定性图示素材；仍须解释与视觉准入审查"),
+    "build_handdrawn_pulse_animation": (
+        "write",
+        "手绘脉冲动画素材；不自动认定为合格成片",
+    ),
+    "generate_gentle_bgm": ("write", "确定性无歌词背景音乐"),
+    "package_review": ("write", "原制作单的单集审看包、双平台文案与字节回读"),
+    "build_release_packages": ("write", "原正式 final 合同与双平台文案"),
+    "build_keyframe_library": ("write", "已审目录校验及 HTML、CSV、缩略图投影"),
 }
+
+
+CANONICAL_TOOLS = {"paper_project", "render_narration", "render_javascript_animation"}
+
+
+def resolve_tool(root: Path, name: str, bundled=False) -> tuple[Path, Path]:
+    if name not in TOOLS:
+        raise ValueError("未知工作台工具")
+    local = root / "scripts" / (name + ".py")
+    script = (
+        BUNDLE / "scripts" / (name + ".py")
+        if bundled or name in CANONICAL_TOOLS or not local.is_file()
+        else local
+    )
+    core = root / ".venv" / ("Scripts/python.exe" if os.name == "nt" else "bin/python")
+    # Legacy IndexTTS callers may deliberately select the independent model interpreter.
+    python = (
+        Path(sys.executable)
+        if name == "render_series_tts" or not core.is_file()
+        else core
+    )
+    return script, python
 
 
 def tool_inventory(root: Path) -> dict:
     entries = []
     for name, (effect, purpose) in TOOLS.items():
-        local = root / 'scripts' / (name + '.py')
-        path = local if local.is_file() else BUNDLE / 'scripts' / (name + '.py')
-        entries.append({'name': name, 'effect': effect, 'purpose': purpose,
-                        'path': str(path), 'exists': path.is_file(),
-                        'implementation': 'workspace' if path == local else 'package'})
-    return {'read_only': True, 'tools': entries, 'production_ready': None}
+        script, python = resolve_tool(root, name)
+        entries.append(
+            {
+                "name": name,
+                "effect": effect,
+                "purpose": purpose,
+                "path": str(script),
+                "python": str(python),
+                "exists": script.is_file(),
+                "implementation": "package"
+                if script.is_relative_to(BUNDLE)
+                else "workspace",
+            }
+        )
+    return {"read_only": True, "tools": entries, "production_ready": None}
 
 
 def run_tool(root: Path, name: str, arguments: list[str], bundled=False) -> int:
     root = root.resolve()
-    if name not in TOOLS:
-        raise ValueError('未知工作台工具')
-    local = root / 'scripts' / (name + '.py')
-    # The shared preview contract is absent from older workbench renderers.
-    use_bundle = bundled or (name == 'render_javascript_animation' and '--preview' in arguments)
-    script = BUNDLE / 'scripts' / (name + '.py') if use_bundle or not local.is_file() else local
-    env = dict(os.environ, MED_AUTOCAST_WORKSPACE_ROOT=str(root),
-               MED_AUTOCAST_HELPERS_ROOT=str(Path(__file__).resolve().parent),
-               PYTHONDONTWRITEBYTECODE='1')
-    # The caller selects the interpreter (core venv or a separate model environment).
-    # Preserve workspace implementations and their sibling module imports.
-    return subprocess.run([sys.executable, str(script), *arguments], cwd=root, env=env).returncode
+    script, python = resolve_tool(root, name, bundled)
+    env = dict(
+        os.environ,
+        MED_AUTOCAST_WORKSPACE_ROOT=str(root),
+        MED_AUTOCAST_HELPERS_ROOT=str(Path(__file__).resolve().parent),
+        PYTHONDONTWRITEBYTECODE="1",
+    )
+    return subprocess.run(
+        [str(python), str(script), *arguments], cwd=root, env=env
+    ).returncode
 
 
 def read_object(path: Path) -> dict:
-    value = yaml.safe_load(path.read_text()) if path.suffix in ('.yaml', '.yml') else json.loads(path.read_text())
+    value = (
+        yaml.safe_load(path.read_text())
+        if path.suffix in (".yaml", ".yml")
+        else json.loads(path.read_text())
+    )
     if not isinstance(value, dict):
-        raise ValueError(f'期望对象：{path.name}')
+        raise ValueError(f"期望对象：{path.name}")
     return value
 
 
-def preflight_native(root: Path, series: str, episode: str, plan_ref: str,
-                     master_ref: str, delivery_ref=None, source_review_ref=None,
-                     allowed_roots=()) -> dict:
+def preflight_native(
+    root: Path,
+    series: str,
+    episode: str,
+    plan_ref: str,
+    master_ref: str,
+    delivery_ref=None,
+    source_review_ref=None,
+    allowed_roots=(),
+) -> dict:
     """Read original YAML/JSON in place. Preserve quality debt, never mint approval.
 
     plan/master are independent current-task selections, not inferred from mtime
@@ -86,148 +148,355 @@ def preflight_native(root: Path, series: str, episode: str, plan_ref: str,
 
     def path(ref, base=root):
         if not isinstance(ref, (str, Path)) or not str(ref):
-            raise ValueError('缺少精确文件引用')
+            raise ValueError("缺少精确文件引用")
         p = (base / ref).resolve()
         if not any(p.is_relative_to(r) for r in roots):
-            raise ValueError('引用越出工作区；外部存储需显式 --allow-root')
+            raise ValueError("引用越出工作区；外部存储需显式 --allow-root")
         if not p.is_file():
-            raise ValueError(f'引用文件不存在：{p}')
+            raise ValueError(f"引用文件不存在：{p}")
         return p
 
-    config = read_object(path('workbench.yaml'))
-    if config.get('schema') != 'medical_video_workbench/v2':
-        raise ValueError('不支持的工作台合同')
-    row = config.get('series', {}).get(series)
-    if not row or not episode or Path(episode).name != episode or episode in ('.', '..'):
-        raise ValueError('未知系列或无效集号')
-    episode_root = (root / row['production_root'] / episode).resolve()
+    config = read_object(path("workbench.yaml"))
+    if config.get("schema") != "medical_video_workbench/v2":
+        raise ValueError("不支持的工作台合同")
+    row = config.get("series", {}).get(series)
+    if (
+        not row
+        or not episode
+        or Path(episode).name != episode
+        or episode in (".", "..")
+    ):
+        raise ValueError("未知系列或无效集号")
+    episode_root = (root / row["production_root"] / episode).resolve()
     plan_path, master = path(plan_ref), path(master_ref)
     plan = read_object(plan_path)
-    if plan.get('schema') not in ('video_production_plan/v2', 'video_production_plan/v3'):
-        raise ValueError('不支持的制作单合同')
-    if plan.get('episode_id') != episode:
-        raise ValueError('制作单集号不一致')
-    audio = path(plan.get('audio', {}).get('source'), episode_root)
-    srt = path(plan.get('subtitles', {}).get('source'), episode_root)
-    catalog_path = path(row['release_catalog'])
+    if plan.get("schema") == "paper_project/v1":
+        if plan.get("series_id") != series or plan.get("episode_id") != episode:
+            raise ValueError("纸剧场项目身份不一致")
+        project = plan_path.parent
+        selected = path(
+            row.get("episodes", {}).get(episode, {}).get("project", "")
+            + "/project.json"
+        )
+        if selected != plan_path:
+            raise ValueError("项目不是工作区登记的当前单集")
+        delivery_path = (
+            path(delivery_ref)
+            if delivery_ref
+            else path(
+                read_object(path(f"deliveries/{series}/{episode}.json"))["manifest"]
+            )
+        )
+        delivery = read_object(delivery_path)
+        if (
+            delivery.get("schema") != "paper_review_delivery/v1"
+            or delivery.get("series_id") != series
+            or delivery.get("episode_id") != episode
+        ):
+            raise ValueError("纸剧场交付身份不一致")
+        sha = lambda f: hashlib.sha256(f.read_bytes()).hexdigest()
+        current = read_object(path("out/current.json", project))
+        if path(current["path"]) != master:
+            raise ValueError("不是当前选择的成片")
+        published = path(delivery["video"], delivery_path.parent)
+        if not sha(master) == sha(published) == delivery["sha256"] == current["sha256"]:
+            raise ValueError("交付不是当前成片字节")
+        for key, ref in [
+            ("score_sha256", plan["score"]),
+            ("bundle_sha256", "dist/film.js"),
+            ("audio_sha256", plan["audio"]),
+        ]:
+            if sha(path(ref, project)) != delivery[key]:
+                raise ValueError("交付与当前项目输入不一致")
+        build = read_object(path("dist/build-receipt.json", project))
+        for name, value in build["inputs"].items():
+            if sha(path(name, project)) != value:
+                raise ValueError("成片后源码或素材已变化，请重新构建与交付")
+        mix = read_object(path("audio/mix-receipt.json", project))
+        if mix.get("voice_sha256") != sha(path(plan["voice"], project)):
+            raise ValueError("交付后旁白已变化")
+        if sha(path("score.json", delivery_path.parent)) != sha(
+            path(plan["score"], project)
+        ) or sha(path("narration.json", delivery_path.parent)) != sha(
+            path(plan["narration"], project)
+        ):
+            raise ValueError("交付文稿与当前项目不一致")
+        for name in ["score.json", "narration.json", "subtitles.srt"]:
+            path(name, delivery_path.parent)
+        claims = delivery.get("reviews", {})
+        return {
+            "schema": "med_autocast_native_preflight/v1",
+            "status": "passed",
+            "read_only": True,
+            "series_id": series,
+            "episode_id": episode,
+            "plan": str(plan_path),
+            "master": str(master),
+            "delivery": str(delivery_path),
+            "video_bytes_equal": True,
+            "review_claims": claims,
+            "quality_debt": [
+                {"review": k, "status": v} for k, v in claims.items() if v == "pending"
+            ],
+            "domain_quality_approved": False,
+            "publication_authorized": False,
+            "release_eligible": False,
+        }
+    if plan.get("schema") not in (
+        "video_production_plan/v2",
+        "video_production_plan/v3",
+    ):
+        raise ValueError("不支持的制作单合同")
+    if plan.get("episode_id") != episode:
+        raise ValueError("制作单集号不一致")
+    audio = path(plan.get("audio", {}).get("source"), episode_root)
+    srt = path(plan.get("subtitles", {}).get("source"), episode_root)
+    catalog_path = path(row["release_catalog"])
     catalog = read_object(catalog_path)
-    if catalog.get('series_id') != series:
-        raise ValueError('文案目录系列不一致')
-    catalog_entries = [e for e in catalog.get('episodes', []) if e.get('id') == episode]
+    if catalog.get("series_id") != series:
+        raise ValueError("文案目录系列不一致")
+    catalog_entries = [e for e in catalog.get("episodes", []) if e.get("id") == episode]
     if len(catalog_entries) != 1:
-        raise ValueError('文案目录缺少本集或集号重复')
+        raise ValueError("文案目录缺少本集或集号重复")
     debt, checked = [], []
-    if (plan.get('animation', {}).get('renderer') == 'javascript'
-            or plan.get('delivery', {}).get('primary_video_backend') == 'js_animation_local'):
+    if (
+        plan.get("animation", {}).get("renderer") == "javascript"
+        or plan.get("delivery", {}).get("primary_video_backend") == "js_animation_local"
+    ):
         import importlib.util
-        spec = importlib.util.spec_from_file_location('animation_asset_admission', BUNDLE / 'scripts/check_animation_assets.py')
+
+        spec = importlib.util.spec_from_file_location(
+            "animation_asset_admission", BUNDLE / "scripts/check_animation_assets.py"
+        )
         admission_module = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(admission_module)
-        admission = admission_module.check_assets(path(plan.get('animation', {}).get('asset_manifest'), plan_path.parent))
-        if admission['status'] != 'passed':
-            raise ValueError('动画素材未准入：' + ', '.join(admission['pending']))
+        admission = admission_module.check_assets(
+            path(plan.get("animation", {}).get("asset_manifest"), plan_path.parent)
+        )
+        if admission["status"] != "passed":
+            raise ValueError("动画素材未准入：" + ", ".join(admission["pending"]))
     reviews = read_object(path(source_review_ref)) if source_review_ref else {}
     # Native source-review files may use either a direct ID map or a shots map.
-    reviews = reviews.get('shots', reviews)
+    reviews = reviews.get("shots", reviews)
     if not isinstance(reviews, dict):
-        raise ValueError('源片审查记录必须为对象')
-    timeline = plan.get('visual_timeline')
+        raise ValueError("源片审查记录必须为对象")
+    timeline = plan.get("visual_timeline")
     if not isinstance(timeline, list) or not timeline:
-        raise ValueError('制作单缺少实际时间轴')
+        raise ValueError("制作单缺少实际时间轴")
     previous = 0.0
     for segment in timeline:
-        start, end = float(segment['start']), float(segment['end'])
-        begin = float(segment.get('source_start', 0))
-        finish = float(segment.get('source_end', begin + end - start))
-        if not all(math.isfinite(v) for v in (start, end, begin, finish)) or abs(start-previous) > .002 or end <= start or begin < 0 or finish <= begin:
-            raise ValueError('镜头时间轴或源区间无效')
+        start, end = float(segment["start"]), float(segment["end"])
+        begin = float(segment.get("source_start", 0))
+        finish = float(segment.get("source_end", begin + end - start))
+        if (
+            not all(math.isfinite(v) for v in (start, end, begin, finish))
+            or abs(start - previous) > 0.002
+            or end <= start
+            or begin < 0
+            or finish <= begin
+        ):
+            raise ValueError("镜头时间轴或源区间无效")
         previous = end
-        source = path(segment['source'], episode_root / 'candidates')
-        sid = segment.get('source_id') or segment.get('diversity_scene')
+        source = path(segment["source"], episode_root / "candidates")
+        sid = segment.get("source_id") or segment.get("diversity_scene")
         record = reviews.get(sid, {}) if sid else {}
         candidates = [record]
-        for ref in (plan.get('source_review'), segment.get('source_review')):
+        for ref in (plan.get("source_review"), segment.get("source_review")):
             if ref:
                 linked = read_object(path(ref))
-                linked = linked.get('shots', linked)
-                if not isinstance(linked, dict):raise ValueError('源片审查记录必须为对象')
-                candidates.extend(v for key, v in linked.items() if key == sid or (
-                    isinstance(v, dict) and (v.get('source_ref') or v.get('source') or v.get('path'))
-                    and path(v.get('source_ref') or v.get('source') or v.get('path')) == source))
+                linked = linked.get("shots", linked)
+                if not isinstance(linked, dict):
+                    raise ValueError("源片审查记录必须为对象")
+                candidates.extend(
+                    v
+                    for key, v in linked.items()
+                    if key == sid
+                    or (
+                        isinstance(v, dict)
+                        and (v.get("source_ref") or v.get("source") or v.get("path"))
+                        and path(
+                            v.get("source_ref") or v.get("source") or v.get("path")
+                        )
+                        == source
+                    )
+                )
         # Explicit path mappings also apply when an older plan has no source ID.
-        candidates.extend(v for v in reviews.values() if isinstance(v, dict) and
-                          (v.get('source_ref') or v.get('source') or v.get('path')) and
-                          path(v.get('source_ref') or v.get('source') or v.get('path')) == source)
-        if any(not isinstance(v, dict) for v in candidates):raise ValueError('无效源片审查项')
-        if any(v.get('accepted') is False for v in candidates):
-            raise ValueError(f'制作单使用已拒绝的源片：{sid or source.name}')
-        bound_records = [v for v in candidates if v.get('source_ref') or v.get('source') or v.get('path')]
-        if bound_records:record=bound_records[-1]
-        if record.get('accepted') is False:
-            raise ValueError(f'制作单使用已拒绝的源片：{sid}')
+        candidates.extend(
+            v
+            for v in reviews.values()
+            if isinstance(v, dict)
+            and (v.get("source_ref") or v.get("source") or v.get("path"))
+            and path(v.get("source_ref") or v.get("source") or v.get("path")) == source
+        )
+        if any(not isinstance(v, dict) for v in candidates):
+            raise ValueError("无效源片审查项")
+        if any(v.get("accepted") is False for v in candidates):
+            raise ValueError(f"制作单使用已拒绝的源片：{sid or source.name}")
+        bound_records = [
+            v
+            for v in candidates
+            if v.get("source_ref") or v.get("source") or v.get("path")
+        ]
+        if bound_records:
+            record = bound_records[-1]
+        if record.get("accepted") is False:
+            raise ValueError(f"制作单使用已拒绝的源片：{sid}")
         # A name/ID alone cannot bind a review to media bytes or even its path.
-        bound = record.get('source_ref') or record.get('source') or record.get('path')
+        bound = record.get("source_ref") or record.get("source") or record.get("path")
         if bound and path(bound) != source:
-            raise ValueError(f'源片审查与实际文件不一致：{sid}')
-        if record.get('accepted') is True and bound:
-            lo, hi = map(float, record['usable_range'])
-            if not all(math.isfinite(v) for v in (lo, hi)) or not 0 <= lo < hi or begin < lo-.002 or finish > hi+.002:
-                raise ValueError(f'源区间超出批准范围：{sid}')
+            raise ValueError(f"源片审查与实际文件不一致：{sid}")
+        if record.get("accepted") is True and bound:
+            lo, hi = map(float, record["usable_range"])
+            if (
+                not all(math.isfinite(v) for v in (lo, hi))
+                or not 0 <= lo < hi
+                or begin < lo - 0.002
+                or finish > hi + 0.002
+            ):
+                raise ValueError(f"源区间超出批准范围：{sid}")
         else:
-            debt.append({'segment': segment['segment_id'], 'review': 'source_admission',
-                         'status': 'needs_evidence', 'reason': '需按原回执和视觉记录核对；不由名称猜测批准'})
-        checked.append({'segment_id': segment['segment_id'], 'source': str(source), 'source_range': [begin, finish]})
-    expected_duration = plan.get('audio', {}).get('duration_seconds')
-    if expected_duration is not None and (not math.isfinite(float(expected_duration)) or abs(previous-float(expected_duration)) > .3):
-        raise ValueError('时间轴与登记音轨时长不一致')
-    delivery_path = path(delivery_ref or str(Path(row['publish_root']) / 'manifest.json'))
+            debt.append(
+                {
+                    "segment": segment["segment_id"],
+                    "review": "source_admission",
+                    "status": "needs_evidence",
+                    "reason": "需按原回执和视觉记录核对；不由名称猜测批准",
+                }
+            )
+        checked.append(
+            {
+                "segment_id": segment["segment_id"],
+                "source": str(source),
+                "source_range": [begin, finish],
+            }
+        )
+    expected_duration = plan.get("audio", {}).get("duration_seconds")
+    if expected_duration is not None and (
+        not math.isfinite(float(expected_duration))
+        or abs(previous - float(expected_duration)) > 0.3
+    ):
+        raise ValueError("时间轴与登记音轨时长不一致")
+    delivery_path = path(
+        delivery_ref or str(Path(row["publish_root"]) / "manifest.json")
+    )
     delivery = read_object(delivery_path)
-    if delivery.get('schema') not in ('medical_video_review_package/v1', 'medical_video_series_delivery/v2') or delivery.get('series_id') != series:
-        raise ValueError('不支持的交付合同或系列不一致')
-    entries = [e for e in delivery.get('episodes', []) if (e.get('id') or e.get('episode_id')) == episode]
+    if (
+        delivery.get("schema")
+        not in ("medical_video_review_package/v1", "medical_video_series_delivery/v2")
+        or delivery.get("series_id") != series
+    ):
+        raise ValueError("不支持的交付合同或系列不一致")
+    entries = [
+        e
+        for e in delivery.get("episodes", [])
+        if (e.get("id") or e.get("episode_id")) == episode
+    ]
     if len(entries) != 1:
-        raise ValueError('交付清单缺少本集或集号重复')
+        raise ValueError("交付清单缺少本集或集号重复")
     entry = entries[0]
-    if entry.get('source') and path(entry['source']) != master:
-        raise ValueError('交付清单来源不是当前选定母版')
-    published = path(entry.get('video') or f'{episode}/video.mp4', delivery_path.parent)
+    if entry.get("source") and path(entry["source"]) != master:
+        raise ValueError("交付清单来源不是当前选定母版")
+    published = path(entry.get("video") or f"{episode}/video.mp4", delivery_path.parent)
     filecmp.clear_cache()
     if not filecmp.cmp(master, published, shallow=False):
-        raise ValueError('交付视频与当前母版字节不一致')
+        raise ValueError("交付视频与当前母版字节不一致")
     # Use the original formatter, so platform content stays single-source.
     import importlib.util
-    scripts = str(BUNDLE / 'scripts')
+
+    scripts = str(BUNDLE / "scripts")
     sys.path.insert(0, scripts)
     try:
-        spec = importlib.util.spec_from_file_location('medcast_release_format', BUNDLE / 'scripts/build_release_packages.py')
+        spec = importlib.util.spec_from_file_location(
+            "medcast_release_format", BUNDLE / "scripts/build_release_packages.py"
+        )
         formatter = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(formatter)
-        for platform, filename in [('xiaohongshu', '小红书文案.txt'), ('channels', '微信视频号文案.txt')]:
-            if path(filename, published.parent).read_text(encoding='utf-8') != formatter.platform_text(catalog_entries[0], platform):
-                raise ValueError(f'{filename} 与当前文案目录不一致')
+        for platform, filename in [
+            ("xiaohongshu", "小红书文案.txt"),
+            ("channels", "微信视频号文案.txt"),
+        ]:
+            if path(filename, published.parent).read_text(
+                encoding="utf-8"
+            ) != formatter.platform_text(catalog_entries[0], platform):
+                raise ValueError(f"{filename} 与当前文案目录不一致")
     finally:
         sys.path.remove(scripts)
-    path('发布交付包.md', published.parent)
-    if (published.parent / '字幕.srt').is_file() and not filecmp.cmp(srt, path('字幕.srt', published.parent), shallow=False):
-        raise ValueError('交付字幕与制作单不一致')
-    review_path = published.parent / '审看记录.json'
+    path("发布交付包.md", published.parent)
+    if (published.parent / "字幕.srt").is_file() and not filecmp.cmp(
+        srt, path("字幕.srt", published.parent), shallow=False
+    ):
+        raise ValueError("交付字幕与制作单不一致")
+    review_path = published.parent / "审看记录.json"
     review = read_object(path(review_path)) if review_path.is_file() else {}
-    for field, expected in [('production_plan', plan_path), ('video_source', master), ('audio_source', audio), ('srt_source', srt)]:
+    for field, expected in [
+        ("production_plan", plan_path),
+        ("video_source", master),
+        ("audio_source", audio),
+        ("srt_source", srt),
+    ]:
         if review.get(field) and path(review[field]) != expected:
-            raise ValueError(f'审看记录 {field} 与当前输入不一致')
-    if 'segments' in review and review['segments'] != timeline:
+            raise ValueError(f"审看记录 {field} 与当前输入不一致")
+    if "segments" in review and review["segments"] != timeline:
         # Review records may add annotations. Compare actual selected ranges only.
-        signature = lambda segs: [(s['segment_id'], float(s['start']), float(s['end']), str(path(s['source'], episode_root/'candidates')), float(s.get('source_start', 0)), float(s.get('source_end', float(s.get('source_start', 0))+float(s['end'])-float(s['start'])))) for s in segs]
-        if signature(review['segments']) != signature(timeline):
-            raise ValueError('审看记录与当前制作单的镜头或区间不一致')
-    if not review.get('production_plan') and 'segments' not in review:
-        debt.append({'review':'current_plan_binding','status':'needs_evidence','reason':'需回读当前构建记录；母版字节一致不单独证明制作单被实际使用'})
+        signature = lambda segs: [
+            (
+                s["segment_id"],
+                float(s["start"]),
+                float(s["end"]),
+                str(path(s["source"], episode_root / "candidates")),
+                float(s.get("source_start", 0)),
+                float(
+                    s.get(
+                        "source_end",
+                        float(s.get("source_start", 0))
+                        + float(s["end"])
+                        - float(s["start"]),
+                    )
+                ),
+            )
+            for s in segs
+        ]
+        if signature(review["segments"]) != signature(timeline):
+            raise ValueError("审看记录与当前制作单的镜头或区间不一致")
+    if not review.get("production_plan") and "segments" not in review:
+        debt.append(
+            {
+                "review": "current_plan_binding",
+                "status": "needs_evidence",
+                "reason": "需回读当前构建记录；母版字节一致不单独证明制作单被实际使用",
+            }
+        )
     # Series summaries cannot approve a newly selected episode revision.
-    claims = {key: review.get(key, 'pending') for key in ('technical_qa', 'sampled_semantic_review', 'full_motion_review', 'full_listening', 'tone_consistency', 'medical_review')}
-    return {'schema': 'med_autocast_native_preflight/v1', 'status': 'passed', 'read_only': True,
-            'series_id': series, 'episode_id': episode, 'plan': str(plan_path), 'master': str(master),
-            'delivery': str(delivery_path), 'checked_shots': len(checked), 'sources': checked,
-            'video_bytes_equal': True, 'platform_copy_equal': True, 'review_claims': claims,
-            'series_review_summary': {key: delivery[key] for key in claims if key in delivery},
-            'quality_debt': debt, 'domain_quality_approved': False, 'publication_authorized': False,
-            'note': '原合同和交付字节一致；保留原复核声明，未重新审定证据、动态、听感或医学质量'}
+    claims = {
+        key: review.get(key, "pending")
+        for key in (
+            "technical_qa",
+            "sampled_semantic_review",
+            "full_motion_review",
+            "full_listening",
+            "tone_consistency",
+            "medical_review",
+        )
+    }
+    return {
+        "schema": "med_autocast_native_preflight/v1",
+        "status": "passed",
+        "read_only": True,
+        "series_id": series,
+        "episode_id": episode,
+        "plan": str(plan_path),
+        "master": str(master),
+        "delivery": str(delivery_path),
+        "checked_shots": len(checked),
+        "sources": checked,
+        "video_bytes_equal": True,
+        "platform_copy_equal": True,
+        "review_claims": claims,
+        "series_review_summary": {
+            key: delivery[key] for key in claims if key in delivery
+        },
+        "quality_debt": debt,
+        "domain_quality_approved": False,
+        "publication_authorized": False,
+        "note": "原合同和交付字节一致；保留原复核声明，未重新审定证据、动态、听感或医学质量",
+    }

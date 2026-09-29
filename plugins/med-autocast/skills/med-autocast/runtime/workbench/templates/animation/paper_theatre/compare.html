@@ -1,0 +1,12 @@
+<!doctype html><html lang="zh-CN"><meta charset="utf-8"><title>纸剧场版本对照</title><style>body{font:16px system-ui;background:#263b36;color:#eee;margin:24px}main{display:flex;gap:16px}section{width:50%}video{width:100%;background:#111}nav{display:flex;gap:14px;align-items:center;margin:20px 0}input{flex:1}button,select{padding:8px}a{color:#d7c194}</style><h1>同一时刻，比较两版</h1><p>默认静音；拖动进度或逐帧比较构图、接触和遮挡。点击播放后才开始运动。</p><main><section><h2>修改前</h2><video id="before" muted preload="metadata" playsinline></video></section><section><h2>修改后</h2><video id="after" muted preload="metadata" playsinline></video></section></main><nav><button id="play">播放</button><button id="prev">上一帧</button><button id="next">下一帧</button><input id="seek" type="range" min="0" max="1" step="0.0001" value="0" aria-label="对照进度"><select id="speed"><option value="1">正常速度</option><option value="0.5">半速</option></select><output></output></nav><p>两版时长不同时，按相同秒数比较，不强行拉伸动作。</p><script>
+const q=new URLSearchParams(location.search),before=document.querySelector('#before'),after=document.querySelector('#after'),seek=document.querySelector('#seek'),play=document.querySelector('#play');
+before.src=q.get('before')||'before.mp4';after.src=q.get('after')||'after.mp4';
+const duration=()=>Math.min(before.duration||0,after.duration||0);
+function pause(){before.pause();after.pause();play.textContent='播放'}
+function at(t){pause();const v=Math.max(0,Math.min(duration(),t));before.currentTime=v;after.currentTime=v;seek.value=v/duration()||0;document.querySelector('output').textContent=v.toFixed(2)+' 秒'}
+seek.oninput=()=>at(Number(seek.value)*duration());document.querySelector('#prev').onclick=()=>at(after.currentTime-1/24);document.querySelector('#next').onclick=()=>at(after.currentTime+1/24);
+play.onclick=async()=>{if(!after.paused){pause();return}if(after.currentTime>=duration()-.05)at(0);await Promise.all([before.play(),after.play()]);play.textContent='暂停'};
+document.querySelector('#speed').onchange=e=>{before.playbackRate=after.playbackRate=Number(e.target.value)};
+after.ontimeupdate=()=>{seek.value=after.currentTime/duration()||0;document.querySelector('output').textContent=after.currentTime.toFixed(2)+' 秒';if(Math.abs(before.currentTime-after.currentTime)>.1)before.currentTime=after.currentTime};
+after.onended=pause;before.onended=pause;
+</script></html>

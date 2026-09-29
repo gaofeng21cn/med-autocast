@@ -1,0 +1,54 @@
+{
+  "fps": 24,
+  "duration": 18,
+  "cues": [],
+  "sounds": [
+    {
+      "shot": "fold",
+      "event": "open",
+      "kind": "fold"
+    },
+    {
+      "shot": "stow",
+      "event": "arrive",
+      "kind": "slide"
+    },
+    {
+      "shot": "stamp",
+      "event": "contact",
+      "kind": "stamp"
+    }
+  ],
+  "shots": [
+    {
+      "id": "fold",
+      "title": "纸页铰接",
+      "start": 0,
+      "end": 6,
+      "events": {
+        "open": 1,
+        "opened": 3
+      }
+    },
+    {
+      "id": "stow",
+      "title": "分层收纳",
+      "start": 6,
+      "end": 12,
+      "events": {
+        "move": 1,
+        "arrive": 3.3
+      }
+    },
+    {
+      "id": "stamp",
+      "title": "接触与抬起",
+      "start": 12,
+      "end": 18,
+      "events": {
+        "contact": 2,
+        "lift": 3
+      }
+    }
+  ]
+}

@@ -1,0 +1,34 @@
+{
+  "schema": "medical_animation_assets/v1",
+  "assets": [
+    {
+      "asset_id": "procedural-paper",
+      "path": "src/main.ts",
+      "source_type": "authored_graphic",
+      "visual_meaning": "原创纸页铰接、收纳、接触动作范例",
+      "must_not_imply": "无医学含义，不是可直接发布的医疗动画",
+      "medical": false,
+      "status": "pending_review"
+    }
+  ],
+  "shots": [
+    {
+      "shot_id": "fold",
+      "asset_ids": [
+        "procedural-paper"
+      ]
+    },
+    {
+      "shot_id": "stow",
+      "asset_ids": [
+        "procedural-paper"
+      ]
+    },
+    {
+      "shot_id": "stamp",
+      "asset_ids": [
+        "procedural-paper"
+      ]
+    }
+  ]
+}

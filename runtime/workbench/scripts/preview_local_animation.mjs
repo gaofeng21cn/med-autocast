@@ -47,9 +47,9 @@ try {
     if (typeof window.__seek !== 'function' || !(window.__total > 0)) throw Error('预览需要 window.__seek(t) 和 window.__total');
     return {duration:window.__total, cuts:window.__cuts || [0, window.__total]};
   });
-  const cuts = [...new Set(timeline.cuts.filter(t => Number.isFinite(t) && t >= 0 && t < timeline.duration))].sort((a,b) => a-b);
-  if (cuts[0] !== 0) cuts.unshift(0);
-  cuts.push(timeline.duration);
+  const rangeStart = Number(config.start ?? 0), rangeEnd = Number(config.end ?? timeline.duration);
+  if (!(0 <= rangeStart && rangeStart < rangeEnd && rangeEnd <= timeline.duration)) throw Error('预览窗口无效');
+  const cuts = [rangeStart, ...new Set(timeline.cuts.filter(t => Number.isFinite(t) && t > rangeStart && t < rangeEnd)), rangeEnd].sort((a,b)=>a-b);
   const points = [];
   for (let index = 0; index < cuts.length - 1; index++) {
     const start = cuts[index], end = cuts[index + 1], span = end - start;
@@ -92,8 +92,8 @@ try {
     const randomAccess = await page.locator('#film').screenshot();
     if (!sequential.equals(randomAccess)) errors.push(`乱序 seek 不确定: ${first.time.toFixed(3)}s`);
   }
-  execFileSync('ffmpeg', ['-y','-loglevel','error','-pattern_type','glob','-i',path.join(output,'*.png'),'-vf',`scale=400:-1,tile=5x${Math.ceil(frames.length/5)}:padding=8:margin=8:color=white`,'-frames:v','1',path.join(output,'contact.jpg')]);
-  const report = {status:errors.length ? 'failed' : 'previewed', project, output, duration:timeline.duration, scenes:cuts.length-1, frames, motionStrips, errors, contact_sheet:path.join(output,'contact.jpg'), release_eligible:false};
+  execFileSync('ffmpeg', ['-y','-loglevel','error','-pattern_type','glob','-i',path.join(output,'[0-9][0-9][0-9]-*.png'),'-vf',`scale=400:-1,tile=5x${Math.ceil(frames.length/5)}:padding=8:margin=8:color=white`,'-frames:v','1',path.join(output,'contact.jpg')]);
+  const report = {status:errors.length ? 'failed' : 'previewed', project, output, duration:timeline.duration, range:[rangeStart,rangeEnd], scenes:cuts.length-1, frames, motionStrips, errors, contact_sheet:path.join(output,'contact.jpg'), release_eligible:false};
   await fs.writeFile(path.join(output,'preview.json'), JSON.stringify(report,null,2));
   console.log(JSON.stringify({status:report.status, output, frames:frames.length, errors, contact_sheet:report.contact_sheet}));
   if (errors.length) process.exitCode = 1;

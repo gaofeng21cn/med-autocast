@@ -69,3 +69,5 @@ video.mp4
 ```
 
 没有合格动画的篇目先交付文案和状态说明，等成片准备好再补视频；不从 animatic 冒充正式成片。每篇目录保留一个真实 `video.mp4`、两个独立 UTF-8 TXT 和一份交付说明，方便用户直接压缩转存。
+
+纸剧场使用 paper_project mix/build/render/package；旧制作单仍用对应原包器。preflight-workbench 同时接受 project.json，回读当前母版与交付字节；审看记录必须绑定当前视频，pending 不变成发布批准。 具体命令见[单集工具与局部返修](../../../runtime/workbench/docs/20_纸剧场单集工具与局部返修.md)。

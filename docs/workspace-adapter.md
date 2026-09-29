@@ -13,7 +13,7 @@ python3 runtime/native_helpers/workbench_tool.py --workspace /absolute/workspace
 python3 runtime/native_helpers/workbench_tool.py --workspace /absolute/workspace --name environment_check -- --pretty
 ```
 
-`inspect`、`tools`、`assets` 和预检只读。`workbench_tool.py` 同步调用一个明确工具，不创建队列或调度器；其效果与原工具一致。所有调用的 cwd 都是制作工作区，默认优先原 `scripts/`；缺少通用脚本才使用随包版本。`--bundled` 显式选择随包版本。工具接收的剩余参数原样传递；生成、下载、合成、检查输出和打包需处于本次授权范围。
+`inspect`、`tools`、`assets` 和预检只读。`workbench_tool.py` 同步调用一个明确工具，不创建队列或调度器；其效果与原工具一致。所有调用的 cwd 都是制作工作区；paper_project、render_narration、render_javascript_animation 固定使用随包实现，其他旧制作单工具优先原 scripts，缺少时使用随包版本。核心解释器自动选工作区 .venv；工具清单显示真实执行路径与解释器。`--bundled` 显式选择随包版本。工具接收的剩余参数原样传递；生成、下载、合成、检查输出和打包需处于本次授权范围。
 
 | 工作 | 工具名称 | 使用边界 |
 | --- | --- | --- |
@@ -51,6 +51,13 @@ python3 runtime/native_helpers/med_autocast.py preflight-workbench --workspace /
 核心依赖 PyYAML、Pillow、FFmpeg/ffprobe、ImageMagick 与配置字体；Python 3.11 以上。GPU、IndexTTS、Whisper、MLX/CUDA 的环境与模型保持独立。随包部署脚本只在明确安装/迁移任务中运行，不因一次检查自动安装模型或重启服务。
 # JS 动画与旁白基线入口
 
-工具分发器提供 `check_animation_assets`、`render_javascript_animation`、`render_edge_tts` 和 `audio_baseline`，通常优先使用工作区实现；`render_javascript_animation --preview` 会调用随包预览器，以兼容尚无预览选项的旧工作台。以工作区 `.venv/bin/python runtime/native_helpers/workbench_tool.py --workspace <工作区> --name <工具> -- <参数>` 调用；`runtime/native_helpers` 路径相对 Med Auto Cast 源码或安装后的 Skill 根。JS 项目先调用 `render_javascript_animation --preview --review-candidate` 生成逐镜姿态与联系表，返修后再编码 MP4；旧工作台的完整编码使用 `--bundled` 明确选择随包通用渲染器。预览不需要音轨，但使用工作区安装的 Playwright。Edge 需要联网，FFmpeg 与 JS 渲染在本机执行。
+JS 与纸剧场统一使用随包渲染器；预览和正式编码不再因 --preview 而选择不同实现。单集默认使用 paper_project 串联实际工具，Edge 仅是联网保底。
 
 输入字段和质量边界见 [素材准入与配音基线](../runtime/workbench/docs/13_素材准入与配音基线.md)。JS 制作单以 `animation.asset_manifest` 关联清单（相对制作单目录）；`preflight-workbench` 对 JS 制作单也执行素材准入。`tone_consistency` 与 `full_listening` 分开保留，响度通过不能批准语气。
+
+
+## 模块化纸剧场入口
+
+新集复制 `runtime/workbench/templates/animation/paper_theatre`（不复制 node_modules），在单集目录运行 `npm ci && npm run build`；Node 22.18+ 或 24 可运行 `npm test`。构建是本地文件写入，npm ci 需要首次依赖下载；最终 dist/film.js 不依赖 CDN。素材和品牌仍由工作区输入。`scripts/mix_audio.py` 接收 `--project --voice --music --output`，只混合已有音轨与事件音效，不调用 TTS。使用 `score.json` 的命名事件避免音画双份时码。构建后的 index.html 兼容已有 render_javascript_animation 入口；无需新增 OPL 动作或平行任务状态。操作细节见[模板说明](../runtime/workbench/templates/animation/paper_theatre/README.md)。
+
+完整操作见[单集工具与局部返修](../runtime/workbench/docs/20_纸剧场单集工具与局部返修.md)。纸剧场预检的 --plan 为 project.json，当前单集从 workbench.yaml.series 的 episodes 中发现，交付指针在 deliveries/SERIES/EPISODE.json。

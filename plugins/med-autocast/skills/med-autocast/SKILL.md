@@ -26,6 +26,8 @@ description: 使用 Med Auto Cast 规划、制作、修订和审查医学科普�
 
 默认纸剧场先把医学素材转为患者问题地图，再规划系列故事圣经和每集 `episode_blueprint`。blueprint 是创意交接，不是机器表单：导演先写视觉处理稿、风格帧和带声音事件的分镜，再做完整粗动态分镜；观众在隐藏说明文字后仍应看见物件的因果变化。随后准备透明分层素材、逐镜实现、连续预览和返修，最后才编码全片。新系列使用 `content/<topic>/` 与 `productions/<series>/<episode>/` 的分层结构；`work/`、`output/`、`deliveries/` 和 `archive/` 分别承担运行态、批量输出、交接记录和历史只读用途，不能互相充当制作权威。预览必须同时产出联系表和每镜固定 12 姿态 strip，导演据此检查准备、动作、落点、重量和切点；透明素材出现图册残片时必须回到单件生成或合法素材准入，不能靠遮挡卡片掩盖。可用 HyperFrames storyboard/Studio 或本地 HTML 预览做导演审片面；静帧、联系表和代码检查只辅助定位故障，不定义视频质量。方法见 `runtime/workbench/docs/15_纸剧场系列策划与制作.md`、`runtime/workbench/docs/16_纸剧场前置策划与质量门.md`、`runtime/workbench/docs/17_工作台目录结构与资产生命周期.md`。
 
+八个交接点的完整顺序和返修优先级见 `runtime/workbench/docs/18_纸剧场导演流程与质量框架.md`：先收敛患者任务、故事卡、处理稿和 animatic，再准入透明单件，最后写逐镜 JS。去文字审片、视觉负担预算和线段/色带物理来源是默认动画门；不能用脚本复杂度、标签堆叠或随机抖动补足没有视觉事件的镜头。
+
 六阶段与原十阶段职责映射见 `docs/production-sop.md`。完整专业方法、模板和通用工具随包存于 `runtime/workbench/`；已有工作区优先使用原入口。默认交付预检使用 `med_autocast.py preflight-workbench`，直接读取原制作单和交付清单，不另外维护 Med Auto Cast 制作状态。
 
 新用户只需提供主题、受众与大致时长；其余由智能体完成。首步默认建立品牌识别、医生形象和授权声线基线；已有系列复用其作者档案中的人物、声线与品牌出场方式。人物基线不要求每集出镜；某集仅用固定品牌印记仍属于该系列，不记录为跳过形象。用户也可显式跳过人物基线或专用声线，制作通用纸剧场；只有无专用声线或明确跳过时才用 Edge，记录 `voice.mode: edge` 并重置声音待审。不得因专用声线后端故障静默切换。工具入口为 `configure_voice --mode edge|reference`。按 `runtime/workbench/docs/14_新用户首片SOP.md` 完成首片。

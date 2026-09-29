@@ -25,7 +25,7 @@ class LocalRenderTests(unittest.TestCase):
         from PIL import Image
         Image.new('RGB', (32, 32), '#377a70').save(self.project / 'paper.png')
         self.html = '''<!doctype html><html><head><link rel="icon" href="data:,"></head>
-<body style="margin:0"><canvas width="320" height="180"></canvas>
+<body style="margin:0"><canvas id="film" width="320" height="180"></canvas>
 <script>
 const image = new Image(); image.src = 'paper.png';
 const ready = image.decode();

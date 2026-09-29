@@ -24,7 +24,7 @@ class ProjectTests(unittest.TestCase):
     def setUp(self):
         self.tmp = tempfile.TemporaryDirectory()
         self.addCleanup(self.tmp.cleanup)
-        self.root = Path(self.tmp.name)
+        self.root = Path(self.tmp.name).resolve()
 
     def test_renderer_and_inventory_share_canonical_entry_and_venv(self):
         (self.root / "scripts").mkdir()
@@ -70,6 +70,36 @@ class ProjectTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "工作区"):
             pp.initialize(a)
         self.assertFalse(target.exists())
+
+    def test_init_uses_series_author_override(self):
+        import yaml
+
+        for name, text in [("default", "Default"), ("series", "Series Brand")]:
+            (self.root / (name + ".yaml")).write_text(
+                yaml.safe_dump({"brand": {"overlay_text": text}})
+            )
+        (self.root / "workbench.yaml").write_text(
+            yaml.safe_dump(
+                {
+                    "schema": "medical_video_workbench/v2",
+                    "active_profiles": {"author": "default.yaml"},
+                    "series": {"s": {"author_profile": "series.yaml"}},
+                }
+            )
+        )
+        a = argparse.Namespace(
+            workspace=self.root,
+            project=self.root / "productions/s/e",
+            series="s",
+            episode="e",
+            title=None,
+            from_project=None,
+            narration=None,
+        )
+        pp.initialize(a)
+        self.assertEqual(pp.read(a.project / "brand.json")["text"], "Series Brand")
+        self.assertTrue((a.project / "tests/motion.test.ts").is_file())
+        self.assertTrue((a.project / "compare.html").is_file())
 
     def test_failed_force_keeps_successful_take_and_virtualenv_path(self):
         root = self.root

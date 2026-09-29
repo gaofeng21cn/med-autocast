@@ -18,8 +18,8 @@ carrier=R/'plugins/med-autocast/skills/med-autocast'
 assert primary.read_bytes()==(carrier/'SKILL.md').read_bytes(),'主Skill载体未同步'
 # Shipped method copies must be byte-identical to current source and contain no stale files.
 for dirname in ['agent','contracts','docs','runtime']:
-    originals={str(p.relative_to(R)) for p in (R/dirname).rglob('*') if p.is_file() and '__pycache__' not in p.parts and not (dirname=='docs' and any(x in p.relative_to(R/'docs').parts for x in ['design','evidence']))}
-    projected={str(p.relative_to(carrier)) for p in (carrier/dirname).rglob('*') if p.is_file() and '__pycache__' not in p.parts}
+    originals={str(p.relative_to(R)) for p in (R/dirname).rglob('*') if p.is_file() and not any(part in p.parts for part in ['__pycache__','node_modules','dist']) and not (dirname=='docs' and any(x in p.relative_to(R/'docs').parts for x in ['design','evidence']))}
+    projected={str(p.relative_to(carrier)) for p in (carrier/dirname).rglob('*') if p.is_file() and not any(part in p.parts for part in ['__pycache__','node_modules','dist'])}
     assert originals==projected,('载体文件清单漂移',originals^projected)
     for rel in originals:assert (R/rel).read_bytes()==(carrier/rel).read_bytes(),('载体内容漂移',rel)
 print(json.dumps({'status':'passed','stages':len(manifest['stages']),'professional_skills':len(list((R/'agent/professional_skills').glob('*/SKILL.md')))},ensure_ascii=False))

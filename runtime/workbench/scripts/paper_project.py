@@ -191,7 +191,11 @@ def initialize(a):
         shutil.copy2(a.narration, p / "preproduction/narration.json")
     else:
         (p / "preproduction").mkdir(exist_ok=True)
-    profile, author = load_author_profile(root=a.workspace)
+    config = yaml.safe_load((a.workspace / "workbench.yaml").read_text())
+    profile, author = load_author_profile(
+        root=a.workspace,
+        series_id=a.series if a.series in config.get("series", {}) else None,
+    )
     brand = author.get("brand", {})
     save(
         p / "brand.json",

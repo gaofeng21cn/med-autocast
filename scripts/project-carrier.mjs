@@ -19,7 +19,7 @@ for(const f of files){
 const skillRoot=path.join(root,'plugins/med-autocast/skills/med-autocast');
 for(const name of ['agent','contracts','docs','runtime']){
  fs.rmSync(path.join(skillRoot,name),{recursive:true,force:true});
- fs.cpSync(path.join(root,name),path.join(skillRoot,name),{recursive:true,filter:p=>!p.includes('__pycache__')&&!p.includes(`${path.sep}design${path.sep}`)&&!p.endsWith(`${path.sep}design`)&&!p.includes(`${path.sep}evidence${path.sep}`)&&!p.endsWith(`${path.sep}evidence`)});
+ fs.cpSync(path.join(root,name),path.join(skillRoot,name),{recursive:true,filter:p=>!p.split(path.sep).some(part=>['__pycache__','node_modules','dist'].includes(part))&&!p.includes(`${path.sep}design${path.sep}`)&&!p.endsWith(`${path.sep}design`)&&!p.includes(`${path.sep}evidence${path.sep}`)&&!p.endsWith(`${path.sep}evidence`)});
 }
 console.log(JSON.stringify({status:'projected',owner:'one-person-lab',generator:'buildScaffoldFiles',local_projection_only:true,installed:false}));
 

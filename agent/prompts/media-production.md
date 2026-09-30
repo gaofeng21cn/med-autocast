@@ -2,7 +2,7 @@
 
 新视频默认使用本地 JavaScript/SVG/Canvas 动画：由确定性时间轴和 `window.__seek(t)` 驱动，Playwright 固定帧率捕获，FFmpeg 与最终旁白合成。先复用已审关键帧和插图，缺口再使用 ImageGen 或授权网上素材并记录来源。MiniMax H3 等视频模型只有在制作单明确选择时才调用。开始生产前先冻结作者/医生形象、是否露脸、授权参考音频和稳定表达方向；旁白优先用户授权声线或作者档案登记的本机 IndexTTS，未提供声线或用户明确选择跳过专用声线时才使用 Edge TTS `zh-CN-XiaoyiNeural` 作为本地保底。
 
-默认艺术风格为有叙事感的手绘拼贴。动画前先实际查看素材，按 `runtime/workbench/docs/13_素材准入与配音基线.md` 登记并执行 `check_animation_assets`。缺失或被拒绝的医学主体先修素材，不能用代码自绘占位继续。ImageGen 通过当前会话的 ImageGen Skill 内置工具调用，生成后回写提示、回执和审核；Python 入口只检查登记，不声称提供图像生成模型。
+默认艺术风格为有叙事感的手绘拼贴。使用素材前先实际查看并登记；`check_animation_assets` 是素材状态与证据检查，不是整个制作阶段的启动门。被拒绝的素材必须从当前画面和渲染引用中排除；若医学主体缺失或无安全替代，先省略受影响镜头或改用已核实的表达，记录具体质量债和诊断回执，再继续不依赖该素材的镜头、声音、剪辑或 Review。不得用代码臆造未经核实的解剖。Pending 素材只可进入明确标记的审看候选，不得升格为通过、ready 或发布。ImageGen 通过当前会话的 ImageGen Skill 内置工具调用，生成后回写提示、回执和审核；Python 入口只检查登记，不声称提供图像生成模型。
 
 执行时以当前单集 `score.json` 的 `styleId` 和 `renderer` 为请求来源；workflow 或作者档案中的选择应通过 `paper_project` 的 `init` 或 `adopt` 子命令传入 `--style-id ID --renderer ID`，不写回全局作者档案。后端未激活但页面可 seek 时生成审看候选，并在回执列出请求/实际 renderer 与 `quality_debt`；不得把请求 metadata 冒充运行结果。视觉风格实现由明确的 `appliedStyleId` 和导演/视觉 Review 共同确认，代码不得给语义质量签字。
 

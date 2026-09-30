@@ -1,8 +1,11 @@
 """Regression checks for asset admission and explicit narration baselines."""
 import asyncio
+from contextlib import redirect_stdout
+import io
 import json
 from pathlib import Path
 import sys
+import subprocess
 import tempfile
 import types
 import unittest
@@ -49,25 +52,110 @@ class AnimationWorkflowTests(unittest.TestCase):
         self.asset['status'] = 'rejected'
         with self.assertRaisesRegex(ValueError, 'rejected'): self.check()
 
-    def test_candidate_allows_pending_but_never_rejected(self):
+    def test_pending_candidate_carries_review_debt_and_rejected_asset_returns_diagnostic(self):
         self.asset['status'] = 'pending_review'
         self.check()
         args = ['renderer', '--project-root', str(self.root), '--asset-manifest', 'assets.json',
                 '--check-only', '--review-candidate']
-        with patch.object(sys, 'argv', args), patch('shutil.which', return_value='/fixture/tool'):
+        output = io.StringIO()
+        with patch.object(sys, 'argv', args), patch('shutil.which', return_value='/fixture/tool'), redirect_stdout(output):
             render_javascript_animation.main()
+        self.assertEqual(json.loads(output.getvalue())['status'], 'blocked')
         self.asset['status'] = 'rejected'
-        with self.assertRaises(ValueError): self.check()
-        with patch.object(sys, 'argv', args), patch('shutil.which', return_value='/fixture/tool'):
-            with self.assertRaisesRegex(SystemExit, 'rejected'):
-                render_javascript_animation.main()
+        path = self.root / 'assets.json'
+        data = json.loads(path.read_text())
+        data['assets'][0] = self.asset
+        path.write_text(json.dumps(data))
+        preview = self.root / 'preview'
+        args = ['renderer', '--project-root', str(self.root), '--asset-manifest', 'assets.json',
+                '--preview', '--preview-output', str(preview), '--review-candidate']
+        output = io.StringIO()
+        with patch.object(sys, 'argv', args), patch('shutil.which', return_value='/fixture/tool'), redirect_stdout(output):
+            render_javascript_animation.main()
+        report = json.loads((preview / 'preview.json').read_text())
+        self.assertEqual(report['status'], 'not_rendered_with_quality_debt')
+        self.assertFalse(report['output_created'])
+        self.assertFalse(report['release_eligible'])
+        self.assertTrue(any(item['code'] == 'asset_admission_unresolved' for item in report['quality_debt']))
+        self.assertIn('rejected', report['quality_debt'][0]['detail'])
 
-    def test_default_renderer_still_blocks_pending(self):
+    def test_default_renderer_materializes_diagnostic_for_pending_assets(self):
         self.asset['status'] = 'pending_review'
         self.check()
-        args = ['renderer', '--project-root', str(self.root), '--asset-manifest', 'assets.json', '--check-only']
-        with patch.object(sys, 'argv', args), patch('shutil.which', return_value='/fixture/tool'):
-            with self.assertRaises(SystemExit): render_javascript_animation.main()
+        output_path = self.root / 'out' / 'candidate.mp4'
+        args = ['renderer', '--project-root', str(self.root), '--asset-manifest', 'assets.json', '--output', str(output_path)]
+        with patch.object(sys, 'argv', args), patch('shutil.which', return_value='/fixture/tool'), redirect_stdout(io.StringIO()):
+            render_javascript_animation.main()
+        report = json.loads(output_path.with_suffix('.receipt.json').read_text())
+        self.assertEqual(report['status'], 'not_rendered_with_quality_debt')
+        self.assertFalse(output_path.exists())
+        self.assertFalse(report['release_eligible'])
+
+    def test_pending_assets_are_top_level_render_quality_debt(self):
+        self.asset['status'] = 'pending_review'
+        admission = self.check()
+        self.assertIn('asset_review_pending', {
+            item['code'] for item in render_javascript_animation.asset_admission_quality_debt(admission)
+        })
+
+    def test_pending_review_render_receipt_preserves_quality_debt(self):
+        self.asset['status'] = 'pending_review'
+        self.check()
+        audio = self.root / 'audio.wav'
+        audio.write_bytes(b'fixture audio')
+        output_path = self.root / 'out' / 'candidate.mp4'
+
+        def render(command, cwd, capture_output=False):
+            config = json.loads(Path(command[-1]).read_text())
+            target = Path(config['output'])
+            target.parent.mkdir(parents=True, exist_ok=True)
+            target.write_bytes(b'fixture video')
+            return subprocess.CompletedProcess(command, 0, stdout=json.dumps({
+                'renderer_runtime': {'renderer_id': 'canvas2d', 'style_id': 'paper_collage'},
+            }))
+
+        args = ['renderer', '--project-root', str(self.root), '--asset-manifest', 'assets.json',
+                '--output', str(output_path), '--audio', str(audio), '--review-candidate']
+        with (
+            patch.object(sys, 'argv', args),
+            patch('shutil.which', return_value='/fixture/tool'),
+            patch.object(render_javascript_animation, 'run', side_effect=render),
+            patch.object(subprocess, 'run', return_value=subprocess.CompletedProcess(
+                ['ffprobe'], 0,
+                stdout='{"format":{"duration":"1"},"streams":[{"codec_type":"video"},{"codec_type":"audio"}]}',
+            )),
+            redirect_stdout(io.StringIO()),
+        ):
+            render_javascript_animation.main()
+        receipt = json.loads(output_path.with_suffix('.receipt.json').read_text())
+        self.assertEqual(receipt['status'], 'rendered')
+        self.assertEqual({item['code'] for item in receipt['quality_debt']}, {'asset_review_pending'})
+        self.assertFalse(receipt['release_eligible'])
+
+    def test_failed_browser_preview_is_not_reported_as_previewed(self):
+        self.check()
+        preview = self.root / 'preview'
+
+        def failed_preview(command, cwd, capture_output=False):
+            preview.mkdir()
+            (preview / 'preview.json').write_text(json.dumps({
+                'status': 'failed', 'frames': [{'file': 'partial.png'}], 'errors': ['browser error'],
+            }))
+            raise SystemExit('browser error')
+
+        args = ['renderer', '--project-root', str(self.root), '--asset-manifest', 'assets.json',
+                '--preview', '--preview-output', str(preview), '--review-candidate']
+        with (
+            patch.object(sys, 'argv', args),
+            patch('shutil.which', return_value='/fixture/tool'),
+            patch.object(render_javascript_animation, 'run', side_effect=failed_preview),
+            redirect_stdout(io.StringIO()),
+        ):
+            render_javascript_animation.main()
+        report = json.loads((preview / 'preview.json').read_text())
+        self.assertEqual(report['status'], 'preview_attempted_with_quality_debt')
+        self.assertTrue(report['output_created'])
+        self.assertTrue(any(item['code'] == 'animation_preview_failed' for item in report['quality_debt']))
 
     def test_renderer_selection_debt_does_not_block_a_candidate(self):
         report = render_javascript_animation.renderer_selection_report(

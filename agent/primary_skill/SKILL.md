@@ -24,9 +24,9 @@ description: 使用 Med Auto Cast 规划、制作、修订和审查医学科普�
 
 专业 Skill 及 SOP 可按当前任务选择加载，不要求用户重复批准已授权的本地工作。部署、生产媒体生成与发布须符合当前请求范围。详见 `docs/production-sop.md`、`docs/workspace-adapter.md`。
 
-默认纸剧场先把医学素材转为患者问题地图，再规划系列故事圣经和每集 `episode_blueprint`。blueprint 是创意交接，不是机器表单：导演先写视觉处理稿、风格帧和带声音事件的分镜，再做完整粗动态分镜；观众在隐藏说明文字后仍应看见物件的因果变化。随后准备透明分层素材、逐镜实现、连续预览和返修，最后才编码全片。新系列使用 `content/<topic>/` 与 `productions/<series>/<episode>/` 的分层结构；`work/`、`output/`、`deliveries/` 和 `archive/` 分别承担运行态、批量输出、交接记录和历史只读用途，不能互相充当制作权威。预览必须同时产出联系表和每镜固定 12 姿态 strip，导演据此检查准备、动作、落点、重量和切点；透明素材出现图册残片时必须回到单件生成或合法素材准入，不能靠遮挡卡片掩盖。可用 HyperFrames storyboard/Studio 或本地 HTML 预览做导演审片面；静帧、联系表和代码检查只辅助定位故障，不定义视频质量。方法见 `runtime/workbench/docs/15_纸剧场系列策划与制作.md`、`runtime/workbench/docs/16_纸剧场前置策划与质量门.md`、`runtime/workbench/docs/17_工作台目录结构与资产生命周期.md`。
+默认纸剧场先把医学素材转为患者问题地图，再规划系列故事圣经和每集 `episode_blueprint`。blueprint 是创意交接，不是机器表单：推荐先写视觉处理稿、风格帧和带声音事件的分镜，再做完整粗动态分镜；低保真代码预览、独立镜头、声音准备和安全替代可以并行推进。这个顺序提高初稿质量，不是阶段启动门；信息不足或质量检查未通过时，保留可消费候选/诊断与质量债，继续不依赖该缺口的工作。被拒绝的医学素材不得进入渲染；没有安全替代时省略受影响镜头，不臆造解剖。新系列使用 `content/<topic>/` 与 `productions/<series>/<episode>/` 的分层结构；`work/`、`output/`、`deliveries/` 和 `archive/` 分别承担运行态、批量输出、交接记录和历史只读用途，不能互相充当制作权威。预览联系表和每镜固定 12 姿态 strip 是导演的定位证据，不是机器质量门；透明素材出现图册残片时应回到单件生成或合法素材准入，不能靠遮挡卡片掩盖。可用 HyperFrames storyboard/Studio 或本地 HTML 预览做导演审片面；静帧、联系表和代码检查只辅助定位故障，不定义视频质量。方法见 `runtime/workbench/docs/15_纸剧场系列策划与制作.md`、`runtime/workbench/docs/16_纸剧场前置策划与质量门.md`、`runtime/workbench/docs/17_工作台目录结构与资产生命周期.md`。
 
-八个交接点的完整顺序和返修优先级见 `runtime/workbench/docs/18_纸剧场导演流程与质量框架.md`：先收敛患者任务、故事卡、处理稿和 animatic，再准入透明单件，最后写逐镜 JS。去文字审片、视觉负担预算和线段/色带物理来源是默认动画门；不能用脚本复杂度、标签堆叠或随机抖动补足没有视觉事件的镜头。
+八个交接点的推荐顺序和返修优先级见 `runtime/workbench/docs/18_纸剧场导演流程与质量框架.md`：通常先收敛患者任务、故事卡、处理稿和 animatic，再准入透明单件并写逐镜 JS；Stage 可以按用户目标与已有产物跳转、并行或回退。去文字审片、视觉负担预算和线段/色带物理来源用于判断候选成熟度；未达标时继续返修或交接质量债，不阻止其他可消费进度。不能用脚本复杂度、标签堆叠或随机抖动补足没有视觉事件的镜头，也不能把欠项候选称为通过或 ready。
 
 六阶段与原十阶段职责映射见 `docs/production-sop.md`。完整专业方法、模板和通用工具随包存于 `runtime/workbench/`；旧制作单保留原入口；纸剧场统一使用随包 paper_project，避免预览和正式渲染调用不同版本。默认交付预检使用 `med_autocast.py preflight-workbench`，直接读取原制作单和交付清单，不另外维护 Med Auto Cast 制作状态。
 
@@ -43,7 +43,7 @@ description: 使用 Med Auto Cast 规划、制作、修订和审查医学科普�
 
 Manifest 的六阶段路线是 `evidence-plan -> story-directing -> media-production -> visual-review -> meta-review -> review-handoff`；`asset-curation` 是交付后的可选沉淀。每个 Stage 的 prompt、专业 Skill、quality gate、工具和推荐产物可由 `contracts/stage_capability_bundle.json` 查询，动画风格与渲染器可由 `contracts/animation_style_registry.json` 查询。
 
-能力包、`requires`、artifact envelope 和风格注册表是定位与交接建议，不是阻断流程的脚本 DSL。模型输出不完整、字段缺失、未列出的可消费材料或工具能力不足，优先保留已有结果、记录 `quality_debt`、`route_back` 或工具 blocker 并继续推进；只有权限、身份/当前性、执行器不可用、明确人工决定和不可逆授权边界才硬停止。
+能力包、`requires`、artifact envelope 和风格注册表是定位与交接建议，不是阻断流程的脚本 DSL。模型输出不完整、字段缺失、未列出的可消费材料或工具能力不足，优先保留已有结果、记录 `quality_debt`、`route_back` 或工具 blocker 并继续推进。工具失败时保留部分结果并物化可读诊断；OPL 可将诊断作为进度按默认路由继续。不能仅凭退出码、质量预算耗尽或材料不完整结束流程；只有连可读诊断都无法形成，或命中权限、身份/当前性、执行器不可用、明确人工决定和不可逆授权等真实硬边界时才停止。
 
 Stage 返回尽量引用真实产物与版本/来源信息，给出质量债务和下一步建议；OPL 可提供的 `stage_run_ref`、owner receipt、typed blocker、human gate、route-back 与 memory 均以真实引用为准。推荐字段缺失时下游仍消费可用材料，不因返回 JSON 不完整而丢弃阶段进展。
 

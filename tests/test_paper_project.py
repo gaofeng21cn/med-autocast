@@ -130,6 +130,77 @@ class ProjectTests(unittest.TestCase):
         self.assertTrue((a.project / "tests/motion.test.ts").is_file())
         self.assertTrue((a.project / "compare.html").is_file())
 
+    def test_preview_returns_diagnostic_without_claiming_a_preview(self):
+        project = self.root / "productions/s/e"
+        project.mkdir(parents=True)
+        pp.save(project / "project.json", {
+            "schema": "paper_project/v1", "series_id": "s", "episode_id": "e",
+            "score": "score.json", "assets": "asset_manifest.json", "entry": "index.html",
+        })
+        pp.save(project / "score.json", {"duration": 10, "shots": []})
+
+        def write_diagnostic(command, cwd, workspace):
+            output = Path(command[command.index("--preview-output") + 1])
+            output.mkdir(parents=True, exist_ok=True)
+            pp.save(output / "preview.json", {
+                "status": "not_rendered_with_quality_debt",
+                "quality_debt": [{"code": "asset_admission_unresolved", "blocks_stage_progress": False}],
+            })
+
+        args = argparse.Namespace(
+            project=project, workspace=self.root, shot=None, neighbors=False,
+            start=None, end=None, output=None, clean=False, width=320, height=180,
+        )
+        with patch.object(pp, "assert_built"), patch.object(pp, "run", side_effect=write_diagnostic):
+            result = pp.preview(args)
+        self.assertEqual(result["status"], "not_rendered_with_quality_debt")
+        self.assertEqual(result["quality_debt"][0]["code"], "asset_admission_unresolved")
+        self.assertIsNotNone(result["preview_receipt"])
+
+    def test_render_returns_failure_diagnostic_without_replacing_current_candidate(self):
+        project = self.root / "productions/s/e"
+        (project / "audio").mkdir(parents=True)
+        (project / "dist").mkdir()
+        (project / "out").mkdir()
+        (project / "audio/narration-normalized.wav").write_bytes(b"voice")
+        (project / "audio.wav").write_bytes(b"mix")
+        (project / "dist/film.js").write_text("bundle")
+        pp.save(project / "score.json", {
+            "fps": 24, "duration": 1, "shots": [],
+            "style": {"styleId": "paper_collage", "renderer": "canvas2d"},
+        })
+        pp.save(project / "project.json", {
+            "schema": "paper_project/v1", "series_id": "s", "episode_id": "e",
+            "score": "score.json", "voice": "audio/narration-normalized.wav",
+            "audio": "audio.wav", "entry": "index.html",
+        })
+        pp.save(project / "audio/mix-receipt.json", {
+            "voice_sha256": pp.sha(project / "audio/narration-normalized.wav"),
+            "score_sha256": pp.sha(project / "score.json"),
+            "audio_sha256": pp.sha(project / "audio.wav"),
+        })
+        pp.save(project / "out/current.json", {"path": "prior-review.mp4", "status": "rendered"})
+
+        def write_diagnostic(command, cwd, workspace):
+            output = Path(command[command.index("--output") + 1])
+            pp.save(output.with_suffix(".receipt.json"), {
+                "status": "not_rendered_with_quality_debt",
+                "quality_debt": [{"code": "asset_admission_unresolved", "blocks_stage_progress": False}],
+                "release_eligible": False,
+            })
+
+        args = argparse.Namespace(project=project, workspace=self.root, output=None)
+        with (
+            patch.object(pp, "assert_narration"),
+            patch.object(pp, "assert_built"),
+            patch.object(pp, "run", side_effect=write_diagnostic),
+        ):
+            result = pp.render(args)
+        self.assertEqual(result["status"], "not_rendered_with_quality_debt")
+        self.assertIsNone(result["path"])
+        self.assertEqual(result["quality_debt"][0]["code"], "asset_admission_unresolved")
+        self.assertEqual(pp.read(project / "out/current.json")["path"], "prior-review.mp4")
+
     def test_failed_force_keeps_successful_take_and_virtualenv_path(self):
         root = self.root
         runtime = root / "tts"

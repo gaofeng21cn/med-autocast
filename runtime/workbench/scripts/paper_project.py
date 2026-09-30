@@ -608,11 +608,23 @@ def preview(a):
             style_selection["renderer_id"],
             preview_report.get("renderer_runtime", {}),
         )
-        quality_debt = renderer_selection["quality_debt"]
+        quality_debt = list(preview_report.get("quality_debt", []))
+        known_debt = {item.get("code") for item in quality_debt if isinstance(item, dict)}
+        quality_debt.extend(
+            item for item in renderer_selection["quality_debt"]
+            if item.get("code") not in known_debt
+        )
         preview_report["renderer_selection"] = renderer_selection
         preview_report["quality_debt"] = quality_debt
         save(preview_report_path, preview_report)
-        preview_status = "previewed"
+        preview_status = (
+            preview_report.get("status")
+            if preview_report.get("status") in {
+                "not_rendered_with_quality_debt",
+                "preview_attempted_with_quality_debt",
+            }
+            else "previewed"
+        )
     else:
         renderer_selection = renderer_selection_report(
             style_selection["style_id"],
@@ -635,6 +647,7 @@ def preview(a):
         **style_selection,
         "renderer_selection": renderer_selection,
         "quality_debt": quality_debt,
+        "preview_receipt": str(preview_report_path) if preview_report_path.is_file() else None,
         "full_listening": "pending",
     }
 
@@ -728,6 +741,24 @@ def render(a):
     )
     render_receipt_path = out.with_suffix(".receipt.json")
     render_receipt = read(render_receipt_path) if render_receipt_path.is_file() else {}
+    if not out.is_file():
+        return {
+            "status": render_receipt.get("status", "render_not_completed_with_quality_debt"),
+            "path": None,
+            "output_target": str(out),
+            "render_receipt": str(render_receipt_path) if render_receipt_path.is_file() else None,
+            **style_selection,
+            "renderer_selection": render_receipt.get("renderer_selection") or renderer_selection_report(
+                style_selection["style_id"], style_selection["renderer_id"], {}
+            ),
+            "quality_debt": render_receipt.get("quality_debt", [{
+                "code": "render_output_missing",
+                "owner_stage": "media-production",
+                "blocks_stage_progress": False,
+                "blocks_quality_export": True,
+            }]),
+            "release_eligible": False,
+        }
     renderer_selection = render_receipt.get("renderer_selection") or renderer_selection_report(
         style_selection["style_id"],
         style_selection["renderer_id"],
@@ -741,6 +772,7 @@ def render(a):
             "blocks_stage_progress": False,
         })
     result = {
+        "status": render_receipt.get("status", "rendered"),
         "path": str(out),
         "sha256": sha(out),
         "score_sha256": sha(p / c["score"]),
@@ -752,7 +784,8 @@ def render(a):
         "render_receipt": str(render_receipt_path) if render_receipt_path.is_file() else None,
         "release_eligible": False,
     }
-    save(p / "out/current.json", result)
+    if result["status"] == "rendered":
+        save(p / "out/current.json", result)
     return result
 
 

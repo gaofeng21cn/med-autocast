@@ -21,6 +21,7 @@
     "quality_debt_blocks_quality_export_or_ready_claims": true,
     "hard_stop_classes": [
       "executor_unavailable",
+      "safety_or_compliance",
       "permission_or_credential_boundary",
       "explicit_human_decision",
       "authority_boundary_violation",

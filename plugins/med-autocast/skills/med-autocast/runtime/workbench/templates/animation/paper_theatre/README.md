@@ -1,4 +1,4 @@
-# 纸剧场制作模块 1.0.0
+# 纸剧场制作模块 1.1.0
 
 本地 TypeScript → Canvas → Chrome/FFmpeg。模块帮助稳定接触、遮挡、时间与预览，不固定故事、疾病、品牌、构图和动作风格。旧 `paper_canvas` 为历史片兼容入口，新集采用本目录。
 
@@ -14,13 +14,14 @@
 |---|---|
 | `src/kit/types.ts` | 素材、连接点、镜头、事件、画幅接口 |
 | `src/kit/stage.ts` | 变换、裁切、纸材、图片与文字绘制、布局定位 |
+| `src/kit/scene.ts` | 按导演顺序绘制环境、主体与前景，保留各层布局职责 |
 | `src/kit/motion.ts` | 由时间直接求姿态，收纳弧线、盖章接触、事件定位 |
 | `src/kit/props.ts` | 前袋遮挡、铰接、固定件；几何来自资产登记 |
 | `src/kit/overlays.ts` | 参数化品牌印记、屏幕层字幕 |
 | `src/kit/player.ts` | 整片装配、镜头选择、seek、逐帧、循环、速度与渲染公开入口 |
 | `src/main.ts` | 无品牌动作样本；新集替换为单集装配 |
 | `scripts/build.mjs` | 生成离线可运行的 `dist/film.js` |
-| `scripts/mix_audio.py` | 从单集 `score.json` 的动作事件生成纸音并混音；不会调用 TTS |
+| `scripts/mix_audio.py` | 命名事件拟音、音乐分轨、旁白侧链和整篇响度处理；不会调用 TTS |
 
 ## 新集接入
 
@@ -32,7 +33,12 @@
 
 ```sh
 python3 scripts/mix_audio.py --project . --voice audio/narration-normalized.wav --music assets/music.wav --output audio.wav
+python3 scripts/mix_audio.py --project . --voice audio/narration-normalized.wav --music-plan preproduction/music-plan.json --output audio.wav
 ```
+
+音乐计划的 `tracks` 提供相对项目根的音轨路径、gain 和可选 loop；可选 `bus_lufs` 与 `ducking` 控制总线电平和真实旁白驱动的侧链。保留原音轨、音乐压低前后、拟音、premix、最终音轨及来源哈希，供局部返修与独立听审。无音乐仍可完成旁白和拟音混音；不按镜头分别归一化。素材齐备后混音与编码均在本机运行，原创 MIDI/采样器只是一种可选配乐路径。
+
+`scene(stage, layers)` 按传入顺序绘制，不自动规定镜头配方。环境建立完整纸面空间，透明主体负责行动，前景负责接触与遮挡；环境默认不计入主体包围盒，前景默认计入，可显式改变。医学结构不能借环境身份排除审查。素材切换时登记门洞、袋口等连接点，而不是散落坐标补丁。
 
 真实旁白使用统一 paper_project narrate/align/captions/mix 入口，完整听审独立进行。音轨变化后重新校准事件及镜头长度，不能简单整体拉伸每个动作。
 
@@ -52,3 +58,5 @@ python3 scripts/mix_audio.py --project . --voice audio/narration-normalized.wav 
 参考方法与本机落地取舍见工作台 `docs/19_纸剧场模块架构与镜头打磨.md`。本模块是独立实现，不复制第三方品牌与角色。
 
 单集实际工具操作见[单集工具与局部返修](../../../docs/20_纸剧场单集工具与局部返修.md)。优先通过 init 复制全部入口和样本测试；纯动作样本可先无声预览，mix 后播放器接入实际音轨。
+
+完整场景、风格帧、动态分镜和配乐选择见[纸面舞台与声音导演](../../../docs/22_纸面舞台与声音导演.md)。模块只稳定执行，不用资源数量或脚本通过代替导演判断。

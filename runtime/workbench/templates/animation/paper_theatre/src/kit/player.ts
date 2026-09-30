@@ -95,7 +95,7 @@ export function mount(config: {
   window.__cuts = [...score.shots.map((s) => s.start), score.duration];
   window.__total = score.duration;
   window.__score = score;
-  window.__kitVersion = "1.0.0";
+  window.__kitVersion = "1.1.0";
   window.__rendererId = "canvas2d";
   window.__requestedStyleId = score.style?.styleId;
   window.__styleId = score.style?.appliedStyleId;

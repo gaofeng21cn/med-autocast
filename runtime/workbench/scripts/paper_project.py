@@ -161,7 +161,7 @@ def adopt(a):
         "renderer_id": renderer_id,
         "style_profile_ref": style_profile_ref,
         "beat_shots": {b["id"]: s["id"] for b, s in zip(beats, score["shots"])},
-        "kit_version": "1.0.0",
+        "kit_version": read(p / "package.json").get("version", "1.0.0"),
     }
     if beats and len(beats) != len(score["shots"]):
         c["beat_shots"] = {}
@@ -656,7 +656,8 @@ def mix(a):
     p, c = get_project(a)
     assert_narration(p, c)
     music = a.music
-    if music is None:
+    music_plan = getattr(a, "music_plan", None)
+    if music is None and music_plan is None:
         _, profile = load_author_profile(root=a.workspace, series_id=c["series_id"])
         value = profile.get("audio_mix", {}).get("background_music")
         if value:
@@ -675,7 +676,9 @@ def mix(a):
     if timing.get("voice_sha256") != sha(p / c["voice"]):
         raise ValueError("旁白已变化，请先 retime 并校准字幕")
     if music:
-        cmd += ["--music", music]
+        cmd += ["--music", Path(music).resolve()]
+    if music_plan:
+        cmd += ["--music-plan", music_plan.resolve()]
     run(cmd, p, a.workspace)
     r = read(p / "audio/mix-receipt.json")
     r.update(
@@ -1053,7 +1056,9 @@ def main():
     s.add_argument("--width", type=int, default=1280)
     s.add_argument("--height", type=int, default=720)
     s = sub.add_parser("mix")
-    s.add_argument("--music", type=Path)
+    music_options = s.add_mutually_exclusive_group()
+    music_options.add_argument("--music", type=Path)
+    music_options.add_argument("--music-plan", type=Path)
     s = sub.add_parser("render")
     s.add_argument("--output", type=Path)
     s = sub.add_parser("package")

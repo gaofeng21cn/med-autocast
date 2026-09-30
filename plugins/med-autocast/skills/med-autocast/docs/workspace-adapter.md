@@ -66,6 +66,6 @@ JS 与纸剧场统一使用随包渲染器；预览和正式编码不再因 --pr
 
 ## 模块化纸剧场入口
 
-新集复制 `runtime/workbench/templates/animation/paper_theatre`（不复制 node_modules），在单集目录运行 `npm ci && npm run build`；Node 22.18+ 或 24 可运行 `npm test`。构建是本地文件写入，npm ci 需要首次依赖下载；最终 dist/film.js 不依赖 CDN。素材和品牌仍由工作区输入。`scripts/mix_audio.py` 接收 `--project --voice --music --output`，只混合已有音轨与事件音效，不调用 TTS。使用 `score.json` 的命名事件避免音画双份时码。构建后的 index.html 兼容已有 render_javascript_animation 入口；无需新增 OPL 动作或平行任务状态。操作细节见[模板说明](../runtime/workbench/templates/animation/paper_theatre/README.md)。
+新集复制 `runtime/workbench/templates/animation/paper_theatre`（不复制 node_modules），在单集目录运行 `npm ci && npm run build`；Node 22.18+ 或 24 可运行 `npm test`。构建是本地文件写入，npm ci 需要首次依赖下载；最终 dist/film.js 不依赖 CDN。素材和品牌仍由工作区输入。`scripts/mix_audio.py` 接收 `--project --voice --output`，可选互斥的 `--music` 或 `--music-plan`；只混合已有音轨、真实旁白侧链与事件音效，不调用 TTS。使用 `score.json` 的命名事件避免音画双份时码。构建后的 index.html 兼容已有 render_javascript_animation 入口；无需新增 OPL 动作或平行任务状态。操作细节见[模板说明](../runtime/workbench/templates/animation/paper_theatre/README.md)。
 
 完整操作见[单集工具与局部返修](../runtime/workbench/docs/20_纸剧场单集工具与局部返修.md)。纸剧场预检的 --plan 为 project.json，当前单集从 workbench.yaml.series 的 episodes 中发现，交付指针在 deliveries/SERIES/EPISODE.json。

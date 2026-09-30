@@ -41,6 +41,8 @@ description: 使用 Med Auto Cast 规划、制作、修订和审查医学科普�
 
 ## Stage 定位与 Progress First
 
+纸片尺寸按实际内容、认知关系和构图平衡判断，区分独立物件、纸上插画与比喻装置，不统一图片外框或强求实物等比例。导演规划主次与局部缩放，Review 核对动作和邻镜；比例数值属于单集，通用方法不设固定比值或启动门。
+
 纸剧场的视觉丰富度与配乐先从导演阶段联合设计，方法见 `runtime/workbench/docs/22_纸面舞台与声音导演.md`。完整环境板建立纸面空间，透明主体负责可见事件，前景提供真实遮挡；通用 scene 模块控制层序与布局，镜头保留创作自由。音乐支持曲库、明确许可的生成或本地原创演奏，现有 `paper_project mix --music-plan` 可混分轨并按实际旁白压低音乐。素材、声音与邻镜状态的 Review 持续进行，不增加脚本启动门；品牌动机、医生形象和声线仍从工作区读取。
 
 Manifest 的六阶段路线是 `evidence-plan -> story-directing -> media-production -> visual-review -> meta-review -> review-handoff`；`asset-curation` 是交付后的可选沉淀。每个 Stage 的 prompt、专业 Skill、quality gate、工具和推荐产物可由 `contracts/stage_capability_bundle.json` 查询，动画风格与渲染器可由 `contracts/animation_style_registry.json` 查询。

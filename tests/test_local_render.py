@@ -34,6 +34,9 @@ window.__seek = async t => {await ready;
   ctx.fillStyle = '#fafafa'; ctx.fillRect(0,0,320,180);
   ctx.drawImage(image,40+t*80,60,60,60);
 };
+window.__rendererId = 'canvas2d';
+window.__requestedStyleId = 'paper_collage';
+window.__styleId = 'paper_collage';
 </script></body></html>'''
         (self.project / 'index.html').write_text(self.html)
         manifest = {'schema': 'medical_animation_assets/v1', 'assets': [{
@@ -47,12 +50,14 @@ window.__seek = async t => {await ready;
                         'anullsrc=r=24000:cl=mono', '-t', '0.5', str(self.audio)], check=True)
         self.output = self.project / 'output.mp4'
 
-    def invoke(self, shared=True, output=None):
+    def invoke(self, shared=True, output=None, style_id=None, renderer_id=None):
         args = [sys.executable, '-B', str(SCRIPTS / 'render_javascript_animation.py'),
                 '--project-root', str(self.project), '--review-candidate',
                 '--output', str(output or self.output)]
         if shared:
             args += ['--audio', str(self.audio), '--width', '320', '--height', '180']
+            args += ['--requested-style-id', style_id or 'paper_collage']
+            args += ['--requested-renderer-id', renderer_id or 'canvas2d']
         else:
             args += ['--fps', '12']
         return subprocess.run(args, env=self.env, text=True, capture_output=True, timeout=60)
@@ -73,6 +78,9 @@ window.__seek = async t => {await ready;
             self.assertIsNotNone(ImageChops.difference(first.convert('RGB'), last.convert('RGB')).getbbox())
         receipt = json.loads(self.output.with_suffix('.receipt.json').read_text())
         self.assertFalse(receipt['release_eligible'])
+        self.assertTrue(receipt['renderer_selection']['renderer_match'])
+        self.assertTrue(receipt['renderer_selection']['style_match'])
+        self.assertEqual(receipt['quality_debt'], [])
         before = self.output.read_bytes()
         self.assertNotEqual(self.invoke().returncode, 0)
         self.assertEqual(before, self.output.read_bytes())
@@ -86,6 +94,21 @@ window.__seek = async t => {await ready;
         self.assertEqual(result.returncode, 0, result.stderr)
         self.assertEqual(json.loads((self.project / 'render-args.json').read_text()), ['--fps=12'])
         self.assertEqual(legacy.read_bytes(), before)
+
+    def test_renderer_mismatch_keeps_candidate_and_records_debt(self):
+        output = self.project / 'mismatch.mp4'
+        result = self.invoke(style_id='line_art', renderer_id='svg', output=output)
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertTrue(output.is_file())
+        receipt = json.loads(output.with_suffix('.receipt.json').read_text())
+        self.assertEqual(receipt['status'], 'rendered')
+        self.assertEqual(receipt['renderer_selection']['actual_renderer_id'], 'canvas2d')
+        self.assertEqual(receipt['renderer_selection']['actual_style_id'], 'paper_collage')
+        self.assertEqual(
+            {item['code'] for item in receipt['quality_debt']},
+            {'style_realization_mismatch', 'renderer_selection_mismatch'},
+        )
+        self.assertTrue(all(not item['blocks_stage_progress'] for item in receipt['quality_debt']))
 
     def test_missing_css_resource_cannot_publish_video(self):
         (self.project / 'index.html').write_text(self.html.replace('</head>', '<link rel="stylesheet" href="missing.css"></head>'))

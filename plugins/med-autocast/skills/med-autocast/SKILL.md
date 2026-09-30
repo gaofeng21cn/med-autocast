@@ -36,3 +36,17 @@ description: 使用 Med Auto Cast 规划、制作、修订和审查医学科普�
 新建或重构代码动画采用 `runtime/workbench/templates/animation/paper_theatre/` 的 TypeScript/Canvas 镜头模块，方法见 `runtime/workbench/docs/19_纸剧场模块架构与镜头打磨.md`。先做导演与 animatic，再准入透明素材；素材清单持有路径和连接点，score 持有事件时间，镜头持有构图与相机，播放器只装配。独立镜头预览、动作样本与版本对照用于持续打磨，不把复用解释为固定构图或故事。保持单集版本冻结和自定义镜头出口；通用模板不含医生、疾病和品牌。
 
 纸剧场实际操作统一走 `paper_project`，按 `runtime/workbench/docs/20_纸剧场单集工具与局部返修.md` 执行初始化/接入、素材台、精确声段配音、真实时码、ASR 辅助字幕、邻镜预览、混音、导出和审看交付。用 `library` 查询跨集纸件；医生品牌来自工作区。新工具减少搬运，不代替导演判断或视觉探索。
+
+风格选择遵循 `style_id`（艺术语言）与 `renderer`（执行后端）分离。优先保留用户 workflow input 的单集选择；通过 `paper_project` 的 `init` 或 `adopt` 子命令将其写入本集 `score.json`，不改全局作者档案。预览/渲染回执区分用户请求、实际 renderer 和实现方声明的 `appliedStyleId`；元数据不能替代视觉 Review。未知风格或未激活 renderer 记录质量债务并继续可消费工作，不因字段或注册表缺项停住。
+
+## Stage 定位与 Progress First
+
+Manifest 的六阶段路线是 `evidence-plan -> story-directing -> media-production -> visual-review -> meta-review -> review-handoff`；`asset-curation` 是交付后的可选沉淀。每个 Stage 的 prompt、专业 Skill、quality gate、工具和推荐产物可由 `contracts/stage_capability_bundle.json` 查询，动画风格与渲染器可由 `contracts/animation_style_registry.json` 查询。
+
+能力包、`requires`、artifact envelope 和风格注册表是定位与交接建议，不是阻断流程的脚本 DSL。模型输出不完整、字段缺失、未列出的可消费材料或工具能力不足，优先保留已有结果、记录 `quality_debt`、`route_back` 或工具 blocker 并继续推进；只有权限、身份/当前性、执行器不可用、明确人工决定和不可逆授权边界才硬停止。
+
+Stage 返回尽量引用真实产物与版本/来源信息，给出质量债务和下一步建议；OPL 可提供的 `stage_run_ref`、owner receipt、typed blocker、human gate、route-back 与 memory 均以真实引用为准。推荐字段缺失时下游仍消费可用材料，不因返回 JSON 不完整而丢弃阶段进展。
+
+区分领域报告与 OPL 运行回执：`stage_review_report`、`meta_review_report`、可读 `route_analysis` 是 Med Auto Cast 的普通审阅材料；OPL formal review receipt、owner receipt、typed blocker 和 Stage 转换由 OPL 按自身合同生成，不能在领域文件中伪造。只有终局 decisive Attempt 需要在 OPL closeout 中表达实际去向：`route_impact.stage_route_decision`；非终局 Attempt 的判断放在 `route_impact.stage_route_recommendation`。其 `decision_kind` 与 `target_stage_id` 面向 OPL 的声明 Stage ABI，不需要复刻成领域 JSON schema。终局路由缺失或不合 ABI 时，可消费产物保留、形成路由质量债并按 OPL 默认推进规则继续；不要把它改造成内容产物门禁。具体 Stage 去向由模型结合目标、产物和审查判断，框架只校验输出权威、形状和目标身份。
+
+常规 Stage 由 OPL 按配置执行 `producer -> reviewer -> repairer -> re-reviewer` 质量循环。`meta-review` 是标记为 `cross_stage_meta_review` 的独立终审 Stage：单次综合判断患者目标、医学证据、导演意图、精确候选、声音/字幕/视觉一致性与阶段 Review 覆盖，并把缺陷回到最早 owner Stage；不再嵌套另一轮 formal review。它不替代医生审核，不签发 owner receipt、发布授权或 production-ready。

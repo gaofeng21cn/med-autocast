@@ -1,30 +1,79 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "type": "object",
-  "required": [
-    "status",
-    "artifact_refs",
-    "quality_debt"
-  ],
+  "description": "Open OPL handoff envelope. Property names are recommendations for model-to-model continuity, not required machine gates.",
   "properties": {
     "status": {
-      "enum": [
-        "completed",
-        "completed_with_quality_debt",
-        "blocked"
-      ]
+      "description": "Suggested progress state; consumers may infer it from the narrative and evidence."
     },
     "artifact_refs": {
-      "type": "array",
-      "items": {
-        "type": "string"
-      }
+      "description": "Produced or reused artifacts in any useful representation."
     },
     "quality_debt": {
-      "type": "array",
-      "items": {
-        "type": "string"
-      }
+      "description": "Known quality gaps, concise or structured."
+    },
+    "stage_id": {
+      "description": "Optional current Stage identity."
+    },
+    "stage_run_ref": {
+      "description": "Optional OPL StageRun reference when one exists."
+    },
+    "next_stage_recommendation": {
+      "description": "Optional recommendation; OPL owns transition materialization."
+    },
+    "route_back": {
+      "description": "Optional repair routing suggestion."
+    },
+    "artifact_envelopes": {
+      "description": "Optional artifact provenance and currentness details."
+    },
+    "quality_debt_items": {
+      "description": "Optional structured quality debt details."
+    },
+    "review_receipt_refs": {
+      "description": "Optional references to real OPL review receipts."
+    },
+    "review_refs": {
+      "description": "Optional review references."
+    },
+    "export_refs": {
+      "description": "Optional export references."
+    },
+    "deliverable_target": {
+      "description": "Optional human-readable target, platform, or format actually addressed by this result."
+    },
+    "handoff_package_ref": {
+      "description": "Optional reference to the reviewable handoff package; a package does not imply approval or publication."
+    },
+    "handoff_manifest_ref": {
+      "description": "Optional reference to a package manifest when one exists."
+    },
+    "handoff_status": {
+      "description": "Optional plain-language handoff state, including pending review or known omissions."
+    },
+    "memory_refs": {
+      "description": "Optional memory references."
+    },
+    "meta_review_ref": {
+      "description": "Optional Meta Review artifact reference."
+    },
+    "owner_receipt_ref": {
+      "description": "Optional reference to an OPL-created owner receipt; never synthesize receipt bodies."
+    },
+    "typed_blocker_ref": {
+      "description": "Optional reference to a real OPL typed blocker."
+    },
+    "human_gate_ref": {
+      "description": "Optional reference to a real OPL human gate."
+    },
+    "route_back_ref": {
+      "description": "Optional reference to a real OPL route-back."
+    },
+    "memory_ref": {
+      "description": "Optional memory reference."
+    },
+    "artifact_envelope_refs": {
+      "description": "Optional artifact envelope references."
     }
   },
   "additionalProperties": true

@@ -15,6 +15,12 @@ python3 runtime/native_helpers/workbench_tool.py --workspace /absolute/workspace
 
 `inspect`、`tools`、`assets` 和预检只读。`workbench_tool.py` 同步调用一个明确工具，不创建队列或调度器；其效果与原工具一致。所有调用的 cwd 都是制作工作区；paper_project、render_narration、render_javascript_animation 固定使用随包实现，其他旧制作单工具优先原 scripts，缺少时使用随包版本。核心解释器自动选工作区 .venv；工具清单显示真实执行路径与解释器。`--bundled` 显式选择随包版本。工具接收的剩余参数原样传递；生成、下载、合成、检查输出和打包需处于本次授权范围。
 
+阶段推荐顺序由 `agent/stages/manifest.json` 和 `contracts/stage_capability_bundle.json` 共同说明：`visual-review` 完成后进入独立 `meta-review`，再到 `review-handoff`；`asset-curation` 只在交付后按需运行。Meta Review 读取当前精确候选、阶段 Review、证据和导演交接材料，输出跨阶段判断与最早 owner route-back；它不创建第二 writer，也不替代医学或发布负责人。
+
+OPL 阶段输出以可引用产物为中心：返回真实 `artifact_refs` 与可选来源/当前性 envelope；同时记录 `stage_run_ref`、质量债务和建议下一步。交付目标、候选、Review 范围与交付包可以像 RedCube 的 deliverable/review/export surfaces 一样分开说明，但 Med Auto Cast 只把它们作为适应工作区的建议，不强制固定目录或字段。需要转交责任、权限或恢复上下文时，只引用真实存在的 owner receipt、typed blocker、human gate、route-back 或 memory ref。引用可以缺省，产物仍可继续进入下一 Stage；不得编造回执或把结构字段缺失变成流程硬停。
+
+领域 `route_analysis` 是给人和下游模型读的去向理由。OPL 终局 Attempt 的 `route_impact.stage_route_decision` 才是实际 Stage 转换；非终局 Attempt 使用 `route_impact.stage_route_recommendation`。路由 ABI 缺失或被拒绝只形成路由质量债，OPL 会保留可消费产物并沿合同声明的默认推进继续。不要用一个领域 JSON 文件或本地脚本替代 OPL 的语义路由。
+
 | 工作 | 工具名称 | 使用边界 |
 | --- | --- | --- |
 | 配置、作者、目录、字体 | workbench_config | validate；show 可能含本机信息，不回显敏感配置 |
@@ -29,6 +35,8 @@ python3 runtime/native_helpers/workbench_tool.py --workspace /absolute/workspace
 | 单集审看修订交付 | package_review | 显式 --series、--episode、--plan、--master、--review；可附 --technical-qa 和 --source-review。保留旧包，更新本集并回读，不重渲染 |
 | 正式 final 交付 | build_release_packages | 原合同、双平台 TXT；整季入口无 --episode，单集使用原公开函数或匹配的专用包器 |
 | 关键帧库投影 | build_keyframe_library | 先由专业判断决定入库；脚本校验并生成页面、CSV、缩略图 |
+
+风格与渲染器通过工作区作者档案或工作流输入的 `style_selection.style_id`、`style_selection.renderer` 指定；缺省为 `paper_collage` + `canvas2d`。未知选择保留用户意图并记录质量债务，不能因为注册表暂缺就阻断故事或 Review。
 
 审看修订优先使用当前工作区登记或当前任务确认的专用包器，先读其参数、制作单与母版路径。现有目录采用 medical_video_review_package/v1 或尚未建包，且没有适用的专用包器时，随包 package_review 直接接收原制作单、当前母版和原审看记录，按原文案格式生成本集交付，更新系列清单并逐字节回读。正式 v2 清单继续使用原匹配包器，不能在同一清单中混写审看包字段。不能用通用 final 包器覆盖 review 修订。OPL 三个公开动作仍由 StageRun 加载专业 Skill，不是同名 Python 命令。
 

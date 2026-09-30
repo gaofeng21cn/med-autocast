@@ -9,6 +9,8 @@
   "map_ref": "contracts/capability_map.json",
   "resolver_policy": "resolver_index_only_no_domain_truth",
   "capability_map_role": "single_source_locator_index_for_stage_prompt_skill_tool_knowledge_gate_eval_refs",
+  "stage_capability_bundle_ref": "contracts/stage_capability_bundle.json",
+  "animation_style_registry_ref": "contracts/animation_style_registry.json",
   "capability_pack": {
     "pack_id": "medical_video.capability_pack.v1",
     "pack_root_ref": "agent/",
@@ -1202,6 +1204,201 @@
       }
     },
     {
+      "capability_id": "med-autocast.meta-review.stage_prompt",
+      "surface_role": "stage_prompt",
+      "capability_kind": "stage_prompt",
+      "stage_ids": [
+        "meta-review"
+      ],
+      "canonical_owner": "med-autocast",
+      "physical_source_ref": {
+        "ref_kind": "repo_path",
+        "ref": "agent/prompts/meta-review.md",
+        "role": "stage_prompt_source"
+      },
+      "runtime_projection_refs": [
+        {
+          "ref_kind": "contract_ref",
+          "ref": "agent/stages/manifest.json#/stages",
+          "role": "declarative_stage_consumption"
+        }
+      ],
+      "sync_policy": "domain_agent_builtin",
+      "externalization_reason": "domain_agent_builtin",
+      "improvement_tokens": [
+        "stage_path_quality",
+        "cross_stage_review_quality"
+      ],
+      "canonical_target_paths": [
+        "agent/prompts/meta-review.md"
+      ],
+      "verification_refs": [
+        "opl:agents-scaffold-validate"
+      ],
+      "forbidden_surfaces": [
+        "domain_truth",
+        "memory_body",
+        "artifact_body",
+        "owner_receipt_body",
+        "typed_blocker_body",
+        "human_gate_body",
+        "runtime_queue",
+        "quality_or_export_verdict",
+        "domain_readiness_claim"
+      ],
+      "owner_closeout_boundary": {
+        "owner": "med-autocast",
+        "required_return_shapes": [
+          "owner_receipt_ref",
+          "typed_blocker_ref",
+          "human_gate_ref",
+          "route_back_ref"
+        ],
+        "can_write_owner_receipt_body": false,
+        "can_create_typed_blocker": false
+      },
+      "authority_boundary": {
+        "can_write_domain_truth": false,
+        "can_write_memory_body": false,
+        "can_mutate_artifact_body": false,
+        "can_sign_owner_receipt": false,
+        "can_create_typed_blocker": false,
+        "can_authorize_quality_or_export": false,
+        "can_claim_domain_ready": false,
+        "can_claim_production_ready": false
+      }
+    },
+    {
+      "capability_id": "med-autocast.meta-review.professional_skill",
+      "surface_role": "professional_skill",
+      "capability_kind": "professional_skill",
+      "stage_ids": [
+        "meta-review"
+      ],
+      "canonical_owner": "med-autocast",
+      "physical_source_ref": {
+        "ref_kind": "repo_path",
+        "ref": "agent/professional_skills/medical-video-visual-qa/SKILL.md",
+        "role": "professional_skill_policy"
+      },
+      "runtime_projection_refs": [
+        {
+          "ref_kind": "contract_ref",
+          "ref": "agent/stages/manifest.json#/stages",
+          "role": "declarative_stage_consumption"
+        }
+      ],
+      "sync_policy": "domain_agent_builtin",
+      "externalization_reason": "domain_agent_builtin",
+      "improvement_tokens": [
+        "professional_skill_quality",
+        "cross_stage_review_quality"
+      ],
+      "canonical_target_paths": [
+        "agent/professional_skills/medical-video-visual-qa/SKILL.md"
+      ],
+      "verification_refs": [
+        "opl:agents-scaffold-validate"
+      ],
+      "forbidden_surfaces": [
+        "domain_truth",
+        "memory_body",
+        "artifact_body",
+        "owner_receipt_body",
+        "typed_blocker_body",
+        "human_gate_body",
+        "runtime_queue",
+        "quality_or_export_verdict",
+        "domain_readiness_claim"
+      ],
+      "owner_closeout_boundary": {
+        "owner": "med-autocast",
+        "required_return_shapes": [
+          "owner_receipt_ref",
+          "typed_blocker_ref",
+          "human_gate_ref",
+          "route_back_ref"
+        ],
+        "can_write_owner_receipt_body": false,
+        "can_create_typed_blocker": false
+      },
+      "authority_boundary": {
+        "can_write_domain_truth": false,
+        "can_write_memory_body": false,
+        "can_mutate_artifact_body": false,
+        "can_sign_owner_receipt": false,
+        "can_create_typed_blocker": false,
+        "can_authorize_quality_or_export": false,
+        "can_claim_domain_ready": false,
+        "can_claim_production_ready": false
+      }
+    },
+    {
+      "capability_id": "med-autocast.meta-review.quality_gate",
+      "surface_role": "quality_gate",
+      "capability_kind": "reference_pack",
+      "stage_ids": [
+        "meta-review"
+      ],
+      "canonical_owner": "med-autocast",
+      "physical_source_ref": {
+        "ref_kind": "repo_path",
+        "ref": "agent/quality_gates/meta-review.md",
+        "role": "quality_gate_ref"
+      },
+      "runtime_projection_refs": [
+        {
+          "ref_kind": "contract_ref",
+          "ref": "agent/stages/manifest.json#/stages",
+          "role": "declarative_stage_consumption"
+        }
+      ],
+      "sync_policy": "domain_agent_builtin_refs_only",
+      "externalization_reason": "domain_agent_builtin",
+      "improvement_tokens": [
+        "quality_gate_precision",
+        "cross_stage_review_quality"
+      ],
+      "canonical_target_paths": [
+        "agent/quality_gates/meta-review.md"
+      ],
+      "verification_refs": [
+        "opl:agents-scaffold-validate"
+      ],
+      "forbidden_surfaces": [
+        "domain_truth",
+        "memory_body",
+        "artifact_body",
+        "owner_receipt_body",
+        "typed_blocker_body",
+        "human_gate_body",
+        "runtime_queue",
+        "quality_or_export_verdict",
+        "domain_readiness_claim"
+      ],
+      "owner_closeout_boundary": {
+        "owner": "med-autocast",
+        "required_return_shapes": [
+          "owner_receipt_ref",
+          "typed_blocker_ref",
+          "human_gate_ref",
+          "route_back_ref"
+        ],
+        "can_write_owner_receipt_body": false,
+        "can_create_typed_blocker": false
+      },
+      "authority_boundary": {
+        "can_write_domain_truth": false,
+        "can_write_memory_body": false,
+        "can_mutate_artifact_body": false,
+        "can_sign_owner_receipt": false,
+        "can_create_typed_blocker": false,
+        "can_authorize_quality_or_export": false,
+        "can_claim_domain_ready": false,
+        "can_claim_production_ready": false
+      }
+    },
+    {
       "capability_id": "medical_video.domain_affordances.tool_connector",
       "surface_role": "tool_connector",
       "capability_kind": "tool_connector",
@@ -1210,6 +1407,7 @@
         "story-directing",
         "media-production",
         "visual-review",
+        "meta-review",
         "review-handoff",
         "asset-curation"
       ],
@@ -1280,6 +1478,7 @@
         "story-directing",
         "media-production",
         "visual-review",
+        "meta-review",
         "review-handoff",
         "asset-curation"
       ],
@@ -1350,6 +1549,7 @@
         "story-directing",
         "media-production",
         "visual-review",
+        "meta-review",
         "review-handoff",
         "asset-curation"
       ],
@@ -1419,7 +1619,8 @@
       "contracts/capability_map.json#/capabilities/6",
       "contracts/capability_map.json#/capabilities/9",
       "contracts/capability_map.json#/capabilities/12",
-      "contracts/capability_map.json#/capabilities/15"
+      "contracts/capability_map.json#/capabilities/15",
+      "contracts/capability_map.json#/capabilities/18"
     ],
     "professional_skill_refs": [
       "contracts/capability_map.json#/capabilities/1",
@@ -1427,13 +1628,14 @@
       "contracts/capability_map.json#/capabilities/7",
       "contracts/capability_map.json#/capabilities/10",
       "contracts/capability_map.json#/capabilities/13",
-      "contracts/capability_map.json#/capabilities/16"
+      "contracts/capability_map.json#/capabilities/16",
+      "contracts/capability_map.json#/capabilities/19"
     ],
     "tool_connector_refs": [
-      "contracts/capability_map.json#/capabilities/18"
+      "contracts/capability_map.json#/capabilities/21"
     ],
     "knowledge_pack_refs": [
-      "contracts/capability_map.json#/capabilities/19"
+      "contracts/capability_map.json#/capabilities/22"
     ],
     "quality_gate_refs": [
       "contracts/capability_map.json#/capabilities/2",
@@ -1441,10 +1643,17 @@
       "contracts/capability_map.json#/capabilities/8",
       "contracts/capability_map.json#/capabilities/11",
       "contracts/capability_map.json#/capabilities/14",
-      "contracts/capability_map.json#/capabilities/17"
+      "contracts/capability_map.json#/capabilities/17",
+      "contracts/capability_map.json#/capabilities/20"
     ],
     "eval_suite_refs": [
-      "contracts/capability_map.json#/capabilities/20"
+      "contracts/capability_map.json#/capabilities/23"
+    ],
+    "stage_capability_bundle_refs": [
+      "contracts/stage_capability_bundle.json"
+    ],
+    "animation_style_registry_refs": [
+      "contracts/animation_style_registry.json"
     ]
   },
   "authority_boundary": {

@@ -29,7 +29,16 @@
         "series_id",
         "episode_ids",
         "request_ref",
-        "current_manifest_ref"
+        "current_manifest_ref",
+        "instruction_revision",
+        "entry_stage_id",
+        "current_artifact_refs",
+        "author_baseline_ref",
+        "style_selection",
+        "requested_quality_scope",
+        "human_review_intent",
+        "delivery_intent",
+        "continuation_ref"
       ],
       "workspace_locator_fields": [
         "workspace_root"
@@ -91,7 +100,16 @@
         "series_id",
         "episode_ids",
         "request_ref",
-        "current_manifest_ref"
+        "current_manifest_ref",
+        "instruction_revision",
+        "entry_stage_id",
+        "current_artifact_refs",
+        "author_baseline_ref",
+        "style_selection",
+        "requested_quality_scope",
+        "human_review_intent",
+        "delivery_intent",
+        "continuation_ref"
       ],
       "workspace_locator_fields": [
         "workspace_root"
@@ -103,11 +121,14 @@
           "story-directing",
           "media-production",
           "visual-review",
-          "review-handoff",
+          "meta-review",
+          "review-handoff"
+        ],
+        "optional_stage_refs": [
           "asset-curation"
         ],
-        "optional_stage_refs": [],
         "terminal_stage_refs": [
+          "review-handoff",
           "asset-curation"
         ],
         "route_policy": "ai_selected_progress_route"
@@ -157,7 +178,16 @@
         "series_id",
         "episode_ids",
         "request_ref",
-        "current_manifest_ref"
+        "current_manifest_ref",
+        "instruction_revision",
+        "entry_stage_id",
+        "current_artifact_refs",
+        "author_baseline_ref",
+        "style_selection",
+        "requested_quality_scope",
+        "human_review_intent",
+        "delivery_intent",
+        "continuation_ref"
       ],
       "workspace_locator_fields": [
         "workspace_root"
@@ -167,11 +197,14 @@
         "entry_stage_ref": "visual-review",
         "required_stage_refs": [
           "visual-review",
-          "review-handoff",
+          "meta-review",
+          "review-handoff"
+        ],
+        "optional_stage_refs": [
           "asset-curation"
         ],
-        "optional_stage_refs": [],
         "terminal_stage_refs": [
+          "review-handoff",
           "asset-curation"
         ],
         "route_policy": "ai_selected_progress_route"

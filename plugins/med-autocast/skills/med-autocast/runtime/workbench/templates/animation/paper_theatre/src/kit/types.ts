@@ -36,6 +36,13 @@ export type Score = {
   shots: Beat[];
   cues: { start: number; end: number; text: string }[];
   sounds: Sound[];
+  style?: AnimationStyleSelection;
+};
+export type AnimationStyleSelection = {
+  styleId?: string;
+  appliedStyleId?: string;
+  renderer?: string;
+  styleProfileRef?: string;
 };
 export type ShotContext = {
   stage: Stage;
@@ -73,5 +80,8 @@ declare global {
     __layout: Layout;
     __score: Score;
     __kitVersion: string;
+    __rendererId?: string;
+    __styleId?: string;
+    __requestedStyleId?: string;
   }
 }

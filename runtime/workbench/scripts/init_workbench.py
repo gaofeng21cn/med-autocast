@@ -55,6 +55,9 @@ brand:
 visual_format:
   requirement: hand_drawn_explainer_animation
   style: hand_drawn_collage
+  style_id: paper_collage
+  renderer: canvas2d
+  style_profile_ref: templates/animation/animation_style_registry.json
   animation_mode: hand_drawn_patient_explainer_animation
   precise_medical_visuals: reviewed_insert_only
   default_shot_seconds: [5, 10]

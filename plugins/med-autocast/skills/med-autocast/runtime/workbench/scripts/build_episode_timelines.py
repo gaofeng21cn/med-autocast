@@ -309,12 +309,20 @@ def build_plan(
             raise ValueError("Edge 时间轴需显式提供 manifest.audio_source 或 --audio-source，不能复用 IndexTTS 文件名")
         audio_source = "audio/local_voice/index-tts25-narration.wav"
     visual_format = author["visual_format"]
+    style_id = visual_format.get("style_id") or "paper_collage"
+    renderer_id = visual_format.get("renderer") or ("canvas2d" if javascript_primary else "backend_default")
+    style_profile_ref = visual_format.get(
+        "style_profile_ref", "templates/animation/animation_style_registry.json"
+    )
     plan = {
         "schema": "video_production_plan/v2",
         "episode_id": episode_id,
         "delivery": {
             "visual_requirement": visual_format["requirement"],
             "visual_style": visual_format["style"],
+            "visual_style_id": style_id,
+            "renderer": renderer_id,
+            "style_profile_ref": style_profile_ref,
             "animation_mode": visual_format["animation_mode"],
             "author_profile": author["profile_id"],
             "primary_video_backend": video_backend,
@@ -360,7 +368,9 @@ def build_plan(
     if javascript_primary:
         plan["delivery"]["minimum_generative_duration_ratio"] = 0.0
         plan["director_contract"].pop("generative_video_roles", None)
-        plan["animation"] = {"renderer": "javascript", "project_root": "animation",
+        plan["animation"] = {"renderer": "javascript", "renderer_id": renderer_id,
+                             "style_id": style_id, "style_profile_ref": style_profile_ref,
+                             "project_root": "animation",
                              "entry": "index.html", "asset_manifest": "animation/asset_manifest.json",
                              "seek_api": "window.__seek"}
     return plan
@@ -376,6 +386,9 @@ def main() -> None:
     parser.add_argument("--video-backend")
     parser.add_argument("--audio-backend")
     parser.add_argument("--audio-source", help="实际音频路径，相对单集目录；批量时各集采用相同相对路径")
+    parser.add_argument("--style-id", help="可选动画风格 ID；缺省读取作者档案")
+    parser.add_argument("--renderer", help="可选渲染器 ID；缺省读取作者档案或 paper_collage 默认值")
+    parser.add_argument("--style-profile-ref", help="可选风格注册表引用")
     args = parser.parse_args()
     args.production_root = production_root_for(args.series, args.production_root)
     terms_path = args.subtitle_terms
@@ -389,6 +402,15 @@ def main() -> None:
         PROTECTED_TERMS.update(terms)
 
     _, author = load_author_profile(profile_path=args.author_profile, series_id=args.series)
+    if args.style_id or args.renderer or args.style_profile_ref:
+        author = dict(author)
+        author["visual_format"] = dict(author["visual_format"])
+        if args.style_id:
+            author["visual_format"]["style_id"] = args.style_id
+        if args.renderer:
+            author["visual_format"]["renderer"] = args.renderer
+        if args.style_profile_ref:
+            author["visual_format"]["style_profile_ref"] = args.style_profile_ref
     _, backends = load_backend_profile()
     video_backend = args.video_backend or backends.get("policy", {}).get("default_video")
     if video_backend not in backends.get("video", {}):

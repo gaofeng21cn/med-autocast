@@ -76,7 +76,13 @@ class ProjectTests(unittest.TestCase):
 
         for name, text in [("default", "Default"), ("series", "Series Brand")]:
             (self.root / (name + ".yaml")).write_text(
-                yaml.safe_dump({"brand": {"overlay_text": text}})
+                yaml.safe_dump({
+                    "brand": {"overlay_text": text},
+                    "visual_format": {
+                        "style_id": "user_defined_ink_style",
+                        "renderer": "svg",
+                    } if name == "series" else {},
+                })
             )
         (self.root / "workbench.yaml").write_text(
             yaml.safe_dump(
@@ -98,6 +104,29 @@ class ProjectTests(unittest.TestCase):
         )
         pp.initialize(a)
         self.assertEqual(pp.read(a.project / "brand.json")["text"], "Series Brand")
+        score_style = pp.read(a.project / "score.json")["style"]
+        self.assertEqual(score_style["styleId"], "user_defined_ink_style")
+        self.assertEqual(score_style["renderer"], "svg")
+        self.assertNotIn("appliedStyleId", score_style)
+        score_style["styleId"] = "changed_after_adoption"
+        score = pp.read(a.project / "score.json")
+        score["style"] = score_style
+        pp.save(a.project / "score.json", score)
+        self.assertEqual(
+            pp.project_style_selection(a.project, pp.read(a.project / "project.json"))["style_id"],
+            "changed_after_adoption",
+        )
+        a.project = self.root / "productions/s/one-off"
+        a.episode = "one-off"
+        a.style_id = "one_off_style"
+        a.renderer = "one_off_renderer"
+        a.style_profile_ref = "local/style-profile.json"
+        pp.initialize(a)
+        one_off_style = pp.read(a.project / "score.json")["style"]
+        self.assertEqual(one_off_style["styleId"], "one_off_style")
+        self.assertEqual(one_off_style["renderer"], "one_off_renderer")
+        self.assertEqual(one_off_style["styleProfileRef"], "local/style-profile.json")
+        self.assertNotIn("appliedStyleId", one_off_style)
         self.assertTrue((a.project / "tests/motion.test.ts").is_file())
         self.assertTrue((a.project / "compare.html").is_file())
 

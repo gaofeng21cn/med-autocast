@@ -6,6 +6,7 @@ import argparse, hashlib, html, json, os, re, shutil, subprocess, sys, tempfile,
 from pathlib import Path
 import yaml
 from workbench_config import load_author_profile
+from render_javascript_animation import renderer_selection_report
 
 BUNDLE = Path(__file__).resolve().parents[1]
 
@@ -57,6 +58,32 @@ def get_project(a):
     return p, config
 
 
+def selected_visual_format(workspace, series_id):
+    data = yaml.safe_load((workspace / "workbench.yaml").read_text()) or {}
+    _, author = load_author_profile(
+        root=workspace,
+        series_id=series_id if series_id in data.get("series", {}) else None,
+    )
+    visual = author.get("visual_format", {})
+    return visual if isinstance(visual, dict) else {}
+
+
+def project_style_selection(project, config):
+    score = read(project / config.get("score", "score.json"))
+    style = score.get("style", {})
+    style = style if isinstance(style, dict) else {}
+    return {
+        "style_id": style.get("styleId") or style.get("style_id") or config.get("style_id") or "paper_collage",
+        "renderer_id": style.get("renderer") or config.get("renderer_id") or "canvas2d",
+        "style_profile_ref": (
+            style.get("styleProfileRef")
+            or style.get("style_profile_ref")
+            or config.get("style_profile_ref")
+            or "templates/animation/animation_style_registry.json"
+        ),
+    }
+
+
 def register(workspace, p, c):
     path = workspace / "workbench.yaml"
     data = yaml.safe_load(path.read_text())
@@ -92,6 +119,31 @@ def adopt(a):
         if not (p / f).is_file():
             raise ValueError(f"缺少 {f}")
     score = read(p / "score.json")
+    score_style = score.get("style", {})
+    score_style = score_style if isinstance(score_style, dict) else {}
+    visual = selected_visual_format(a.workspace, a.series)
+    style_id = (
+        getattr(a, "style_id", None)
+        or score_style.get("styleId")
+        or score_style.get("style_id")
+        or visual.get("style_id")
+        or "paper_collage"
+    )
+    renderer_id = getattr(a, "renderer", None) or score_style.get("renderer") or visual.get("renderer") or "canvas2d"
+    style_profile_ref = (
+        getattr(a, "style_profile_ref", None)
+        or score_style.get("styleProfileRef")
+        or score_style.get("style_profile_ref")
+        or visual.get("style_profile_ref")
+        or "templates/animation/animation_style_registry.json"
+    )
+    score["style"] = {
+        **score_style,
+        "styleId": style_id,
+        "renderer": renderer_id,
+        "styleProfileRef": style_profile_ref,
+    }
+    save(p / "score.json", score)
     narration = p / "preproduction/narration.json"
     beats = read(narration).get("beats", []) if narration.exists() else []
     c = {
@@ -105,6 +157,9 @@ def adopt(a):
         "voice": "audio/narration-normalized.wav",
         "audio": "audio.wav",
         "entry": "index.html",
+        "style_id": style_id,
+        "renderer_id": renderer_id,
+        "style_profile_ref": style_profile_ref,
         "beat_shots": {b["id"]: s["id"] for b, s in zip(beats, score["shots"])},
         "kit_version": "1.0.0",
     }
@@ -197,6 +252,37 @@ def initialize(a):
         series_id=a.series if a.series in config.get("series", {}) else None,
     )
     brand = author.get("brand", {})
+    visual = author.get("visual_format", {})
+    visual = visual if isinstance(visual, dict) else {}
+    score = read(p / "score.json")
+    score_style = score.get("style", {})
+    score_style = score_style if isinstance(score_style, dict) else {}
+    selected_style_id = (
+        getattr(a, "style_id", None)
+        or score_style.get("styleId")
+        or visual.get("style_id")
+        or "paper_collage"
+    )
+    applied_style_id = score_style.get("appliedStyleId") or score_style.get("applied_style_id")
+    if not applied_style_id and selected_style_id == "paper_collage":
+        applied_style_id = "paper_collage"
+    score["style"] = {
+        **score_style,
+        "styleId": selected_style_id,
+        "renderer": getattr(a, "renderer", None) or score_style.get("renderer") or visual.get("renderer") or "canvas2d",
+        "styleProfileRef": (
+            getattr(a, "style_profile_ref", None)
+            or score_style.get("styleProfileRef")
+            or visual.get("style_profile_ref")
+            or "templates/animation/animation_style_registry.json"
+        ),
+    }
+    if applied_style_id:
+        score["style"]["appliedStyleId"] = applied_style_id
+    else:
+        score["style"].pop("appliedStyleId", None)
+        score["style"].pop("applied_style_id", None)
+    save(p / "score.json", score)
     save(
         p / "brand.json",
         {
@@ -213,6 +299,7 @@ def initialize(a):
 
 def inspect(a):
     p, c = get_project(a)
+    style_selection = project_style_selection(p, c)
     score = read(p / c["score"])
     manifest = read(p / c["assets"])
     return {
@@ -223,6 +310,7 @@ def inspect(a):
         "assets": len(manifest["assets"]),
         "duration": score["duration"],
         "kit_version": c["kit_version"],
+        **style_selection,
         "voice_exists": (p / c["voice"]).exists(),
         "mix_exists": (p / c["audio"]).exists(),
         "latest_render": read(p / "out/current.json")
@@ -465,6 +553,7 @@ def captions(a):
 
 def preview(a):
     p, c = get_project(a)
+    style_selection = project_style_selection(p, c)
     assert_built(p)
     score = read(p / c["score"])
     start, end = 0, score["duration"]
@@ -481,27 +570,71 @@ def preview(a):
     if not 0 <= start < end <= score["duration"]:
         raise ValueError("审片窗口超出单集")
     out = a.output.resolve() if a.output else p / "qa" / ("preview-" + stamp())
-    config = {
-        "project_root": str(p),
-        "entry": c["entry"] + ("?clean=1" if a.clean else ""),
-        "output": str(out),
-        "width": a.width,
-        "height": a.height,
-        "start": start,
-        "end": end,
-    }
-    with tempfile.TemporaryDirectory() as d:
-        cfg = Path(d) / "preview.json"
-        save(cfg, config)
-        run(
-            ["node", BUNDLE / "scripts/preview_local_animation.mjs", cfg],
-            p,
-            a.workspace,
+    entry = c["entry"] + ("?clean=1" if a.clean else "")
+    command = [
+        sys.executable,
+        BUNDLE / "scripts/render_javascript_animation.py",
+        "--project-root",
+        p,
+        "--html-entry",
+        entry,
+        "--preview",
+        "--preview-output",
+        out,
+        "--width",
+        str(a.width),
+        "--height",
+        str(a.height),
+        "--start",
+        str(start),
+        "--end",
+        str(end),
+        "--asset-manifest",
+        c["assets"],
+        "--requested-style-id",
+        style_selection["style_id"],
+        "--requested-renderer-id",
+        style_selection["renderer_id"],
+        "--review-candidate",
+    ]
+    run(command, p, a.workspace)
+    preview_report_path = out / "preview.json"
+    renderer_selection = None
+    quality_debt = []
+    if preview_report_path.is_file():
+        preview_report = read(preview_report_path)
+        renderer_selection = renderer_selection_report(
+            style_selection["style_id"],
+            style_selection["renderer_id"],
+            preview_report.get("renderer_runtime", {}),
         )
+        quality_debt = renderer_selection["quality_debt"]
+        preview_report["renderer_selection"] = renderer_selection
+        preview_report["quality_debt"] = quality_debt
+        save(preview_report_path, preview_report)
+        preview_status = "previewed"
+    else:
+        renderer_selection = renderer_selection_report(
+            style_selection["style_id"],
+            style_selection["renderer_id"],
+            {},
+        )
+        quality_debt = [
+            *renderer_selection["quality_debt"],
+            {
+                "code": "preview_receipt_missing",
+                "owner_stage": "visual-review",
+                "blocks_stage_progress": False,
+            },
+        ]
+        preview_status = "preview_attempted_with_quality_debt"
     return {
-        "status": "previewed",
+        "status": preview_status,
         "output": str(out),
         "range": [start, end],
+        **style_selection,
+        "renderer_selection": renderer_selection,
+        "quality_debt": quality_debt,
         "full_listening": "pending",
     }
 
@@ -556,6 +689,7 @@ def mix(a):
 
 def render(a):
     p, c = get_project(a)
+    style_selection = project_style_selection(p, c)
     assert_narration(p, c)
     assert_built(p)
     r = read(p / "audio/mix-receipt.json")
@@ -583,17 +717,39 @@ def render(a):
             out,
             "--fps",
             str(read(p / c["score"])["fps"]),
+            "--requested-style-id",
+            style_selection["style_id"],
+            "--requested-renderer-id",
+            style_selection["renderer_id"],
             "--review-candidate",
         ],
         p,
         a.workspace,
     )
+    render_receipt_path = out.with_suffix(".receipt.json")
+    render_receipt = read(render_receipt_path) if render_receipt_path.is_file() else {}
+    renderer_selection = render_receipt.get("renderer_selection") or renderer_selection_report(
+        style_selection["style_id"],
+        style_selection["renderer_id"],
+        {},
+    )
+    quality_debt = list(render_receipt.get("quality_debt", renderer_selection["quality_debt"]))
+    if not render_receipt_path.is_file():
+        quality_debt.append({
+            "code": "render_receipt_missing",
+            "owner_stage": "visual-review",
+            "blocks_stage_progress": False,
+        })
     result = {
         "path": str(out),
         "sha256": sha(out),
         "score_sha256": sha(p / c["score"]),
         "bundle_sha256": sha(p / "dist/film.js"),
         "audio_sha256": sha(p / c["audio"]),
+        **style_selection,
+        "renderer_selection": renderer_selection,
+        "quality_debt": quality_debt,
+        "render_receipt": str(render_receipt_path) if render_receipt_path.is_file() else None,
         "release_eligible": False,
     }
     save(p / "out/current.json", result)
@@ -825,6 +981,9 @@ def main():
         s.add_argument("--title")
         s.add_argument("--from-project", type=Path)
         s.add_argument("--narration", type=Path)
+        s.add_argument("--style-id", help="单集风格选择；未知风格保留并交给导演/Review 判断")
+        s.add_argument("--renderer", help="单集 renderer 选择；未激活后端不阻断前置工作")
+        s.add_argument("--style-profile-ref")
     sub.add_parser("inspect")
     sub.add_parser("build")
     sub.add_parser("retime")

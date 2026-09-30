@@ -8,6 +8,8 @@
 
 从系列故事圣经写单集纸剧场分镜，注明物件含义变化、动作因果、景别、透明分层、读图停留和字幕空间。粗动态分镜及每镜 JS seek 预览可在最终编码前返修，首帧和切入帧须精确检查。
 
+优先沿用用户在 workflow input 的 `style_selection`；没有显式选择时才读取系列作者档案和 `animation_style_registry.json` 默认值。把 `style_id`（艺术语言）和 `renderer`（实现后端）分开。未知风格先保留原请求、设计视觉处理并记录能力债务，不因目录不认识该值而退回默认风格或停止导演工作。
+
 执行入口及质量边界见 `agent/professional_skills/medical-video-director/SKILL.md`、`agent/knowledge/domain_boundary.md`。
 
 ## 原工作台职责与专业交接

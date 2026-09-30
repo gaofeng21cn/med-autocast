@@ -60,6 +60,9 @@ visual_timeline:
 
 animation:
   renderer: javascript
+  renderer_id: canvas2d
+  style_id: paper_collage
+  style_profile_ref: templates/animation/animation_style_registry.json
   project_root: animation
   entry: index.html
   asset_manifest: animation/asset_manifest.json

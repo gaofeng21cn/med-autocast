@@ -69,6 +69,28 @@ class AnimationWorkflowTests(unittest.TestCase):
         with patch.object(sys, 'argv', args), patch('shutil.which', return_value='/fixture/tool'):
             with self.assertRaises(SystemExit): render_javascript_animation.main()
 
+    def test_renderer_selection_debt_does_not_block_a_candidate(self):
+        report = render_javascript_animation.renderer_selection_report(
+            'line_art', 'svg', {'renderer_id': 'canvas2d', 'requested_style_id': 'line_art'}
+        )
+        self.assertEqual(report['renderer_match'], False)
+        self.assertIsNone(report['style_match'])
+        self.assertEqual(
+            {item['code'] for item in report['quality_debt']},
+            {'style_realization_unreported', 'renderer_selection_mismatch'},
+        )
+        self.assertTrue(all(not item['blocks_stage_progress'] for item in report['quality_debt']))
+
+    def test_renderer_report_never_reads_requested_style_as_runtime_realization(self):
+        report = render_javascript_animation.renderer_selection_report(
+            'paper_collage', 'canvas2d',
+            {'renderer_id': 'canvas2d', 'requested_style_id': 'paper_collage'},
+        )
+        self.assertTrue(report['renderer_match'])
+        self.assertFalse(report['style_realization_reported'])
+        self.assertIsNone(report['style_match'])
+        self.assertEqual(report['quality_debt'][0]['code'], 'style_realization_unreported')
+
     def test_missing_generation_provenance_blocks(self):
         (self.root / 'generation.json').unlink()
         with self.assertRaisesRegex(ValueError, 'Missing'): self.check()

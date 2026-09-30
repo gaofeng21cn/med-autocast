@@ -47,7 +47,7 @@ python3 scripts/mix_audio.py --project . --voice audio/narration-normalized.wav 
 
 ## 版本与验证
 
-单集持有冻结 `src/kit` 与 package-lock.json；project.json 登记 kit_version，构建回执绑定实际源码，升级显式比较并重建，不用共享目录变更静默改变旧片。修正通用实现先回到本目录，再同步源码快照。现有渲染器继续使用 `window.__ready/__seek/__cuts/__total/__layout`，新增 `__score/__kitVersion` 方便审片；播放器、预览和导出调用同一绘制入口。
+单集持有冻结 `src/kit` 与 package-lock.json；project.json 登记 kit_version，构建回执绑定实际源码，升级显式比较并重建，不用共享目录变更静默改变旧片。修正通用实现先回到本目录，再同步源码快照。播放器、预览和导出共用 `window.__seek(t_seconds)`；Canvas 入口声明实际 `__rendererId`，`__requestedStyleId` 保留制作单风格，只有 `__styleId` 明确声明已实现的风格。风格未声明或后端与制作单不一致时仍可生成候选，回执保留运行事实和质量债务；视觉是否符合所选风格仍由 Review 判断。
 
 参考方法与本机落地取舍见工作台 `docs/19_纸剧场模块架构与镜头打磨.md`。本模块是独立实现，不复制第三方品牌与角色。
 

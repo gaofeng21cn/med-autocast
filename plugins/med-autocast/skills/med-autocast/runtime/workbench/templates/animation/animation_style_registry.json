@@ -1,0 +1,231 @@
+{
+  "surface_kind": "medical_video_animation_style_registry",
+  "version": "medical-video-animation-style-registry.v1",
+  "owner": "med-autocast",
+  "default_style_id": "paper_collage",
+  "selection_policy": {
+    "user_may_choose_style_id": true,
+    "style_selection_is_advisory": true,
+    "unknown_style_policy": "preserve_request_and_route_to_story_directing",
+    "renderer_selection_is_advisory": true,
+    "unavailable_renderer_policy": "preserve_requested_style_and_renderer; continue preproduction or use a compatible active renderer with explicit quality debt",
+    "backend_is_separate_from_style": true,
+    "video_model_is_explicit_backend_only": true
+  },
+  "shared_render_contract": {
+    "version": "time-addressable-html-renderer.v1",
+    "required_for_frame_capture": ["window.__seek(t_seconds)"],
+    "recommended_for_review": [
+      "window.__ready",
+      "window.__total",
+      "window.__cuts",
+      "window.__layout",
+      "window.__score",
+      "window.__rendererId",
+      "window.__requestedStyleId",
+      "window.__styleId"
+    ],
+    "runtime_identity_semantics": {
+      "renderer_id": "actual renderer implementation that executed",
+      "requested_style_id": "requested or planned style; does not prove visual realization",
+      "style_id": "implementation-declared realized style; absence is a review debt, not a render blocker",
+      "visual_style_quality": "requires semantic visual review and cannot be approved by runtime metadata"
+    },
+    "seek_must_be_deterministic_and_random_access": true,
+    "frame_capture_owner": "render_javascript_animation.py + Chrome + FFmpeg",
+    "unreported_or_mismatched_selection_policy": "render_review_candidate_when_seekable; record_quality_debt; never_claim_requested_renderer_or_style_was_used"
+  },
+  "maturity_legend": {
+    "default": "当前主线已有端到端工作区与渲染支持",
+    "supported_next": "可在导演阶段选择和规划；若目标 renderer 尚未激活，保留风格意图并用兼容实现继续或记录质量债务",
+    "experimental": "概念可试作，不承诺通用模板已提供完整实现",
+    "auxiliary": "作为其他主风格的局部手段，不单独替代视觉叙事",
+    "specialized": "需要作者/系列基线或特殊医学审查范围"
+  },
+  "renderers": [
+    {
+      "renderer_id": "canvas2d",
+      "status": "active",
+      "adapter_status": "implemented",
+      "native_seek_api": "seconds",
+      "shared_seek_bridge": "direct",
+      "purpose": "透明 PNG、纸材、遮挡、阴影、局部变换和确定性逐帧输出",
+      "entry_refs": [
+        "runtime/workbench/templates/animation/paper_theatre/",
+        "runtime/workbench/scripts/render_local_animation.mjs"
+      ]
+    },
+    {
+      "renderer_id": "svg",
+      "status": "planned",
+      "adapter_status": "planned",
+      "native_seek_api": "seconds",
+      "shared_seek_bridge": "window.__seek(t_seconds)",
+      "purpose": "线条动画、科学图示、路径绘制和高质量文字",
+      "entry_refs": ["runtime/workbench/docs/19_纸剧场模块架构与镜头打磨.md"]
+    },
+    {
+      "renderer_id": "remotion_dom",
+      "status": "planned",
+      "adapter_status": "planned",
+      "native_seek_api": "frames",
+      "shared_seek_bridge": "window.__seek(t_seconds)-to-frame adapter required",
+      "purpose": "React/DOM 排版、复杂字幕和可复用 composition",
+      "entry_refs": ["https://www.remotion.dev/docs/"]
+    },
+    {
+      "renderer_id": "webgl_three",
+      "status": "experimental",
+      "adapter_status": "experimental",
+      "native_seek_api": "seconds",
+      "shared_seek_bridge": "window.__seek(t_seconds)",
+      "purpose": "2.5D 多层视差和医学三维结构",
+      "entry_refs": ["https://threejs.org/docs/"]
+    }
+  ],
+  "styles": [
+    {
+      "style_id": "paper_collage",
+      "label": "Hand-drawn paper collage",
+      "maturity": "default",
+      "default_renderer": "canvas2d",
+      "compatible_renderers": ["canvas2d", "svg"],
+      "asset_requirements": ["transparent_cutouts", "paper_texture", "physical_layers", "contact_points"],
+      "motion_vocabulary": ["assemble", "fold", "slide", "pin", "stamp", "settle", "stop_motion_wobble"],
+      "qa_focus": ["material_consistency", "layer_order", "contact_causality", "subtitle_clearance"],
+      "medical_risk": "medium"
+    },
+    {
+      "style_id": "line_art",
+      "label": "Continuous line art",
+      "maturity": "supported_next",
+      "default_renderer": "svg",
+      "compatible_renderers": ["svg", "canvas2d"],
+      "asset_requirements": ["reviewed_paths", "stroke_style", "semantic_layers"],
+      "motion_vocabulary": ["draw_on", "trace", "branch", "underline", "erase", "reveal"],
+      "qa_focus": ["path_accuracy", "stroke_readability", "causal_order", "no_decorative_lines"],
+      "medical_risk": "high"
+    },
+    {
+      "style_id": "scientific_diagram",
+      "label": "Scientific diagram motion",
+      "maturity": "supported_next",
+      "default_renderer": "svg",
+      "compatible_renderers": ["svg", "canvas2d", "webgl_three"],
+      "asset_requirements": ["reviewed_anatomy", "layered_labels", "section_geometry", "source_citations"],
+      "motion_vocabulary": ["cutaway", "focus", "magnify", "separate", "compare", "highlight"],
+      "qa_focus": ["medical_geometry", "label_mapping", "scale_disclaimer", "evidence_scope"],
+      "medical_risk": "very_high"
+    },
+    {
+      "style_id": "whiteboard",
+      "label": "Whiteboard hand-drawing",
+      "maturity": "supported_next",
+      "default_renderer": "svg",
+      "compatible_renderers": ["svg", "canvas2d"],
+      "asset_requirements": ["reviewed_icons", "handwritten_type_rules", "stroke_order"],
+      "motion_vocabulary": ["write", "draw", "circle", "cross_out", "wipe"],
+      "qa_focus": ["text_load", "draw_order", "legibility", "medical_symbol_accuracy"],
+      "medical_risk": "medium"
+    },
+    {
+      "style_id": "flat_cutout",
+      "label": "Flat 2D cut-out",
+      "maturity": "supported_next",
+      "default_renderer": "canvas2d",
+      "compatible_renderers": ["canvas2d", "svg", "remotion_dom"],
+      "asset_requirements": ["transparent_layers", "joint_anchors", "approved_character_baseline"],
+      "motion_vocabulary": ["walk", "gesture", "turn", "reach", "react", "hold"],
+      "qa_focus": ["identity_consistency", "joint_continuity", "pose_variety", "medical_role_boundary"],
+      "medical_risk": "medium"
+    },
+    {
+      "style_id": "motion_comic",
+      "label": "Motion comic / ink panel",
+      "maturity": "supported_next",
+      "default_renderer": "canvas2d",
+      "compatible_renderers": ["canvas2d", "svg", "remotion_dom"],
+      "asset_requirements": ["panel_art", "halftone_texture", "reviewed_subjects"],
+      "motion_vocabulary": ["panel_reveal", "push_in", "impact", "freeze", "speed_ramp"],
+      "qa_focus": ["panel_rhythm", "impact_readability", "no_false_emergency_cues", "text_load"],
+      "medical_risk": "medium"
+    },
+    {
+      "style_id": "parallax_2_5d",
+      "label": "2.5D layered parallax",
+      "maturity": "supported_next",
+      "default_renderer": "canvas2d",
+      "compatible_renderers": ["canvas2d", "remotion_dom", "webgl_three"],
+      "asset_requirements": ["depth_layers", "camera_anchor", "occlusion_map"],
+      "motion_vocabulary": ["push_in", "pan", "orbit", "rack_focus", "depth_reveal"],
+      "qa_focus": ["occlusion", "depth_consistency", "camera_motivation", "medical_scale"],
+      "medical_risk": "medium"
+    },
+    {
+      "style_id": "watercolor_ink",
+      "label": "Watercolor and ink wash",
+      "maturity": "experimental",
+      "default_renderer": "canvas2d",
+      "compatible_renderers": ["canvas2d", "svg"],
+      "asset_requirements": ["paper_wash", "reviewed_silhouette", "mask_layers"],
+      "motion_vocabulary": ["bleed", "bloom", "wash", "fade_reveal"],
+      "qa_focus": ["subject_boundary", "contrast", "metaphor_disclaimer"],
+      "medical_risk": "medium"
+    },
+    {
+      "style_id": "stop_motion_paper",
+      "label": "Paper stop-motion simulation",
+      "maturity": "experimental",
+      "default_renderer": "canvas2d",
+      "compatible_renderers": ["canvas2d"],
+      "asset_requirements": ["transparent_cutouts", "seeded_jitter", "hold_cadence"],
+      "motion_vocabulary": ["step", "snap", "nudge", "hold", "assemble"],
+      "qa_focus": ["cadence", "jitter_bounds", "medical_edge_stability"],
+      "medical_risk": "medium"
+    },
+    {
+      "style_id": "kinetic_type",
+      "label": "Kinetic typography",
+      "maturity": "auxiliary",
+      "default_renderer": "remotion_dom",
+      "compatible_renderers": ["remotion_dom", "svg", "canvas2d"],
+      "asset_requirements": ["font_profile", "word_timing", "safe_area"],
+      "motion_vocabulary": ["type_on", "split", "scale", "emphasize", "track"],
+      "qa_focus": ["reading_speed", "subtitle_conflict", "not_text_only"],
+      "medical_risk": "low"
+    },
+    {
+      "style_id": "svg_morph",
+      "label": "SVG shape morph",
+      "maturity": "experimental",
+      "default_renderer": "svg",
+      "compatible_renderers": ["svg", "canvas2d"],
+      "asset_requirements": ["reviewed_path_pairs", "semantic_correspondence"],
+      "motion_vocabulary": ["morph", "split", "merge", "transform"],
+      "qa_focus": ["semantic_continuity", "path_correspondence", "medical_misread"],
+      "medical_risk": "high"
+    },
+    {
+      "style_id": "particle_field",
+      "label": "Procedural particle or field",
+      "maturity": "experimental",
+      "default_renderer": "webgl_three",
+      "compatible_renderers": ["canvas2d", "webgl_three"],
+      "asset_requirements": ["seed", "field_definition", "explicit_diagram_status"],
+      "motion_vocabulary": ["flow", "pulse", "diffuse", "propagate", "cluster"],
+      "qa_focus": ["seed_reproducibility", "diagram_disclaimer", "not_real_imaging"],
+      "medical_risk": "high"
+    },
+    {
+      "style_id": "character_rig",
+      "label": "Character rig / articulated cut-out",
+      "maturity": "specialized",
+      "default_renderer": "canvas2d",
+      "compatible_renderers": ["canvas2d", "svg", "remotion_dom"],
+      "asset_requirements": ["approved_character_baseline", "joint_map", "expression_sheet"],
+      "motion_vocabulary": ["gesture", "walk", "turn", "react", "speak", "hold"],
+      "qa_focus": ["identity", "pose_continuity", "lip_sync_scope", "role_boundary"],
+      "medical_risk": "medium"
+    }
+  ]
+}

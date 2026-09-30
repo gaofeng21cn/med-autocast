@@ -45,11 +45,16 @@ try {
   });
   await page.goto(`http://127.0.0.1:${server.address().port}/${entry}`,{waitUntil:'networkidle',timeout:30000});
   await page.addStyleTag({content:'button, [role="button"] { visibility: hidden !important; }'});
-  await page.evaluate(async()=>{
+  const rendererRuntime = await page.evaluate(async()=>{
     await document.fonts.ready;
     await Promise.all([...document.images].map(img=>img.decode()));
     if(window.__ready) await window.__ready;
     if(typeof window.__seek!=='function') throw Error('动画必须提供 window.__seek(t)');
+    return {
+      renderer_id: window.__rendererId || null,
+      requested_style_id: window.__requestedStyleId || window.__score?.style?.styleId || null,
+      style_id: window.__styleId || null,
+    };
   });
   const args=['-v','error','-f','image2pipe','-vcodec','png','-framerate',String(fps),'-i','pipe:0','-i',voice,'-map','0:v','-map','1:a','-t',String(duration),'-c:v','libx264','-crf','18','-preset','medium','-pix_fmt','yuv420p','-c:a','aac','-b:a','192k','-movflags','+faststart',path.join(temp,'video.mp4')];
   encoder = spawn('ffmpeg',args,{stdio:['pipe','ignore','pipe']});
@@ -73,7 +78,7 @@ try {
   // Hard-link publishes only a completed file and never overwrites another revision.
   await fs.link(path.join(temp,'video.mp4'),target);
   await fs.unlink(path.join(temp,'video.mp4'));
-  console.log(JSON.stringify({status:'rendered',output:target,frames,duration,fps,width,height,evidence_directory:temp,release_eligible:false}));
+  console.log(JSON.stringify({status:'rendered',output:target,frames,duration,fps,width,height,evidence_directory:temp,renderer_runtime:rendererRuntime,release_eligible:false}));
 } finally {
   if(encoder && encoder.exitCode===null) encoder.kill();
   if(browser) await browser.close();

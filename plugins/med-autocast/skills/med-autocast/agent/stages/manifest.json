@@ -3,6 +3,9 @@
   "version": "opl-standard-agent-declarative-stage-manifest.v1",
   "target_domain_id": "medical_video",
   "owner": "medical_video",
+  "capability_bundle_ref": "contracts/stage_capability_bundle.json",
+  "animation_style_registry_ref": "contracts/animation_style_registry.json",
+  "meta_review_policy_ref": "agent/quality_gates/meta-review.md",
   "progress_first_policy": {
     "semantic_route_decision_owner": "decisive_codex_attempt",
     "stage_transition_materialization_owner": "opl_stage_run_controller",
@@ -71,6 +74,10 @@
         "en-US": "Evidence Plan"
       },
       "stage_quality_cycle_policy_ref": "contracts/stage_quality_cycle_policy.json#/stages/evidence-plan",
+      "capability_bundle_ref": "contracts/stage_capability_bundle.json#/stages/evidence-plan",
+      "input_artifact_advisories_ref": "contracts/stage_capability_bundle.json#/stages/evidence-plan/input_artifact_advisories",
+      "output_artifact_advisories_ref": "contracts/stage_capability_bundle.json#/stages/evidence-plan/output_artifact_advisories",
+      "route_back_targets": [],
       "skill_refs": [
         "agent/professional_skills/medical-video-series-producer/SKILL.md",
         "agent/professional_skills/medical-video-content-planner/SKILL.md",
@@ -117,6 +124,10 @@
         "en-US": "Story Directing"
       },
       "stage_quality_cycle_policy_ref": "contracts/stage_quality_cycle_policy.json#/stages/story-directing",
+      "capability_bundle_ref": "contracts/stage_capability_bundle.json#/stages/story-directing",
+      "input_artifact_advisories_ref": "contracts/stage_capability_bundle.json#/stages/story-directing/input_artifact_advisories",
+      "output_artifact_advisories_ref": "contracts/stage_capability_bundle.json#/stages/story-directing/output_artifact_advisories",
+      "route_back_targets": ["evidence-plan"],
       "skill_refs": [
         "agent/professional_skills/medical-video-content-planner/SKILL.md",
         "agent/professional_skills/medical-video-director/SKILL.md",
@@ -164,6 +175,10 @@
         "en-US": "Media Production"
       },
       "stage_quality_cycle_policy_ref": "contracts/stage_quality_cycle_policy.json#/stages/media-production",
+      "capability_bundle_ref": "contracts/stage_capability_bundle.json#/stages/media-production",
+      "input_artifact_advisories_ref": "contracts/stage_capability_bundle.json#/stages/media-production/input_artifact_advisories",
+      "output_artifact_advisories_ref": "contracts/stage_capability_bundle.json#/stages/media-production/output_artifact_advisories",
+      "route_back_targets": ["story-directing"],
       "skill_refs": [
         "agent/professional_skills/medical-video-backends/SKILL.md",
         "agent/professional_skills/medical-video-director/SKILL.md",
@@ -204,7 +219,7 @@
         "quality_debt_refs"
       ],
       "next_stage_refs": [
-        "review-handoff"
+        "meta-review"
       ],
       "trust_lane": "domain_agent",
       "display_names": {
@@ -212,10 +227,73 @@
         "en-US": "Visual Review"
       },
       "stage_quality_cycle_policy_ref": "contracts/stage_quality_cycle_policy.json#/stages/visual-review",
+      "capability_bundle_ref": "contracts/stage_capability_bundle.json#/stages/visual-review",
+      "input_artifact_advisories_ref": "contracts/stage_capability_bundle.json#/stages/visual-review/input_artifact_advisories",
+      "output_artifact_advisories_ref": "contracts/stage_capability_bundle.json#/stages/visual-review/output_artifact_advisories",
+      "route_back_targets": ["evidence-plan", "story-directing", "media-production"],
       "skill_refs": [
         "agent/professional_skills/medical-video-visual-qa/SKILL.md",
         "agent/professional_skills/medical-video-release-packager/SKILL.md",
         "agent/professional_skills/medical-video-content-planner/SKILL.md"
+      ]
+    },
+    {
+      "stage_id": "meta-review",
+      "stage_kind": "review",
+      "stage_role": "cross_stage_meta_review",
+      "title": "Meta Review",
+      "summary": "跨阶段审阅当前精确候选、证据、阶段 Review 和质量债务；判断整体目标并把缺陷回到最早责任 Stage。",
+      "goal": "跨阶段审阅当前精确候选、证据、阶段 Review 和质量债务；判断整体目标并把缺陷回到最早责任 Stage。",
+      "policy_ref": "agent/stages/meta-review.md",
+      "prompt_ref": "agent/prompts/meta-review.md",
+      "knowledge_refs": [
+        "agent/knowledge/domain_boundary.md",
+        "docs/production-sop.md",
+        "docs/workspace-adapter.md"
+      ],
+      "quality_gate_refs": [
+        "agent/quality_gates/meta-review.md"
+      ],
+      "allowed_action_refs": [
+        "produce-episodes",
+        "review-delivery"
+      ],
+      "requires": [
+        "workspace_root",
+        "current_request",
+        "skill-ref:agent/professional_skills/medical-video-visual-qa/SKILL.md",
+        "skill-ref:agent/professional_skills/medical-video-content-planner/SKILL.md",
+        "skill-ref:agent/professional_skills/medical-video-series-producer/SKILL.md"
+      ],
+      "ensures": [
+        "meta_review_ref",
+        "defect_owner_matrix_ref",
+        "route_analysis_ref",
+        "next_stage_recommendation_ref",
+        "quality_debt_refs"
+      ],
+      "next_stage_refs": [
+        "review-handoff"
+      ],
+      "route_back_targets": [
+        "evidence-plan",
+        "story-directing",
+        "media-production",
+        "visual-review"
+      ],
+      "trust_lane": "domain_agent",
+      "display_names": {
+        "zh-CN": "跨阶段 Meta Review",
+        "en-US": "Meta Review"
+      },
+      "stage_quality_cycle_policy_ref": "contracts/stage_quality_cycle_policy.json#/stages/meta-review",
+      "capability_bundle_ref": "contracts/stage_capability_bundle.json#/stages/meta-review",
+      "input_artifact_advisories_ref": "contracts/stage_capability_bundle.json#/stages/meta-review/input_artifact_advisories",
+      "output_artifact_advisories_ref": "contracts/stage_capability_bundle.json#/stages/meta-review/output_artifact_advisories",
+      "skill_refs": [
+        "agent/professional_skills/medical-video-visual-qa/SKILL.md",
+        "agent/professional_skills/medical-video-content-planner/SKILL.md",
+        "agent/professional_skills/medical-video-series-producer/SKILL.md"
       ]
     },
     {
@@ -259,6 +337,10 @@
         "en-US": "Review Handoff"
       },
       "stage_quality_cycle_policy_ref": "contracts/stage_quality_cycle_policy.json#/stages/review-handoff",
+      "capability_bundle_ref": "contracts/stage_capability_bundle.json#/stages/review-handoff",
+      "input_artifact_advisories_ref": "contracts/stage_capability_bundle.json#/stages/review-handoff/input_artifact_advisories",
+      "output_artifact_advisories_ref": "contracts/stage_capability_bundle.json#/stages/review-handoff/output_artifact_advisories",
+      "route_back_targets": ["meta-review", "visual-review"],
       "handoff_review_boundary": {
         "artifact_effect": "mechanical_repackaging_of_reviewed_bytes",
         "freezes_canonical_artifact_bytes": true,
@@ -310,6 +392,10 @@
         "en-US": "Asset Curation"
       },
       "stage_quality_cycle_policy_ref": "contracts/stage_quality_cycle_policy.json#/stages/asset-curation",
+      "capability_bundle_ref": "contracts/stage_capability_bundle.json#/stages/asset-curation",
+      "input_artifact_advisories_ref": "contracts/stage_capability_bundle.json#/stages/asset-curation/input_artifact_advisories",
+      "output_artifact_advisories_ref": "contracts/stage_capability_bundle.json#/stages/asset-curation/output_artifact_advisories",
+      "route_back_targets": ["evidence-plan", "story-directing", "media-production", "visual-review"],
       "skill_refs": [
         "agent/professional_skills/medical-video-series-producer/SKILL.md",
         "agent/professional_skills/medical-video-content-planner/SKILL.md",

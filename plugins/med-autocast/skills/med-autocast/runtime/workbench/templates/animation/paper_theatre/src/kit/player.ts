@@ -96,6 +96,9 @@ export function mount(config: {
   window.__total = score.duration;
   window.__score = score;
   window.__kitVersion = "1.0.0";
+  window.__rendererId = "canvas2d";
+  window.__requestedStyleId = score.style?.styleId;
+  window.__styleId = score.style?.appliedStyleId;
   controls.inert = true;
   const ready = (window.__ready = s.load(config.assets).then(async () => {
     await document.fonts.ready;

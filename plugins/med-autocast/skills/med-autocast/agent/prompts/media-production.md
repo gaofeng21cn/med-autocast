@@ -4,6 +4,8 @@
 
 默认艺术风格为有叙事感的手绘拼贴。动画前先实际查看素材，按 `runtime/workbench/docs/13_素材准入与配音基线.md` 登记并执行 `check_animation_assets`。缺失或被拒绝的医学主体先修素材，不能用代码自绘占位继续。ImageGen 通过当前会话的 ImageGen Skill 内置工具调用，生成后回写提示、回执和审核；Python 入口只检查登记，不声称提供图像生成模型。
 
+执行时以当前单集 `score.json` 的 `styleId` 和 `renderer` 为请求来源；workflow 或作者档案中的选择应通过 `paper_project` 的 `init` 或 `adopt` 子命令传入 `--style-id ID --renderer ID`，不写回全局作者档案。后端未激活但页面可 seek 时生成审看候选，并在回执列出请求/实际 renderer 与 `quality_debt`；不得把请求 metadata 冒充运行结果。视觉风格实现由明确的 `appliedStyleId` 和导演/视觉 Review 共同确认，代码不得给语义质量签字。
+
 品牌标记、医生形象和声线是默认首步。已有系列沿用作者档案的固定品牌露出、人物母版和声线；单集人物是否出镜由故事决定，仅用品牌标记也仍属于原系列，不记为跳过人物基线。只有用户明确放弃人物基线时才记录跳过。每集先写 `episode_blueprint`、beat grid、读取顺序和可分层透明素材计划，再写动画；编码前调用 `render_javascript_animation --preview --review-candidate` 看关键姿态、动作 strip、切点、联系表、layout 和字幕避让，返修后才导出 MP4。质量下限与迭代循环见 `runtime/workbench/docs/16_纸剧场前置策划与质量门.md`。
 
 全篇共用一个配音基线；禁止分场景改变情绪指令。Edge 使用 `render_edge_tts` 整篇合成及响度归一化，IndexTTS 保持同一参考声线和情绪参数。使用 `audio_baseline` 定位音量异常，完整听感和语气一致性单独审查。声学通过不能把突然兴奋、角色变化或机械感标为通过。新的音轨必须重新校对时间轴。

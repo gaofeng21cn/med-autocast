@@ -1,6 +1,6 @@
 ---
 name: med-autocast
-description: 使用 Med Auto Cast 规划、制作、修订和审查医学科普视频，交付审看包并整理已审关键帧资产。
+description: 使用 Med Auto Cast 规划、制作、修订和审查医学科普动画，交付审看包并保管可复用图像、组件、动作与声音。
 ---
 
 # Med Auto Cast
@@ -45,7 +45,7 @@ description: 使用 Med Auto Cast 规划、制作、修订和审查医学科普�
 
 纸剧场的视觉丰富度与配乐先从导演阶段联合设计，方法见 `runtime/workbench/docs/22_纸面舞台与声音导演.md`。完整环境板建立纸面空间，透明主体负责可见事件，前景提供真实遮挡；通用 scene 模块控制层序与布局，镜头保留创作自由。音乐支持曲库、明确许可的生成或本地原创演奏，现有 `paper_project mix --music-plan` 可混分轨并按实际旁白压低音乐。素材、声音与邻镜状态的 Review 持续进行，不增加脚本启动门；品牌动机、医生形象和声线仍从工作区读取。
 
-Manifest 的六阶段路线是 `evidence-plan -> story-directing -> media-production -> visual-review -> meta-review -> review-handoff`；`asset-curation` 是交付后的可选沉淀。每个 Stage 的 prompt、专业 Skill、quality gate、工具和推荐产物可由 `contracts/stage_capability_bundle.json` 查询，动画风格与渲染器可由 `contracts/animation_style_registry.json` 查询。
+Manifest 的六阶段路线是 `evidence-plan -> story-directing -> media-production -> visual-review -> meta-review -> review-handoff`；`asset-curation` 是交付后的可选集中沉淀，素材策展能力也贯穿制作。导演准备先查库并看实际原件/动作，制作中独立保存有价值的纸件、组件、声音与来源；清理前保全。由 `medical-video-asset-curator` 使用 `paper_project library` 的只读查询、独立版本包、看图库和精确版本复用；作者/声线母版仍在作者档案，医学、动态和听感状态不因入库升级。方法见 `runtime/workbench/docs/23_可复用素材保管与策展.md`。每个 Stage 的 prompt、专业 Skill、quality gate、工具和推荐产物可由 `contracts/stage_capability_bundle.json` 查询，动画风格与渲染器可由 `contracts/animation_style_registry.json` 查询。
 
 能力包、`requires`、artifact envelope 和风格注册表是定位与交接建议，不是阻断流程的脚本 DSL。模型输出不完整、字段缺失、未列出的可消费材料或工具能力不足，优先保留已有结果、记录 `quality_debt`、`route_back` 或工具 blocker 并继续推进。工具失败时保留部分结果并物化可读诊断；OPL 可将诊断作为进度按默认路由继续。不能仅凭退出码、质量预算耗尽或材料不完整结束流程；只有连可读诊断都无法形成，或命中权限、身份/当前性、执行器不可用、明确人工决定和不可逆授权等真实硬边界时才停止。
 

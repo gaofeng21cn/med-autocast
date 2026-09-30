@@ -8,6 +8,7 @@
 python3 runtime/native_helpers/med_autocast.py inspect --workspace /absolute/workspace
 python3 runtime/native_helpers/med_autocast.py tools --workspace /absolute/workspace
 python3 runtime/native_helpers/med_autocast.py assets --workspace /absolute/workspace --category 05
+python3 runtime/native_helpers/med_autocast.py assets --workspace /absolute/workspace --library animation --query 信封
 python3 runtime/native_helpers/workbench_tool.py --workspace /absolute/workspace --name workbench_config -- validate --series SERIES --pretty
 python3 runtime/native_helpers/workbench_tool.py --workspace /absolute/workspace --name media_backend -- resolve --media video --pretty
 python3 runtime/native_helpers/workbench_tool.py --workspace /absolute/workspace --name environment_check -- --pretty
@@ -15,7 +16,7 @@ python3 runtime/native_helpers/workbench_tool.py --workspace /absolute/workspace
 
 `inspect`、`tools`、`assets` 和预检只读。`workbench_tool.py` 同步调用一个明确工具，不创建队列或调度器；其效果与原工具一致。所有调用的 cwd 都是制作工作区；paper_project、render_narration、render_javascript_animation 固定使用随包实现，其他旧制作单工具优先原 scripts，缺少时使用随包版本。核心解释器自动选工作区 .venv；工具清单显示真实执行路径与解释器。`--bundled` 显式选择随包版本。工具接收的剩余参数原样传递；生成、下载、合成、检查输出和打包需处于本次授权范围。
 
-阶段推荐顺序由 `agent/stages/manifest.json` 和 `contracts/stage_capability_bundle.json` 共同说明：`visual-review` 完成后进入独立 `meta-review`，再到 `review-handoff`；`asset-curation` 只在交付后按需运行。Meta Review 读取当前精确候选、阶段 Review、证据和导演交接材料，输出跨阶段判断与最早 owner route-back；它不创建第二 writer，也不替代医学或发布负责人。
+阶段推荐顺序由 `agent/stages/manifest.json` 和 `contracts/stage_capability_bundle.json` 共同说明：`visual-review` 后进入独立 `meta-review`，再到 `review-handoff`；交付后按需进入 `asset-curation` 集中沉淀。素材策展专业能力同时供导演准备和制作中调用；欠项不阻断已有交付。Meta Review 读取精确候选和已有 Review 判断最早返修职责，不创建第二 writer，不替代医学或发布负责人。
 
 OPL 阶段输出以可引用产物为中心：返回真实 `artifact_refs` 与可选来源/当前性 envelope；同时记录 `stage_run_ref`、质量债务和建议下一步。交付目标、候选、Review 范围与交付包可以像 RedCube 的 deliverable/review/export surfaces 一样分开说明，但 Med Auto Cast 只把它们作为适应工作区的建议，不强制固定目录或字段。需要转交责任、权限或恢复上下文时，只引用真实存在的 owner receipt、typed blocker、human gate、route-back 或 memory ref。引用可以缺省，产物仍可继续进入下一 Stage；不得编造回执或把结构字段缺失变成流程硬停。
 
@@ -35,6 +36,7 @@ OPL 阶段输出以可引用产物为中心：返回真实 `artifact_refs` 与�
 | 单集审看修订交付 | package_review | 显式 --series、--episode、--plan、--master、--review；可附 --technical-qa 和 --source-review。保留旧包，更新本集并回读，不重渲染 |
 | 正式 final 交付 | build_release_packages | 原合同、双平台 TXT；整季入口无 --episode，单集使用原公开函数或匹配的专用包器 |
 | 关键帧库投影 | build_keyframe_library | 先由专业判断决定入库；脚本校验并生成页面、CSV、缩略图 |
+| 可复用素材版本库 | paper_project library | 查询只读；显式归档原件/证据、代码/动作/声音包、完整看图库与精确版本复制。新镜头审核重置，源码由开发者显式接入 |
 
 风格与渲染器通过工作区作者档案或工作流输入的 `style_selection.style_id`、`style_selection.renderer` 指定；缺省为 `paper_collage` + `canvas2d`。未知选择保留用户意图并记录质量债务，不能因为注册表暂缺就阻断故事或 Review。
 

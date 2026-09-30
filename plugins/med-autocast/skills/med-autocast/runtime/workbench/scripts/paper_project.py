@@ -489,39 +489,8 @@ def align(a):
 
 
 def library(a):
-    config = yaml.safe_load((a.workspace / "workbench.yaml").read_text())
-    entries = []
-    for sid, series in config.get("series", {}).items():
-        for eid, row in series.get("episodes", {}).items():
-            p = a.workspace / row["project"]
-            manifest = p / "asset_manifest.json"
-            if not manifest.exists():
-                continue
-            for item in read(manifest).get("assets", []):
-                if (
-                    a.query
-                    and a.query.lower()
-                    not in json.dumps(item, ensure_ascii=False).lower()
-                ):
-                    continue
-                entries.append(
-                    {
-                        "series": sid,
-                        "episode": eid,
-                        "project": str(p),
-                        **item,
-                        "resolved_path": str((p / item["path"]).resolve()),
-                    }
-                )
-    target = a.workspace / "assets/paper-theatre/index.json"
-    save(
-        target,
-        {
-            "assets": entries,
-            "note": "检索投影不授予素材或动态批准；来源是各集 manifest",
-        },
-    )
-    return {"count": len(entries), "index": str(target), "assets": entries}
+    from animation_library import run as library_run
+    return library_run(a)
 
 
 def captions(a):
@@ -1025,6 +994,16 @@ def main():
     sub.add_parser("retime")
     s = sub.add_parser("library")
     s.add_argument("--query")
+    s.add_argument("--kind", help="按已登记类型检索，不强制类型枚举")
+    s.add_argument("--scope", help="按复用范围检索")
+    s.add_argument("--refresh", action="store_true", help="重建完整看图库，不受查询过滤影响")
+    library_action = s.add_mutually_exclusive_group()
+    library_action.add_argument("--ingest-project", action="store_true", help="独立保存所选单集素材与现有来源证据")
+    library_action.add_argument("--register", type=Path, help="登记代码、动作、声音或其他素材包")
+    library_action.add_argument("--use", help="将素材库精确版本复制到当前项目")
+    s.add_argument("--asset-id", action="append", help="归档时选择素材；复用图像时指定新 ID")
+    s.add_argument("--revision", help="复用的精确版本；缺省取最新登记版本")
+    s.add_argument("--notes", type=Path, help="可选策展说明：标题、用途、范围与标签")
     s = sub.add_parser("align")
     s.add_argument("--python", required=True)
     s.add_argument("--model", required=True)

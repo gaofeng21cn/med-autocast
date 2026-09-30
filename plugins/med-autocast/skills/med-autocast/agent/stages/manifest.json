@@ -109,7 +109,8 @@
         "current_request",
         "skill-ref:agent/professional_skills/medical-video-content-planner/SKILL.md",
         "skill-ref:agent/professional_skills/medical-video-director/SKILL.md",
-        "skill-ref:agent/professional_skills/medical-video-visual-qa/SKILL.md"
+        "skill-ref:agent/professional_skills/medical-video-visual-qa/SKILL.md",
+        "skill-ref:agent/professional_skills/medical-video-asset-curator/SKILL.md"
       ],
       "ensures": [
         "故事包、分镜、旁白、镜头与复用/生成缺口清单",
@@ -132,7 +133,8 @@
       "skill_refs": [
         "agent/professional_skills/medical-video-content-planner/SKILL.md",
         "agent/professional_skills/medical-video-director/SKILL.md",
-        "agent/professional_skills/medical-video-visual-qa/SKILL.md"
+        "agent/professional_skills/medical-video-visual-qa/SKILL.md",
+        "agent/professional_skills/medical-video-asset-curator/SKILL.md"
       ]
     },
     {
@@ -160,7 +162,8 @@
         "skill-ref:agent/professional_skills/medical-video-backends/SKILL.md",
         "skill-ref:agent/professional_skills/medical-video-director/SKILL.md",
         "skill-ref:agent/professional_skills/medical-video-visual-qa/SKILL.md",
-        "skill-ref:agent/professional_skills/medical-video-release-packager/SKILL.md"
+        "skill-ref:agent/professional_skills/medical-video-release-packager/SKILL.md",
+        "skill-ref:agent/professional_skills/medical-video-asset-curator/SKILL.md"
       ],
       "ensures": [
         "精确媒体引用、去密回执、剪辑清单、候选成片",
@@ -184,7 +187,8 @@
         "agent/professional_skills/medical-video-backends/SKILL.md",
         "agent/professional_skills/medical-video-director/SKILL.md",
         "agent/professional_skills/medical-video-visual-qa/SKILL.md",
-        "agent/professional_skills/medical-video-release-packager/SKILL.md"
+        "agent/professional_skills/medical-video-release-packager/SKILL.md",
+        "agent/professional_skills/medical-video-asset-curator/SKILL.md"
       ]
     },
     {
@@ -358,8 +362,8 @@
       "stage_id": "asset-curation",
       "stage_kind": "domain_specific",
       "title": "Asset Curation",
-      "summary": "覆盖反馈维护和跨阶段编排：事实更新追踪受影响集与镜头，恢复原任务，按用途整理有价值的已审关键帧。",
-      "goal": "覆盖反馈维护和跨阶段编排：事实更新追踪受影响集与镜头，恢复原任务，按用途整理有价值的已审关键帧。",
+      "summary": "独立保管可复用纸件、环境、源码、动作与声音，保留精确版本、来源和审看范围；追踪复用影响并沉淀经验。",
+      "goal": "独立保管可复用纸件、环境、源码、动作与声音，保留精确版本、来源和审看范围；追踪复用影响并沉淀经验。",
       "policy_ref": "agent/stages/asset-curation.md",
       "prompt_ref": "agent/prompts/asset-curation.md",
       "knowledge_refs": [
@@ -379,17 +383,18 @@
         "current_request",
         "skill-ref:agent/professional_skills/medical-video-series-producer/SKILL.md",
         "skill-ref:agent/professional_skills/medical-video-content-planner/SKILL.md",
-        "skill-ref:agent/professional_skills/medical-video-director/SKILL.md"
+        "skill-ref:agent/professional_skills/medical-video-director/SKILL.md",
+        "skill-ref:agent/professional_skills/medical-video-asset-curator/SKILL.md"
       ],
       "ensures": [
-        "资产索引更新、复用记录与经验修订",
+        "独立版本素材包、可看索引、复用记录与经验修订",
         "next_stage_recommendation_ref",
         "quality_debt_refs"
       ],
       "next_stage_refs": [],
       "trust_lane": "domain_agent",
       "display_names": {
-        "zh-CN": "关键帧与经验沉淀",
+        "zh-CN": "素材保管与经验沉淀",
         "en-US": "Asset Curation"
       },
       "stage_quality_cycle_policy_ref": "contracts/stage_quality_cycle_policy.json#/stages/asset-curation",
@@ -400,7 +405,8 @@
       "skill_refs": [
         "agent/professional_skills/medical-video-series-producer/SKILL.md",
         "agent/professional_skills/medical-video-content-planner/SKILL.md",
-        "agent/professional_skills/medical-video-director/SKILL.md"
+        "agent/professional_skills/medical-video-director/SKILL.md",
+        "agent/professional_skills/medical-video-asset-curator/SKILL.md"
       ]
     }
   ]

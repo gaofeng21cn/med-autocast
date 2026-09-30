@@ -49,6 +49,7 @@ metadata:
 - 已登记的视频或音频后端运行路径：读取并使用 `.agents/skills/medical-video-backends/SKILL.md`。
 - 候选镜头、人工视觉验收或品牌异常：读取并使用 `.agents/skills/medical-video-visual-qa/SKILL.md`。
 - 成片合成、字幕、BGM、固定品牌、技术 QA 和发布包：读取并使用 `.agents/skills/medical-video-release-packager/SKILL.md`。
+- 制作前选材、跨集复用、组件/动作/声音独立保管及清理前保全：使用 `medical-video-asset-curator`。制作中随时保存有复用价值的材料，交付后再汇总精选；策展不阻断已有审看包。
 
 只读取当前阶段必要的专业 Skill；跨阶段任务在同一主线中串行推进，不让多个阶段同时改同一集的权威文件。
 
@@ -78,4 +79,4 @@ H3按[调研策略](../../../runtime/workbench/docs/12_H3调研与制作策略.m
 
 每篇分别记录内容、动画、技术制作、完整听感、医学终审和公开发布状态。缺镜头时先定位原因、复用或重设表达；不要堆提示词和随机重抽。技术 QA 通过但未完整试听时，明确写“技术制作完成，完整听感和医学终审待确认”。manifest 的 `release_eligible` 不等于公开发布许可；本轮复盘证据与未验证边界见 SOP 第 10.1 节。
 
-纸剧场新集使用 paper_project init；现有作品使用 adopt 原地登记，不重建已审媒体。inspect 回读当前项目；library 检索跨集素材及来源，索引不授予审核批准。恢复先读实际输入和回执，避免重新生成未变音轨。 具体命令见[单集工具与局部返修](../../../runtime/workbench/docs/20_纸剧场单集工具与局部返修.md)。
+纸剧场新集使用 paper_project init；现有作品使用 adopt 原地登记，不重建已审媒体。inspect 回读当前项目；library 只读检索并支持独立归档、完整看图库和精确版本复制。源码、动作样例、分轨音乐及来源随包保存，旧片不随库升级改变。恢复先读实际输入和回执，避免重新生成未变音轨。具体命令见[单集工具与局部返修](../../../runtime/workbench/docs/20_纸剧场单集工具与局部返修.md)、[素材策展](../../../runtime/workbench/docs/23_可复用素材保管与策展.md)。

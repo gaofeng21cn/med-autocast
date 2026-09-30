@@ -93,7 +93,7 @@
         {"kind": "animatic", "recommended_ref": "productions/<series>/<episode>/review/animatic/"}
       ],
       "tool_refs": [
-        {"tool_id": "paper_project", "surface": "workbench_tool", "purpose": "检查镜头、素材和邻镜预览", "effect": "write_when_authorized"},
+        {"tool_id": "paper_project", "surface": "workbench_tool", "purpose": "检查镜头、素材和邻镜预览；library 只读查询纸件、环境、动作和组件", "effect": "write_when_authorized"},
         {"tool_id": "build_timeline_review", "surface": "workbench_tool", "purpose": "把旁白、字幕和画面放在同一时间轴定位", "effect": "write_when_authorized"},
         {"tool_id": "render_javascript_animation", "surface": "workbench_tool", "purpose": "在正式编码前预览动作和构图", "effect": "write_when_authorized"},
         {"tool_id": "check_animation_assets", "surface": "workbench_tool", "purpose": "检查素材来源、分层和镜头覆盖", "effect": "read_only"}
@@ -124,7 +124,7 @@
         {"tool_id": "configure_voice", "surface": "workbench_tool", "purpose": "显式选择 reference 或 Edge 声线模式", "effect": "write_when_authorized"},
         {"tool_id": "render_series_tts", "surface": "workbench_tool", "purpose": "按作者档案生成统一旁白", "effect": "generate"},
         {"tool_id": "render_edge_tts", "surface": "workbench_tool", "purpose": "无专用声线时的整篇保底旁白", "effect": "generate"},
-        {"tool_id": "paper_project", "surface": "workbench_tool", "purpose": "单集构建、配音、字幕、混音、预览和导出；init/adopt 可按单集传入 style_id 与 renderer", "effect": "write"},
+        {"tool_id": "paper_project", "surface": "workbench_tool", "purpose": "单集制作与返修；library 显式复制精确素材版本、保存图像及代码/动作/声音；init/adopt 选择本集风格与 renderer", "effect": "write"},
         {"tool_id": "render_javascript_animation", "surface": "workbench_tool", "purpose": "统一预览和正式渲染入口", "effect": "write"}
       ],
       "route_back_targets": ["story-directing"],
@@ -230,20 +230,23 @@
         "lessons_learned"
       ],
       "input_artifact_advisories": [
-        {"kind": "accepted_review_artifact", "required": false, "purpose": "实际看过且值得复用的资产"},
+        {"kind": "accepted_review_artifact", "required": false, "purpose": "实际看过且值得复用的纸件、环境、源码、动作样例和声音；待审范围如实保留"},
         {"kind": "review_findings", "required": false, "purpose": "返修原因和复用限制"}
       ],
       "output_artifact_advisories": [
-        {"kind": "asset_catalog_update", "recommended_ref": "assets/keyframes/catalog.json"},
+        {"kind": "asset_catalog_update", "recommended_ref": "assets/paper-theatre/catalog.json"},
+        {"kind": "versioned_element_package", "recommended_ref": "assets/paper-theatre/entries/<id>/<revision>/"},
+        {"kind": "asset_board", "recommended_ref": "assets/paper-theatre/index.html"},
+        {"kind": "reuse_record", "recommended_ref": "assets/paper-theatre/uses.json"},
         {"kind": "lesson_update", "recommended_ref": "runtime/workbench/docs/production-lessons.md"}
       ],
       "tool_refs": [
         {"tool_id": "build_keyframe_library", "surface": "workbench_tool", "purpose": "生成关键帧索引和可读投影", "effect": "write"},
-        {"tool_id": "paper_project", "surface": "workbench_tool", "purpose": "查询跨集纸件和来源限制", "effect": "read_only"},
-        {"tool_id": "med_autocast.py assets", "surface": "native_helper", "purpose": "检索已审关键帧索引；复用前仍须由模型核对图像与用途", "effect": "read_only"}
+        {"tool_id": "paper_project", "surface": "workbench_tool", "purpose": "library 只读检索；ingest-project / register 独立保管，refresh 完整看图库，use 精确版本复制及复用记录", "effect": "write_when_authorized"},
+        {"tool_id": "med_autocast.py assets", "surface": "native_helper", "purpose": "--library animation 查询复用素材；默认保持关键帧查询，复用前实际审看原件与用途", "effect": "read_only"}
       ],
       "route_back_targets": ["evidence-plan", "story-directing", "media-production", "visual-review"],
-      "review_scope": ["source_traceability", "reuse_value", "review_scope", "lesson_generality"]
+      "review_scope": ["source_traceability", "independent_storage", "identity_scope", "watchable_sample", "reuse_value", "review_scope", "lesson_generality"]
     }
   }
 }

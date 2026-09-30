@@ -17,7 +17,7 @@ BUNDLE = Path(__file__).resolve().parents[1] / "workbench"
 TOOLS = {
     "paper_project": (
         "write",
-        "单集初始化/登记、素材、配音、构建、窗口审片、混音、导出和审看交付",
+        "单集制作与返修；library 检索、独立归档及精确版本复用图像、代码、动作和声音",
     ),
     "render_narration": (
         "generate",

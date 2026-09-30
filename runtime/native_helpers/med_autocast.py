@@ -65,6 +65,7 @@ def inspect_workspace(root: Path) -> dict:
             'workspace_root': str(root.resolve()), 'profiles': profile_readback, 'series': series,
             'workbench_entrypoints': scripts,
             'keyframe_catalog_exists': (root/'assets/keyframes/catalog.json').is_file(),
+            'animation_catalog_exists': (root/'assets/paper-theatre/catalog.json').is_file(),
             'production_ready': None, 'note': '仅配置与路径回读，未调用后端或批准任何媒体'}
 
 
@@ -101,6 +102,15 @@ def query_assets(root: Path, category: str | None = None, series: str | None = N
                        'review_ref': related_review.get('path')})
     return {'schema': 'med_autocast_asset_query/v1', 'read_only': True, 'count': len(assets), 'assets': assets,
             'note': '仅静态参考检索；真实复用前看图和审核医学细节、人物及关联动态'}
+
+
+def query_animation_assets(root: Path, query=None, kind=None, scope=None) -> dict:
+    bundle = Path(__file__).resolve().parents[1] / 'workbench/scripts'
+    sys.path.insert(0, str(bundle))
+    from animation_library import run
+    result = run(argparse.Namespace(workspace=root, query=query, kind=kind, scope=scope))
+    return {**result, 'schema': 'med_autocast_asset_query/v1', 'library': 'animation',
+            'read_only': True, 'note': '持久素材与工程发现结果分开标记；复用仍需按新镜头审看'}
 
 
 def interval(value) -> tuple[float,float]:
@@ -194,7 +204,10 @@ def main():
     sub=parser.add_subparsers(dest='command',required=True)
     for name in ('inspect','assets','preflight','tools','preflight-workbench'):
         p=sub.add_parser(name);p.add_argument('--workspace',type=Path,required=True)
-        if name=='assets':p.add_argument('--category');p.add_argument('--series')
+        if name=='assets':
+            p.add_argument('--category');p.add_argument('--series')
+            p.add_argument('--library', choices=['keyframes', 'animation'], default='keyframes')
+            p.add_argument('--query');p.add_argument('--kind');p.add_argument('--scope')
         if name=='preflight':
             p.add_argument('--delivery',required=True);p.add_argument('--current',required=True);p.add_argument('--source-review',required=True)
         if name=='preflight-workbench':
@@ -207,7 +220,9 @@ def main():
         root=a.workspace.resolve()
         if not root.is_dir():raise ContractError('workspace 必须为现有目录')
         if a.command=='inspect':result=inspect_workspace(root)
-        elif a.command=='assets':result=query_assets(root,a.category,a.series)
+        elif a.command=='assets':
+            result = (query_animation_assets(root, a.query, a.kind, a.scope) if a.library == 'animation'
+                      else query_assets(root, a.category, a.series))
         elif a.command=='preflight':result=preflight(root,a.delivery,a.current,a.source_review)
         else:
             from workbench_adapter import tool_inventory, preflight_native

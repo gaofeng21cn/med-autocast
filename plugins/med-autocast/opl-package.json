@@ -34,12 +34,12 @@
       "en-US": "Med Auto Cast"
     },
     "description_i18n": {
-      "zh-CN": "医学科普视频规划、制作、视听复核与关键帧资产整理。",
-      "en-US": "Medical education video planning, production, audiovisual review, and keyframe curation."
+      "zh-CN": "医学科普动画规划、制作、视听复核与可复用素材保管。",
+      "en-US": "Medical education animation planning, production, audiovisual review, and reusable element curation."
     },
     "session_routing_summary_i18n": {
-      "en-US": "Plan evidence-based medical education videos, direct their stories, review audiovisual quality, and curate reusable keyframes.",
-      "zh-CN": "规划循证医学科普视频，设计叙事与镜头，复核视听质量并整理可复用关键帧。"
+      "en-US": "Plan evidence-based medical education animations, direct their stories, review audiovisual quality, and preserve reusable visual, code, motion, and audio elements.",
+      "zh-CN": "规划循证医学科普动画，设计叙事与镜头，复核视听质量并保管可复用图像、代码、动作与声音。"
     },
     "home_shortcuts": [
       {

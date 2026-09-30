@@ -29,7 +29,7 @@ New productions default to local JavaScript animation in a hand-drawn collage st
 | Produce a video from a script | Coordinate voiceovers, subtitles, animation, and editing; add branding and background music to create a video for review |
 | Identify what needs revision | Check visual meaning, framing, and motion continuity; organize listening feedback and medical review findings |
 | Prepare an episode or series for handoff | Gather videos, subtitles, narration, review records, and accompanying copy for Xiaohongshu and WeChat Channels |
-| Build a useful collection for future work | Organize reviewed keyframes and reusable clips with their sources and usage limits, and look for existing assets before creating more |
+| Build a useful collection for future work | Store cutouts, environments, code components, motion samples, and audio independently with versions, sources, and reuse scope; inspect existing material before production and curate it afterward |
 
 ## Start With A Request
 
@@ -72,6 +72,7 @@ Source changes and the in-repository plugin carrier reach ordinary installed use
 - [Production workflow](docs/production-sop.md): from topics and scripts to video handoff.
 - [Audiovisual review](docs/visual-review-sop.md) and [delivery guide](docs/delivery-sop.md): review, revise, and organize the results.
 - [Keyframe library](docs/keyframe-library.md): collect and reuse valuable visuals.
+- [Reusable animation elements](runtime/workbench/docs/23_可复用素材保管与策展.md): preserve cutouts, environments, components, motion, and audio, and adopt exact versions in new episodes.
 - [Current capabilities and validation](docs/status.md): what has been verified and which evaluations remain outstanding.
 
 For development and maintenance, see [AGENTS.md](AGENTS.md), [Project](docs/project.md),

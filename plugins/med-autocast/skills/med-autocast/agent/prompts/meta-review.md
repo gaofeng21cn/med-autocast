@@ -4,6 +4,8 @@
 
 把 `episode_blueprint`、证据包、实际旁白/字幕、素材清单、渲染候选、visual-review 结果和已有质量债务放在同一条证据链中检查。先判断患者任务是否仍然成立，再判断阶段 Review 是否覆盖了这个版本，最后判断是否需要回到最早责任阶段。可以消费不完整但有用的结果；缺失输入记录为质量债务或路由建议。
 
+对纸剧场追加读取 `shot_recipe`、动作弧、主物件/空间差异表以及带 BGM/无 BGM 候选的版本绑定，检查每镜是否仍由可见事件承担解释责任；联系表或自动布局结果只能作为定位证据。
+
 输出一份可继续消费的 Meta Review 报告，推荐包括：`outcome`、`evidence_refs`、`global_goal_fit`、`cross_stage_consistency`、`review_coverage`、`quality_debt_refs`、`defect_owner_matrix`、`route_analysis`、`next_stage_recommendation`。每个 finding 说明精确证据、影响范围、最早 owner stage 和下一步。报告内的 route analysis 解释建议，不直接启动 Stage，也不是 OPL 路由字段的替代物。
 
 允许的 outcome 是 `pass`、`repair_required`、`quality_debt`、`blocked`、`human_gate`。`blocked` 只用于真实执行器、权限、身份/当前性或不可逆授权边界；结构化字段缺失、工具未绑定或模型输出不完整应保留结果并写入 `quality_debt`。Meta Review 不签发医学批准、发布授权、owner receipt 或 production-ready 声明。

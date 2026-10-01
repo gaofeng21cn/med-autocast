@@ -26,6 +26,8 @@ description: 使用 Med Auto Cast 规划、制作、修订和审查医学科普�
 
 默认纸剧场先把医学素材转为患者问题地图，再规划系列故事圣经和每集 `episode_blueprint`。blueprint 是创意交接，不是机器表单：推荐先写视觉处理稿、风格帧和带声音事件的分镜，再做完整粗动态分镜；低保真代码预览、独立镜头、声音准备和安全替代可以并行推进。这个顺序提高初稿质量，不是阶段启动门；信息不足或质量检查未通过时，保留可消费候选/诊断与质量债，继续不依赖该缺口的工作。被拒绝的医学素材不得进入渲染；没有安全替代时省略受影响镜头，不臆造解剖。新系列使用 `content/<topic>/` 与 `productions/<series>/<episode>/` 的分层结构；`work/`、`output/`、`deliveries/` 和 `archive/` 分别承担运行态、批量输出、交接记录和历史只读用途，不能互相充当制作权威。预览联系表和每镜固定 12 姿态 strip 是导演的定位证据，不是机器质量门；透明素材出现图册残片时应回到单件生成或合法素材准入，不能靠遮挡卡片掩盖。可用 HyperFrames storyboard/Studio 或本地 HTML 预览做导演审片面；静帧、联系表和代码检查只辅助定位故障，不定义视频质量。方法见 `runtime/workbench/docs/15_纸剧场系列策划与制作.md`、`runtime/workbench/docs/16_纸剧场前置策划与质量门.md`、`runtime/workbench/docs/17_工作台目录结构与资产生命周期.md`。
 
+从 Video Shotcraft 吸收的镜头配方卡、单镜主运动、`prepare -> action -> reaction -> settle -> hold/rest` 动作弧、首帧/连续动作 strip/邻镜/整片的多轮审片，以及旁白、BGM、拟音分轨方法，见 `docs/video-shotcraft方法适配.md`。这里的 `shot_recipe` 是自然语言导演交接材料，不是阻断 Stage 的脚本 DSL；固定 seed、显式时间和 `window.__seek(t)` 只用于可复现预览。Remotion、HyperFrames 等可以辅助预览或作为替换渲染器，但不改变本地 Canvas 2D 纸剧场默认路线。
+
 八个交接点的推荐顺序和返修优先级见 `runtime/workbench/docs/18_纸剧场导演流程与质量框架.md`：通常先收敛患者任务、故事卡、处理稿和 animatic，再准入透明单件并写逐镜 JS；Stage 可以按用户目标与已有产物跳转、并行或回退。去文字审片、视觉负担预算和线段/色带物理来源用于判断候选成熟度；未达标时继续返修或交接质量债，不阻止其他可消费进度。不能用脚本复杂度、标签堆叠或随机抖动补足没有视觉事件的镜头，也不能把欠项候选称为通过或 ready。
 
 六阶段与原十阶段职责映射见 `docs/production-sop.md`。完整专业方法、模板和通用工具随包存于 `runtime/workbench/`；旧制作单保留原入口；纸剧场统一使用随包 paper_project，避免预览和正式渲染调用不同版本。默认交付预检使用 `med_autocast.py preflight-workbench`，直接读取原制作单和交付清单，不另外维护 Med Auto Cast 制作状态。

@@ -6,9 +6,9 @@ Med Auto Cast 采用标准 OPL 软件包与 OCI 发布流程。当前源码已�
 
 历史迁移验证曾只读使用血脂单集的原修订制作单与母版，检查 13 段镜头及双平台文案；作者和后端仍从工作区解析，保留原 RTX 4090 视频与音频默认选择。原听感、连续动态与医学待审状态保持不变。源码和载体检查的最新结果见 [能力迁移验收](workbench-parity.md)。
 
-当前源码版本为 0.2.3；本版本的 OCI 发布与本机安装以 immutable ref、latest-stable 和 OPL Package 回读为准。独立 OMA 资格、托管生产运行、新后端真实推理、医学复核和上传均不由工程验证替代。
+当前源码版本为 0.2.4；本版本的 OCI 发布与本机安装以 immutable ref、latest-stable 和 OPL Package 回读为准。独立 OMA 资格、托管生产运行、新后端真实推理、医学复核和上传均不由工程验证替代。
 
-## 0.2.3 发布范围与 App 接入
+## 0.2.4 发布范围与 App 接入
 
 本版集中交付本地 JavaScript 纸剧场的导演方法、模块化 Canvas 镜头、可选动画风格和渲染器定位、Progress First 阶段交接、视觉与声音联合设计，以及可复用素材的独立保管、看图库和精确版本复用。七个专业 Skill、完整 SOP、工具、模板及资源通过同一软件包分发；私人素材和作者声线不进入公开包。
 
@@ -48,7 +48,7 @@ Med Auto Cast 以 `publisher: one-person-lab` 和 `standard_agent` 角色加入 
 
 ## 2026-09-28 本地优先与首用复核
 
-当前源码的 OPL `agents check` 已通过 scaffold 与 generated_interfaces 检查。修复了 Standard Agent 描述中不被当前接口接受的 workspace_binding.shared_resources 字段；共享目录的生命周期仍由 OPL 工作区机制持有，不建立第二份初始化权威。结构符合标准不代表独立 OMA 资格或生产质量已通过。
+当前源码的 OPL `agents check` 已通过 scaffold 与 generated_interfaces 检查。修复了 Standard Agent 描述中不被当前接口接受的 workspace_binding.shared_resources 字段；共享目录的生命周期仍由 OPL 工作区机制持有，不建立第二份初始化权威。全季交付经验已补入随包 `runtime/workbench/docs/25_全季交付回读与经验沉淀.md`，强调当前母版、逐字节回读、逐集归档和 Progress First；结构符合标准不代表独立 OMA 资格或生产质量已通过。
 
 新建制作目录支持自动初始化、依赖安装、真实浏览器与字体检查。默认 1280×720 / 24 fps 本机 JS 手绘拼贴；H3/Seedance 明确为备选。推荐授权声线 IndexTTS，用户可跳过并用 Edge；不强迫准备医生头像。共享 HTML 定帧/编码入口避免每集重写 render/mux，素材、字幕和视觉叙事仍由智能体负责并逐片验收。
 

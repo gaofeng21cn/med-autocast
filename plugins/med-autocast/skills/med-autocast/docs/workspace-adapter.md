@@ -50,6 +50,8 @@ python3 runtime/native_helpers/med_autocast.py preflight-workbench --workspace /
 
 `--plan` 和 `--master` 来自当前任务确认的独立输入；不从待验证交付清单反推“当前版本”，不按前缀或修改时间猜测。支持制作单 video_production_plan/v2、v3 和交付 medical_video_review_package/v1、medical_video_series_delivery/v2，原文件原地读取，**不要求生成另一套 Med Auto Cast 制作单**。默认从登记 publish_root 读 manifest；可用 --delivery 指定精确清单、--source-review 指定原源片审查记录。
 
+代码纸剧场的 `--plan` 可以是 `project.json`，但 `--master` 必须来自该项目的 `out/current.json`；`--delivery` 必须是精确的 `current/manifest.json` 文件。预检成功只证明当前性、引用和字节一致，不批准连续动态、完整听感、医学质量或公开发布。全季交付后的逐集审计、归档路径和文档回读见[全季交付回读与经验沉淀](../runtime/workbench/docs/25_全季交付回读与经验沉淀.md)。
+
 预检核对集号、实际路径、镜头区间、母版复制字节、可用时的审看记录与字幕、两份 TXT 和登记 release_catalog 全文。拒用状态优先于残留区间；源 ID 缺少真实文件映射时保留缺证据，不能猜测批准。原复核声明原样返回，不升格为新的质量批准。工具不解码成片、不判医学正确性、不授权上传；原 animation_gate、技术 QA 和专业复核仍须按任务范围执行。
 
 工作台根外的 NAS/挂载资产通过 --allow-root 显式登记允许读取的根，不默默放宽路径范围。旧的 `preflight --current --delivery --source-review` 仅兼容已经采用 Med Auto Cast v1 JSON 的调用者，不作为新任务的默认入口。

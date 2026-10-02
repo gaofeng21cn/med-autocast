@@ -75,3 +75,9 @@ video.mp4
 没有合格动画的篇目先交付文案和状态说明，等成片准备好再补视频；不从 animatic 冒充正式成片。每篇目录保留一个真实 `video.mp4`、两个独立 UTF-8 TXT 和一份交付说明，方便用户直接压缩转存。
 
 纸剧场使用 paper_project mix/build/render/package；旧制作单仍用对应原包器。preflight-workbench 同时接受 project.json，回读当前母版与交付字节；审看记录必须绑定当前视频，pending 不变成发布批准。 具体命令见[单集工具与局部返修](../../../runtime/workbench/docs/20_纸剧场单集工具与局部返修.md)。
+
+## 全季交付回读
+
+全季打包时逐集读取当前制作单、`out/current.json`、publish manifest 和视频；代码纸剧场的母版必须是 `out/current.json` 实际指向的文件，`--delivery` 传 `current/manifest.json` 文件。预检返回 `passed` 只表示当前性、引用和字节一致，不能把待审的连续动态、完整听感或医学状态写成通过。
+
+每集只保留一个活动 `current/`。被替换的候选移到对应集的 `archive/<revision>/`，文档生成器从真实目录读取归档，不使用全季固定归档路径。发布清单、观看索引、SHA-256 清单和平台文案生成后必须回读；标题已有问号或感叹号时不要追加重复句号。具体方法见[全季交付回读与经验沉淀](../../../runtime/workbench/docs/25_全季交付回读与经验沉淀.md)。

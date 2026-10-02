@@ -56,3 +56,11 @@ Stage 返回尽量引用真实产物与版本/来源信息，给出质量债务�
 区分领域报告与 OPL 运行回执：`stage_review_report`、`meta_review_report`、可读 `route_analysis` 是 Med Auto Cast 的普通审阅材料；OPL formal review receipt、owner receipt、typed blocker 和 Stage 转换由 OPL 按自身合同生成，不能在领域文件中伪造。只有终局 decisive Attempt 需要在 OPL closeout 中表达实际去向：`route_impact.stage_route_decision`；非终局 Attempt 的判断放在 `route_impact.stage_route_recommendation`。其 `decision_kind` 与 `target_stage_id` 面向 OPL 的声明 Stage ABI，不需要复刻成领域 JSON schema。终局路由缺失或不合 ABI 时，可消费产物保留、形成路由质量债并按 OPL 默认推进规则继续；不要把它改造成内容产物门禁。具体 Stage 去向由模型结合目标、产物和审查判断，框架只校验输出权威、形状和目标身份。
 
 常规 Stage 由 OPL 按配置执行 `producer -> reviewer -> repairer -> re-reviewer` 质量循环。`meta-review` 是标记为 `cross_stage_meta_review` 的独立终审 Stage：单次综合判断患者目标、医学证据、导演意图、精确候选、声音/字幕/视觉一致性与阶段 Review 覆盖，并把缺陷回到最早 owner Stage；不再嵌套另一轮 formal review。它不替代医生审核，不签发 owner receipt、发布授权或 production-ready。
+
+## 全季交付回读
+
+全季审看包完成后，先按工作区的 `workbench.yaml`、系列登记、每集 `project.json`、`out/current.json` 与 `publish/<series>/<episode>/current/manifest.json` 重建当前版本；不要按修改时间、目录排序、旧 checkpoint 或文件名前缀猜版本。代码纸剧场的 `--master` 必须来自 `out/current.json`，`--delivery` 必须传精确 manifest 文件，不传目录。
+
+逐集 `preflight-workbench` 通过只证明制作单、母版、publish 视频和 manifest 的引用与字节一致。全季审计还应核对字幕安全区、逐镜 `shot_recipe`、语义事件、无 BGM 审听候选、视频解码和 SHA-256；联系表、静帧、ASR、响度和布局只能定位问题，不能替代连续动态、完整听感或医学审查。`release_eligible`、视觉、连续动态、听感、医学和上传状态分开保留。
+
+每集只保留一个活动 `current/`；被替换候选归档到该集自己的 `archive/<revision>/`。交付文档和生成器按实际目录写归档路径，不能把一集路径推广为全季，也不能把历史归档误报为本轮替换。Progress First 下，版本或文档问题先修 owner 并保留可消费产物，记录 `quality_debt` 或诊断后继续；只有当前性、权限、执行器、身份和明确人工决定等硬边界才停止。方法细节见 `runtime/workbench/docs/25_全季交付回读与经验沉淀.md`。

@@ -1,0 +1,12 @@
+{
+  "style_id": "scientific_diagram",
+  "intent": "优先清楚旁白与静默，避免警报联想",
+  "preferred_recorded_sources": [
+    "quiet_focus_accent"
+  ],
+  "procedural_study_kinds": "none",
+  "timing_owner": "score.json named events",
+  "music": "choose by patient task and narrative arc; not hardcoded",
+  "silence_is_valid": true,
+  "full_listening_required_for_quality_claim": true
+}

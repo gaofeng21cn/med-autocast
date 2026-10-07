@@ -11,3 +11,5 @@
 允许的 outcome 是 `pass`、`repair_required`、`quality_debt`、`blocked`、`human_gate`。`blocked` 只用于真实执行器、权限、身份/当前性或不可逆授权边界；结构化字段缺失、工具未绑定或模型输出不完整应保留结果并写入 `quality_debt`。Meta Review 不签发医学批准、发布授权、owner receipt 或 production-ready 声明。
 
 本 Stage 本身就是独立的跨阶段评审，不再嵌套另一轮 formal review。直接给出可复核的判断和路由理由；可定位的问题返回最早的 canonical owner stage。实际阶段转换由 OPL 注入的终局 closeout 协议承载：终局 Attempt 使用 `route_impact.stage_route_decision`，其他 Attempt 只给 `route_impact.stage_route_recommendation`。即使材料不完整，只要存在可消费结果也继续交接，并把缺口记录为质量债务；路由缺失只产生路由质量债并按默认推进继续，不得因推荐字段缺失而停止阶段推进。
+
+综合核对风格方法、Treatment 与实际候选是否一致，复用模块是否仍服务患者观看任务。风格帧、运行声明、技术样例和文字布局诊断各有边界；没有完整动作/听感/医学证据的范围继续待审，不以脚本齐全或注册风格数替代成片质量。

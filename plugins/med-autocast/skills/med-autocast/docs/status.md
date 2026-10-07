@@ -6,7 +6,7 @@ Med Auto Cast 采用标准 OPL 软件包与 OCI 发布流程。当前源码已�
 
 历史迁移验证曾只读使用血脂单集的原修订制作单与母版，检查 13 段镜头及双平台文案；作者和后端仍从工作区解析，保留原 RTX 4090 视频与音频默认选择。原听感、连续动态与医学待审状态保持不变。源码和载体检查的最新结果见 [能力迁移验收](workbench-parity.md)。
 
-当前源码版本为 0.2.4；本版本的 OCI 发布与本机安装以 immutable ref、latest-stable 和 OPL Package 回读为准。独立 OMA 资格、托管生产运行、新后端真实推理、医学复核和上传均不由工程验证替代。
+当前源码版本为 0.2.5；本版本的 OCI 发布与本机安装以 immutable ref、latest-stable 和 OPL Package 回读为准。独立 OMA 资格、托管生产运行、新后端真实推理、医学复核和上传均不由工程验证替代。
 
 ## 0.2.4 发布范围与 App 接入
 
@@ -57,3 +57,11 @@ Med Auto Cast 以 `publisher: one-person-lab` 和 `standard_agent` 角色加入 
 环境报告分别展示 `core_ready` 与 `selected_narration`，当前选择的声音依赖缺失会返回 `needs_setup`；未选择的模型保持可选。IndexTTS 路径存在不代表权重完整或真实推理通过，Apple Silicon 安装脚本目前仍需按上游要求准备完整权重或从用户指定 LAN 复制。Linux/Windows、IndexTTS 全平台安装、完整医学样片及独立 OMA 资格尚未由本轮验收覆盖。
 
 本轮改进位于源码与仓库内插件投影，版本为 0.2.2；发布前已安装缓存仍可能保留旧字节，必须在 OCI 发布后通过 OPL Package 更新并回读实际载体。首次部署说明与当前验收入口见安装文档。
+
+## 2026-10-08 代码动画制作能力 0.2.5
+
+从 lemo-opuscar 固定提交学习导演与媒介方法，新增动画制作专业 Skill 并绑定导演、媒体制作、视觉 Review 与策展 Stage。七个 STYLE 方法及声音调色板、开放 Treatment 模板、实际代码风格帧与 signature shot 短动作成为前置制作建议，欠项继续保留质量债，不新增内容门禁。
+
+kit 1.2.0 增加按弧长路径与抬笔、纯时间轨道、接触后衰减、纸材/胶带、水彩笔触、半色调及底轴投影。animation_lab 可从随包原件在新目录生成 52 秒原创七镜头样片、事件音效、离线播放器、gallery、关键帧/动作 strip 与 MP4。已实际完成 1280×720、24 fps、1,248 帧 PNG 管线与 H.264/AAC 编码、解码检查，八项 TypeScript 测试通过。
+
+preview 新增全部画内文字的交叠/出框观察、cue 时长和每帧实际风格身份，兼容可选 TEXTS(t)；观察结果不是质量批准，亦不阻断 Stage。水彩为 Canvas 视觉近似，纸立体书为 2.5D 投影；SVG、Remotion 和 Three.js 的现有 planned/experimental 状态不变。无医学内容研究不能替代医学成片、完整听感、独立 OMA 资格或托管生产验收。源码、随包、发布及安装按真实回读分别报告。

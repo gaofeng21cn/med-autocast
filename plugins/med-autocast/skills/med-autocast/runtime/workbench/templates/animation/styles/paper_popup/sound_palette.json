@@ -1,0 +1,13 @@
+{
+  "style_id": "paper_popup",
+  "intent": "展开有声，稳态收敛",
+  "preferred_recorded_sources": [
+    "page_fold",
+    "paper_tab_contact"
+  ],
+  "procedural_study_kinds": "fold",
+  "timing_owner": "score.json named events",
+  "music": "choose by patient task and narrative arc; not hardcoded",
+  "silence_is_valid": true,
+  "full_listening_required_for_quality_claim": true
+}

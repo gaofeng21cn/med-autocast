@@ -1,0 +1,13 @@
+{
+  "style_id": "whiteboard",
+  "intent": "跟随强调或擦除，不给每根线配声",
+  "preferred_recorded_sources": [
+    "marker_stroke",
+    "eraser_wipe"
+  ],
+  "procedural_study_kinds": "marker / wipe",
+  "timing_owner": "score.json named events",
+  "music": "choose by patient task and narrative arc; not hardcoded",
+  "silence_is_valid": true,
+  "full_listening_required_for_quality_claim": true
+}

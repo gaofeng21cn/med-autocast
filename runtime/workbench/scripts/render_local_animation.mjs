@@ -63,8 +63,14 @@ try {
   // Catch stream errors through once(drain) / process exit without uncaught EPIPE.
   let pipeError; encoder.stdin.on('error',e=>{pipeError=e;});
   const frames=Math.ceil(duration*fps);
+  const styleSequence=[];
   for(let frame=0;frame<frames;frame++) {
-    await page.evaluate(t=>window.__seek(t),frame/fps);
+    const identity=await page.evaluate(t=>{window.__seek(t);return {
+      shot:window.__state?.shot||null,renderer_id:window.__rendererId||null,style_id:window.__styleId||null,
+    };},frame/fps);
+    const last=styleSequence.at(-1);
+    if(!last||last.shot!==identity.shot||last.style_id!==identity.style_id||last.renderer_id!==identity.renderer_id)
+      styleSequence.push({...identity,start:frame/fps});
     if(errors.length) throw Error(errors.join('\n'));
     const png=await page.locator('#film').screenshot({type:'png'});
     if(pipeError || encoder.exitCode!==null) throw Error(fferror||String(pipeError||'编码提前结束'));
@@ -78,7 +84,9 @@ try {
   // Hard-link publishes only a completed file and never overwrites another revision.
   await fs.link(path.join(temp,'video.mp4'),target);
   await fs.unlink(path.join(temp,'video.mp4'));
-  console.log(JSON.stringify({status:'rendered',output:target,frames,duration,fps,width,height,evidence_directory:temp,renderer_runtime:rendererRuntime,release_eligible:false}));
+  const receipt={status:'rendered',output:target,frames,duration,fps,width,height,evidence_directory:temp,renderer_runtime:rendererRuntime,style_sequence:styleSequence,release_eligible:false};
+  await fs.writeFile(path.join(temp,'render.json'),JSON.stringify(receipt,null,2)+'\n');
+  console.log(JSON.stringify(receipt));
 } finally {
   if(encoder && encoder.exitCode===null) encoder.kill();
   if(browser) await browser.close();

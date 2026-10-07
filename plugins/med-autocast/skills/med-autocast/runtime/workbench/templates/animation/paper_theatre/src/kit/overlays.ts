@@ -42,5 +42,9 @@ export function caption(s: Stage, score: Score, t: number) {
   g.textBaseline = "middle";
   g.fillStyle = "#253f3b";
   g.fillText(c.text, s.width / 2, s.height - 67);
+  const m = g.measureText(c.text);
+  const rect = { x: s.width/2-m.width/2, y: s.height-84,
+    w: m.width, h: 34, name: c.text };
   g.restore();
+  return rect;
 }

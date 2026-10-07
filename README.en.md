@@ -16,6 +16,8 @@ Start with a topic or continue from an existing script, recording, asset collect
 
 New productions default to local JavaScript animation in a hand-drawn collage style. The agent prepares medically grounded, layered assets and designs shots around the narration. Video models are used only when explicitly selected in the production plan. With an authorized reference voice, local IndexTTS is recommended; without one, or when the creator explicitly skips it, Edge TTS `zh-CN-XiaoyiNeural` is available and requires a network connection for synthesis.
 
+Code animation includes reusable path drawing, camera tracks, material motion, and event-aligned sound, with seven style studies that run locally. Story treatments and key shots guide production; modules provide a starting point while keeping custom shot design open. See the [animation craft workflow](runtime/workbench/docs/26_代码动画技法与风格工作流.md) for implementation and review boundaries.
+
 <p align="center">
   <img src="assets/branding/medautocast-overview.en.png" alt="The six-stage Med Auto Cast workflow, from medical evidence and story design through audiovisual production, review, handoff, and asset curation. Author profiles, professional skills, production tools, and recovery support ongoing work." width="100%" />
 </p>

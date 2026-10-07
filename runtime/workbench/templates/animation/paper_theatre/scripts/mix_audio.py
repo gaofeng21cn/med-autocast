@@ -9,6 +9,7 @@ import random
 import subprocess
 import wave
 from pathlib import Path
+from sound_materials import material_sound
 
 
 def run(args):
@@ -52,6 +53,8 @@ def foley(project, score, output, rate):
             samples = array.array("f")
             samples.frombytes(decoded)
             resolved[-1].update(source=source["path"], source_type="registered_audio")
+        elif (samples := material_sound(event["kind"], rate, 1701 + i)) is not None:
+            resolved[-1]["source_type"] = "procedural_material_study"
         else:
             duration = .17 if event["kind"] == "stamp" else .44
             rng = random.Random(1701 + i)

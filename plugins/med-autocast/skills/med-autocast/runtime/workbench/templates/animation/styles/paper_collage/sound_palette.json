@@ -1,0 +1,14 @@
+{
+  "style_id": "paper_collage",
+  "intent": "轻薄，重点接触有声，等待可静默",
+  "preferred_recorded_sources": [
+    "thin_paper_rustle",
+    "wood_tap",
+    "fold"
+  ],
+  "procedural_study_kinds": "paper / tap / fold",
+  "timing_owner": "score.json named events",
+  "music": "choose by patient task and narrative arc; not hardcoded",
+  "silence_is_valid": true,
+  "full_listening_required_for_quality_claim": true
+}

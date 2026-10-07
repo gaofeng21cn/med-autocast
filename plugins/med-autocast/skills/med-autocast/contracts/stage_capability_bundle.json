@@ -11,24 +11,8 @@
   "artifact_envelope_recommendation": {
     "required_for_stage_transition": false,
     "purpose": "让下一阶段快速判断产物来源、当前性和可复用范围，不作为启动或继续条件",
-    "fields": [
-      "artifact_ref",
-      "artifact_type",
-      "schema_ref",
-      "producer_stage",
-      "attempt_id",
-      "lineage_ref",
-      "currentness",
-      "sha256_if_available"
-    ],
-    "quality_debt_fields": [
-      "debt_id",
-      "severity",
-      "owner_stage",
-      "impact_scope",
-      "recommended_next_action",
-      "blocks_ready_claim"
-    ]
+    "fields": ["artifact_ref", "artifact_type", "schema_ref", "producer_stage", "attempt_id", "lineage_ref", "currentness", "sha256_if_available"],
+    "quality_debt_fields": ["debt_id", "severity", "owner_stage", "impact_scope", "recommended_next_action", "blocks_ready_claim"]
   },
   "deliverable_handoff_recommendation": {
     "inspiration": "RedCube's separation of deliverable goal, review surface, and export bundle, adapted as open guidance rather than a fixed contract",
@@ -48,17 +32,8 @@
   "stage_binding_note": "prompt、policy、quality gate 与专业 Skill 的唯一逐阶段映射以 manifest 为准；本能力包补充工具和交接建议，不复制第二份绑定表。",
   "stages": {
     "evidence-plan": {
-      "work_packages": [
-        "author_baseline",
-        "patient_problem_map",
-        "medical_evidence_bundle",
-        "series_architecture"
-      ],
-      "input_artifact_advisories": [
-        {"kind": "request", "required": false, "purpose": "用户目标、受众和范围"},
-        {"kind": "workspace_profile", "required": false, "purpose": "作者、品牌、声音和工作区档案"},
-        {"kind": "source_material", "required": false, "purpose": "用户提供的指南、论文、病例或已有内容"}
-      ],
+      "work_packages": ["author_baseline", "patient_problem_map", "medical_evidence_bundle", "series_architecture"],
+      "input_artifact_advisories": [{"kind": "request", "required": false, "purpose": "用户目标、受众和范围"}, {"kind": "workspace_profile", "required": false, "purpose": "作者、品牌、声音和工作区档案"}, {"kind": "source_material", "required": false, "purpose": "用户提供的指南、论文、病例或已有内容"}],
       "output_artifact_advisories": [
         {"kind": "author_baseline", "recommended_ref": "content/<topic>/author_baseline.yaml"},
         {"kind": "evidence_bundle", "recommended_ref": "content/<topic>/evidence/"},
@@ -74,46 +49,28 @@
       "review_scope": ["evidence_fit", "audience_fit", "series_coverage", "baseline_clarity"]
     },
     "story-directing": {
-      "work_packages": [
-        "episode_blueprint",
-        "visual_treatment",
-        "beat_grid",
-        "shot_plan",
-        "animatic"
-      ],
-      "input_artifact_advisories": [
-        {"kind": "series_bible", "required": false, "purpose": "系列共同世界和分集边界"},
-        {"kind": "evidence_bundle", "required": false, "purpose": "本集医学事实和不确定性"},
-        {"kind": "author_baseline", "required": false, "purpose": "人物、声音、品牌和风格基线"}
-      ],
+      "work_packages": ["episode_blueprint", "visual_treatment", "beat_grid", "shot_plan", "animatic"],
+      "input_artifact_advisories": [{"kind": "series_bible", "required": false, "purpose": "系列共同世界和分集边界"}, {"kind": "evidence_bundle", "required": false, "purpose": "本集医学事实和不确定性"}, {"kind": "author_baseline", "required": false, "purpose": "人物、声音、品牌和风格基线"}],
       "output_artifact_advisories": [
         {"kind": "episode_blueprint", "recommended_ref": "productions/<series>/<episode>/episode_blueprint.yaml"},
         {"kind": "visual_treatment", "recommended_ref": "productions/<series>/<episode>/visual_treatment.md"},
         {"kind": "shot_plan", "recommended_ref": "productions/<series>/<episode>/shot_plan.json"},
-        {"kind": "animatic", "recommended_ref": "productions/<series>/<episode>/review/animatic/"}
+        {"kind": "animatic", "recommended_ref": "productions/<series>/<episode>/review/animatic/"},
+        {"kind": "executable_style_frame", "recommended_ref": "productions/<series>/<episode>/review/style-frame/", "purpose": "真实构图与 signature shot 短动作；可消费草稿，不是启动门"}
       ],
       "tool_refs": [
         {"tool_id": "paper_project", "surface": "workbench_tool", "purpose": "检查镜头、素材和邻镜预览；library 只读查询纸件、环境、动作和组件", "effect": "write_when_authorized"},
         {"tool_id": "build_timeline_review", "surface": "workbench_tool", "purpose": "把旁白、字幕和画面放在同一时间轴定位", "effect": "write_when_authorized"},
         {"tool_id": "render_javascript_animation", "surface": "workbench_tool", "purpose": "在正式编码前预览动作和构图", "effect": "write_when_authorized"},
-        {"tool_id": "check_animation_assets", "surface": "workbench_tool", "purpose": "检查素材来源、分层和镜头覆盖", "effect": "read_only"}
+        {"tool_id": "check_animation_assets", "surface": "workbench_tool", "purpose": "检查素材来源、分层和镜头覆盖", "effect": "read_only"},
+        {"tool_id": "animation_lab", "surface": "workbench_tool", "purpose": "按需加载风格方法并实际看原创媒介动作样例；不覆盖现有单集", "effect": "write_when_authorized"}
       ],
       "route_back_targets": ["evidence-plan"],
       "review_scope": ["patient_task", "visual_causality", "style_fit", "animatic_readability", "subtitle_safe_area"]
     },
     "media-production": {
-      "work_packages": [
-        "asset_admission",
-        "voice_and_timing",
-        "subtitle_alignment",
-        "renderer_build",
-        "mix_and_candidate"
-      ],
-      "input_artifact_advisories": [
-        {"kind": "episode_blueprint", "required": false, "purpose": "导演冻结的叙事与动作"},
-        {"kind": "shot_plan", "required": false, "purpose": "镜头和素材计划"},
-        {"kind": "asset_manifest", "required": false, "purpose": "已审素材和来源记录"}
-      ],
+      "work_packages": ["asset_admission", "voice_and_timing", "subtitle_alignment", "renderer_build", "mix_and_candidate"],
+      "input_artifact_advisories": [{"kind": "episode_blueprint", "required": false, "purpose": "导演冻结的叙事与动作"}, {"kind": "shot_plan", "required": false, "purpose": "镜头和素材计划"}, {"kind": "asset_manifest", "required": false, "purpose": "已审素材和来源记录"}],
       "output_artifact_advisories": [
         {"kind": "asset_manifest", "recommended_ref": "productions/<series>/<episode>/animation/asset_manifest.json"},
         {"kind": "audio_meta", "recommended_ref": "productions/<series>/<episode>/audio/audio_meta.json"},
@@ -125,24 +82,15 @@
         {"tool_id": "render_series_tts", "surface": "workbench_tool", "purpose": "按作者档案生成统一旁白", "effect": "generate"},
         {"tool_id": "render_edge_tts", "surface": "workbench_tool", "purpose": "无专用声线时的整篇保底旁白", "effect": "generate"},
         {"tool_id": "paper_project", "surface": "workbench_tool", "purpose": "单集制作与返修；library 显式复制精确素材版本、保存图像及代码/动作/声音；init/adopt 选择本集风格与 renderer", "effect": "write"},
-        {"tool_id": "render_javascript_animation", "surface": "workbench_tool", "purpose": "统一预览和正式渲染入口", "effect": "write"}
+        {"tool_id": "render_javascript_animation", "surface": "workbench_tool", "purpose": "统一预览和正式渲染入口", "effect": "write"},
+        {"tool_id": "animation_lab", "surface": "workbench_tool", "purpose": "按需加载风格方法并实际看原创媒介动作样例；不覆盖现有单集", "effect": "write_when_authorized"}
       ],
       "route_back_targets": ["story-directing"],
       "review_scope": ["asset_currentness", "voice_consistency", "timeline_alignment", "renderer_reproducibility"]
     },
     "visual-review": {
-      "work_packages": [
-        "technical_review",
-        "motion_review",
-        "listening_review",
-        "medical_visual_review",
-        "subtitle_and_layout_review"
-      ],
-      "input_artifact_advisories": [
-        {"kind": "render_candidate", "required": false, "purpose": "当前候选成片"},
-        {"kind": "timeline", "required": false, "purpose": "镜头、字幕和声音时间事实"},
-        {"kind": "asset_manifest", "required": false, "purpose": "实际使用素材和审核范围"}
-      ],
+      "work_packages": ["technical_review", "motion_review", "listening_review", "medical_visual_review", "subtitle_and_layout_review"],
+      "input_artifact_advisories": [{"kind": "render_candidate", "required": false, "purpose": "当前候选成片"}, {"kind": "timeline", "required": false, "purpose": "镜头、字幕和声音时间事实"}, {"kind": "asset_manifest", "required": false, "purpose": "实际使用素材和审核范围"}],
       "output_artifact_advisories": [
         {"kind": "stage_review_report", "recommended_ref": "productions/<series>/<episode>/review/stage_review.json", "purpose": "当前候选对应的阶段审查结论；OPL formal review receipt 由 OPL 单独管理"},
         {"kind": "finding_set", "recommended_ref": "productions/<series>/<episode>/review/findings.json"},
@@ -152,19 +100,14 @@
         {"tool_id": "qa_series_videos", "surface": "workbench_tool", "purpose": "技术检查和范围内联系表", "effect": "write_when_authorized"},
         {"tool_id": "build_timeline_review", "surface": "workbench_tool", "purpose": "同步查看画面、PCM、SRT和ASR定位", "effect": "write_when_authorized"},
         {"tool_id": "audio_baseline", "surface": "workbench_tool", "purpose": "检测响度异常并定位听审重点", "effect": "write_when_authorized"},
-        {"tool_id": "render_javascript_animation", "surface": "workbench_tool", "purpose": "生成固定帧和动作 strip", "effect": "write_when_authorized"}
+        {"tool_id": "render_javascript_animation", "surface": "workbench_tool", "purpose": "生成固定帧和动作 strip", "effect": "write_when_authorized"},
+        {"tool_id": "animation_lab", "surface": "workbench_tool", "purpose": "按需加载风格方法并实际看原创媒介动作样例；不覆盖现有单集", "effect": "write_when_authorized"}
       ],
       "route_back_targets": ["evidence-plan", "story-directing", "media-production"],
       "review_scope": ["technical", "visual", "continuous_motion", "full_listening", "medical"]
     },
     "meta-review": {
-      "work_packages": [
-        "global_goal_fit",
-        "cross_stage_consistency",
-        "review_coverage",
-        "quality_debt_impact",
-        "earliest_owner_route"
-      ],
+      "work_packages": ["global_goal_fit", "cross_stage_consistency", "review_coverage", "quality_debt_impact", "earliest_owner_route"],
       "input_artifact_advisories": [
         {"kind": "stage_review_report", "required": false, "purpose": "阶段内 Review 结果；不能替代 OPL formal review receipt"},
         {"kind": "render_candidate", "required": false, "purpose": "被审的精确候选字节"},
@@ -185,12 +128,7 @@
       "review_scope": ["stage_fit", "cross_stage_consistency", "review_coverage", "quality_debt_impact", "route_decision"]
     },
     "review-handoff": {
-      "work_packages": [
-        "currentness_preflight",
-        "review_package",
-        "copy_and_manifest",
-        "handoff_readback"
-      ],
+      "work_packages": ["currentness_preflight", "review_package", "copy_and_manifest", "handoff_readback"],
       "input_artifact_advisories": [
         {"kind": "meta_review_report", "required": false, "purpose": "跨阶段质量判断；不代表医学批准或发布授权"},
         {"kind": "render_candidate", "required": false, "purpose": "被交付的当前母版"},
@@ -201,19 +139,9 @@
           "kind": "review_handoff_package",
           "recommended_ref": "deliveries/<series>/<episode>/",
           "purpose": "面向指定审看对象的可直接检查交付物；保留真实待审和缺项状态",
-          "suggested_contents": [
-            "当前母版或可消费候选及其修订信息",
-            "与该版本一致的字幕、旁白和所需平台文案",
-            "阶段 Review 与 Meta Review 的实际范围和结果",
-            "素材来源、许可或授权信息（可用时）",
-            "未解决质量债务、待人工决定和未执行的检查"
-          ]
+          "suggested_contents": ["当前母版或可消费候选及其修订信息", "与该版本一致的字幕、旁白和所需平台文案", "阶段 Review 与 Meta Review 的实际范围和结果", "素材来源、许可或授权信息（可用时）", "未解决质量债务、待人工决定和未执行的检查"]
         },
-        {
-          "kind": "handoff_manifest",
-          "recommended_ref": "deliveries/<series>/<episode>/manifest.json",
-          "purpose": "便于定位当前交付文件和状态；字段和文件结构按工作区现行包器及用户目标调整"
-        }
+        {"kind": "handoff_manifest", "recommended_ref": "deliveries/<series>/<episode>/manifest.json", "purpose": "便于定位当前交付文件和状态；字段和文件结构按工作区现行包器及用户目标调整"}
       ],
       "tool_refs": [
         {"tool_id": "package_review", "purpose": "组织当前单集审看包并回读字节", "effect": "write"},
@@ -224,15 +152,8 @@
       "review_scope": ["currentness", "package_integrity", "copy_fidelity", "handoff_usability"]
     },
     "asset-curation": {
-      "work_packages": [
-        "asset_reuse_index",
-        "feedback_propagation",
-        "lessons_learned"
-      ],
-      "input_artifact_advisories": [
-        {"kind": "accepted_review_artifact", "required": false, "purpose": "实际看过且值得复用的纸件、环境、源码、动作样例和声音；待审范围如实保留"},
-        {"kind": "review_findings", "required": false, "purpose": "返修原因和复用限制"}
-      ],
+      "work_packages": ["asset_reuse_index", "feedback_propagation", "lessons_learned"],
+      "input_artifact_advisories": [{"kind": "accepted_review_artifact", "required": false, "purpose": "实际看过且值得复用的纸件、环境、源码、动作样例和声音；待审范围如实保留"}, {"kind": "review_findings", "required": false, "purpose": "返修原因和复用限制"}],
       "output_artifact_advisories": [
         {"kind": "asset_catalog_update", "recommended_ref": "assets/paper-theatre/catalog.json"},
         {"kind": "versioned_element_package", "recommended_ref": "assets/paper-theatre/entries/<id>/<revision>/"},
@@ -243,7 +164,8 @@
       "tool_refs": [
         {"tool_id": "build_keyframe_library", "surface": "workbench_tool", "purpose": "生成关键帧索引和可读投影", "effect": "write"},
         {"tool_id": "paper_project", "surface": "workbench_tool", "purpose": "library 只读检索；ingest-project / register 独立保管，refresh 完整看图库，use 精确版本复制及复用记录", "effect": "write_when_authorized"},
-        {"tool_id": "med_autocast.py assets", "surface": "native_helper", "purpose": "--library animation 查询复用素材；默认保持关键帧查询，复用前实际审看原件与用途", "effect": "read_only"}
+        {"tool_id": "med_autocast.py assets", "surface": "native_helper", "purpose": "--library animation 查询复用素材；默认保持关键帧查询，复用前实际审看原件与用途", "effect": "read_only"},
+        {"tool_id": "animation_lab", "surface": "workbench_tool", "purpose": "按需加载风格方法并实际看原创媒介动作样例；不覆盖现有单集", "effect": "write_when_authorized"}
       ],
       "route_back_targets": ["evidence-plan", "story-directing", "media-production", "visual-review"],
       "review_scope": ["source_traceability", "independent_storage", "identity_scope", "watchable_sample", "reuse_value", "review_scope", "lesson_generality"]

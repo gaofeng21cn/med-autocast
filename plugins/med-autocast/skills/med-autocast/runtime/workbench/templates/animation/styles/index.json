@@ -1,0 +1,64 @@
+{
+  "kind": "mac_style_bibles",
+  "version": "1.0.0",
+  "default_style_id": "paper_collage",
+  "profiles": [
+    {
+      "style_id": "paper_collage",
+      "label": "手绘纸拼贴",
+      "style_ref": "paper_collage/STYLE.md",
+      "sample": "paper_theatre/examples/style_lab",
+      "implementation": "canvas2d_material_study",
+      "medical_qualified": false
+    },
+    {
+      "style_id": "watercolor_ink",
+      "label": "水彩与墨",
+      "style_ref": "watercolor_ink/STYLE.md",
+      "sample": "paper_theatre/examples/style_lab",
+      "implementation": "canvas2d_material_study",
+      "medical_qualified": false
+    },
+    {
+      "style_id": "line_art",
+      "label": "线条动画",
+      "style_ref": "line_art/STYLE.md",
+      "sample": "paper_theatre/examples/style_lab",
+      "implementation": "canvas2d_material_study",
+      "medical_qualified": false
+    },
+    {
+      "style_id": "scientific_diagram",
+      "label": "科学图示",
+      "style_ref": "scientific_diagram/STYLE.md",
+      "sample": "paper_theatre/examples/style_lab",
+      "implementation": "canvas2d_material_study",
+      "medical_qualified": false
+    },
+    {
+      "style_id": "whiteboard",
+      "label": "白板手绘",
+      "style_ref": "whiteboard/STYLE.md",
+      "sample": "paper_theatre/examples/style_lab",
+      "implementation": "canvas2d_material_study",
+      "medical_qualified": false
+    },
+    {
+      "style_id": "risograph",
+      "label": "Riso 孔版印刷",
+      "style_ref": "risograph/STYLE.md",
+      "sample": "paper_theatre/examples/style_lab",
+      "implementation": "canvas2d_material_study",
+      "medical_qualified": false
+    },
+    {
+      "style_id": "paper_popup",
+      "label": "纸立体书",
+      "style_ref": "paper_popup/STYLE.md",
+      "sample": "paper_theatre/examples/style_lab",
+      "implementation": "canvas2d_material_study",
+      "medical_qualified": false
+    }
+  ],
+  "selection": "advisory; unknown styles remain open creative requests"
+}

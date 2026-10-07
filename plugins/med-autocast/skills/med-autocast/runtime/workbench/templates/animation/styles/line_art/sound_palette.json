@@ -1,0 +1,13 @@
+{
+  "style_id": "line_art",
+  "intent": "几处笔势提示，长解释保持安静",
+  "preferred_recorded_sources": [
+    "short_pencil_drag",
+    "soft_turn_accent"
+  ],
+  "procedural_study_kinds": "pencil",
+  "timing_owner": "score.json named events",
+  "music": "choose by patient task and narrative arc; not hardcoded",
+  "silence_is_valid": true,
+  "full_listening_required_for_quality_claim": true
+}

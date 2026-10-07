@@ -1,0 +1,14 @@
+{
+  "style_id": "watercolor_ink",
+  "intent": "柔和逐笔，避免持续水声",
+  "preferred_recorded_sources": [
+    "wet_brush",
+    "dry_brush",
+    "soft_air"
+  ],
+  "procedural_study_kinds": "brush",
+  "timing_owner": "score.json named events",
+  "music": "choose by patient task and narrative arc; not hardcoded",
+  "silence_is_valid": true,
+  "full_listening_required_for_quality_claim": true
+}

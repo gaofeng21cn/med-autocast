@@ -96,7 +96,8 @@
       "knowledge_refs": [
         "agent/knowledge/domain_boundary.md",
         "docs/production-sop.md",
-        "docs/workspace-adapter.md"
+        "docs/workspace-adapter.md",
+        "runtime/workbench/docs/26_代码动画技法与风格工作流.md"
       ],
       "quality_gate_refs": [
         "agent/quality_gates/story-directing.md"
@@ -129,12 +130,15 @@
       "capability_bundle_ref": "contracts/stage_capability_bundle.json#/stages/story-directing",
       "input_artifact_advisories_ref": "contracts/stage_capability_bundle.json#/stages/story-directing/input_artifact_advisories",
       "output_artifact_advisories_ref": "contracts/stage_capability_bundle.json#/stages/story-directing/output_artifact_advisories",
-      "route_back_targets": ["evidence-plan"],
+      "route_back_targets": [
+        "evidence-plan"
+      ],
       "skill_refs": [
         "agent/professional_skills/medical-video-content-planner/SKILL.md",
         "agent/professional_skills/medical-video-director/SKILL.md",
         "agent/professional_skills/medical-video-visual-qa/SKILL.md",
-        "agent/professional_skills/medical-video-asset-curator/SKILL.md"
+        "agent/professional_skills/medical-video-asset-curator/SKILL.md",
+        "agent/professional_skills/medical-video-animation-craft/SKILL.md"
       ]
     },
     {
@@ -148,7 +152,8 @@
       "knowledge_refs": [
         "agent/knowledge/domain_boundary.md",
         "docs/production-sop.md",
-        "docs/workspace-adapter.md"
+        "docs/workspace-adapter.md",
+        "runtime/workbench/docs/26_代码动画技法与风格工作流.md"
       ],
       "quality_gate_refs": [
         "agent/quality_gates/media-production.md"
@@ -182,13 +187,16 @@
       "capability_bundle_ref": "contracts/stage_capability_bundle.json#/stages/media-production",
       "input_artifact_advisories_ref": "contracts/stage_capability_bundle.json#/stages/media-production/input_artifact_advisories",
       "output_artifact_advisories_ref": "contracts/stage_capability_bundle.json#/stages/media-production/output_artifact_advisories",
-      "route_back_targets": ["story-directing"],
+      "route_back_targets": [
+        "story-directing"
+      ],
       "skill_refs": [
         "agent/professional_skills/medical-video-backends/SKILL.md",
         "agent/professional_skills/medical-video-director/SKILL.md",
         "agent/professional_skills/medical-video-visual-qa/SKILL.md",
         "agent/professional_skills/medical-video-release-packager/SKILL.md",
-        "agent/professional_skills/medical-video-asset-curator/SKILL.md"
+        "agent/professional_skills/medical-video-asset-curator/SKILL.md",
+        "agent/professional_skills/medical-video-animation-craft/SKILL.md"
       ]
     },
     {
@@ -202,7 +210,8 @@
       "knowledge_refs": [
         "agent/knowledge/domain_boundary.md",
         "docs/production-sop.md",
-        "docs/workspace-adapter.md"
+        "docs/workspace-adapter.md",
+        "runtime/workbench/docs/26_代码动画技法与风格工作流.md"
       ],
       "quality_gate_refs": [
         "agent/quality_gates/visual-review.md"
@@ -235,11 +244,16 @@
       "capability_bundle_ref": "contracts/stage_capability_bundle.json#/stages/visual-review",
       "input_artifact_advisories_ref": "contracts/stage_capability_bundle.json#/stages/visual-review/input_artifact_advisories",
       "output_artifact_advisories_ref": "contracts/stage_capability_bundle.json#/stages/visual-review/output_artifact_advisories",
-      "route_back_targets": ["evidence-plan", "story-directing", "media-production"],
+      "route_back_targets": [
+        "evidence-plan",
+        "story-directing",
+        "media-production"
+      ],
       "skill_refs": [
         "agent/professional_skills/medical-video-visual-qa/SKILL.md",
         "agent/professional_skills/medical-video-release-packager/SKILL.md",
-        "agent/professional_skills/medical-video-content-planner/SKILL.md"
+        "agent/professional_skills/medical-video-content-planner/SKILL.md",
+        "agent/professional_skills/medical-video-animation-craft/SKILL.md"
       ]
     },
     {
@@ -345,7 +359,10 @@
       "capability_bundle_ref": "contracts/stage_capability_bundle.json#/stages/review-handoff",
       "input_artifact_advisories_ref": "contracts/stage_capability_bundle.json#/stages/review-handoff/input_artifact_advisories",
       "output_artifact_advisories_ref": "contracts/stage_capability_bundle.json#/stages/review-handoff/output_artifact_advisories",
-      "route_back_targets": ["meta-review", "visual-review"],
+      "route_back_targets": [
+        "meta-review",
+        "visual-review"
+      ],
       "handoff_review_boundary": {
         "artifact_effect": "mechanical_repackaging_of_reviewed_bytes",
         "freezes_canonical_artifact_bytes": true,
@@ -369,7 +386,8 @@
       "knowledge_refs": [
         "agent/knowledge/domain_boundary.md",
         "docs/production-sop.md",
-        "docs/workspace-adapter.md"
+        "docs/workspace-adapter.md",
+        "runtime/workbench/docs/26_代码动画技法与风格工作流.md"
       ],
       "quality_gate_refs": [
         "agent/quality_gates/asset-curation.md"
@@ -401,12 +419,18 @@
       "capability_bundle_ref": "contracts/stage_capability_bundle.json#/stages/asset-curation",
       "input_artifact_advisories_ref": "contracts/stage_capability_bundle.json#/stages/asset-curation/input_artifact_advisories",
       "output_artifact_advisories_ref": "contracts/stage_capability_bundle.json#/stages/asset-curation/output_artifact_advisories",
-      "route_back_targets": ["evidence-plan", "story-directing", "media-production", "visual-review"],
+      "route_back_targets": [
+        "evidence-plan",
+        "story-directing",
+        "media-production",
+        "visual-review"
+      ],
       "skill_refs": [
         "agent/professional_skills/medical-video-series-producer/SKILL.md",
         "agent/professional_skills/medical-video-content-planner/SKILL.md",
         "agent/professional_skills/medical-video-director/SKILL.md",
-        "agent/professional_skills/medical-video-asset-curator/SKILL.md"
+        "agent/professional_skills/medical-video-asset-curator/SKILL.md",
+        "agent/professional_skills/medical-video-animation-craft/SKILL.md"
       ]
     }
   ]

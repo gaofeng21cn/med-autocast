@@ -1,4 +1,4 @@
-# 纸剧场制作模块 1.1.0
+# 纸剧场制作模块 1.2.0
 
 本地 TypeScript → Canvas → Chrome/FFmpeg。模块帮助稳定接触、遮挡、时间与预览，不固定故事、疾病、品牌、构图和动作风格。旧 `paper_canvas` 为历史片兼容入口，新集采用本目录。
 
@@ -15,6 +15,9 @@
 | `src/kit/types.ts` | 素材、连接点、镜头、事件、画幅接口 |
 | `src/kit/stage.ts` | 变换、裁切、纸材、图片与文字绘制、布局定位 |
 | `src/kit/scene.ts` | 按导演顺序绘制环境、主体与前景，保留各层布局职责 |
+| `src/kit/paths.ts` | 路径弧长与抬笔、分段绘制和线端定位 |
+| `src/kit/tracks.ts` | 纯时间关键帧、相机轨道、衰减反应与底轴投影 |
+| `src/kit/materials.ts` | 固定纸粒、撕边剪件、透明胶带、水彩叠色与半色调 |
 | `src/kit/motion.ts` | 由时间直接求姿态，收纳弧线、盖章接触、事件定位 |
 | `src/kit/props.ts` | 前袋遮挡、铰接、固定件；几何来自资产登记 |
 | `src/kit/overlays.ts` | 参数化品牌印记、屏幕层字幕 |
@@ -60,3 +63,9 @@ python3 scripts/mix_audio.py --project . --voice audio/narration-normalized.wav 
 单集实际工具操作见[单集工具与局部返修](../../../docs/20_纸剧场单集工具与局部返修.md)。优先通过 init 复制全部入口和样本测试；纯动作样本可先无声预览，mix 后播放器接入实际音轨。
 
 完整场景、风格帧、动态分镜和配乐选择见[纸面舞台与声音导演](../../../docs/22_纸面舞台与声音导演.md)。模块只稳定执行，不用资源数量或脚本通过代替导演判断。
+
+## 风格方法与可观看实验室
+
+[风格目录](../styles/index.json) 把 STYLE 方法与故事示例分开。`animation_lab create --project <新空目录> --complete` 创建 52 秒原创研究，包含七种媒介、共用 score、材质音效、离线播放器、gallery、动作 strip 和 MP4。`examples/style_lab` 保存可编辑原件；不覆盖主模板的三个基本动作，也不把研究样例称为医学成片。
+
+新增模块可单独导入，也允许自定义绘制。相机轨道用秒数采样，on-twos 只作用于选定对象；线条的 M 指令保留抬笔。水彩是透明颜料笔触近似，纸立体书为 Canvas 2.5D 投影；不冒充流体模拟、SVG 适配或真实 Three.js。preview 的全文字布局与 cue 显示时长是 Review 线索，无法替代艺术、听感或医学批准。方法见 [代码动画工作流](../../../docs/26_代码动画技法与风格工作流.md)。

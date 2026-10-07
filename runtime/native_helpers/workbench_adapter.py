@@ -15,6 +15,7 @@ import yaml
 
 BUNDLE = Path(__file__).resolve().parents[1] / "workbench"
 TOOLS = {
+    "animation_lab": ("write", "风格圣经查询与原创媒介动作样例的构建、预览、声音和本地导出"),
     "paper_project": (
         "write",
         "单集制作与返修；library 检索、独立归档及精确版本复用图像、代码、动作和声音",
@@ -62,7 +63,7 @@ TOOLS = {
 }
 
 
-CANONICAL_TOOLS = {"paper_project", "render_narration", "render_javascript_animation"}
+CANONICAL_TOOLS = {"animation_lab", "paper_project", "render_narration", "render_javascript_animation"}
 
 
 def resolve_tool(root: Path, name: str, bundled=False) -> tuple[Path, Path]:

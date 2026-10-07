@@ -22,11 +22,13 @@ export type Beat = {
   start: number;
   end: number;
   events: Record<string, number>;
+  styleId?: string;
 };
 export type Sound = {
   shot: string;
   event: string;
-  kind: "fold" | "slide" | "stamp";
+  kind: string;
+  asset_id?: string;
   gain?: number;
   offset?: number;
 };

@@ -1,0 +1,143 @@
+{
+  "fps": 24,
+  "duration": 52,
+  "shots": [
+    {
+      "id": "collage",
+      "title": "纸拼贴",
+      "start": 0,
+      "end": 10,
+      "events": {
+        "travel": 1,
+        "plant": 3.1,
+        "bloom": 6.7
+      },
+      "styleId": "paper_collage"
+    },
+    {
+      "id": "watercolor",
+      "title": "水彩与墨",
+      "start": 10,
+      "end": 17,
+      "events": {
+        "ink": 2.4,
+        "wash": 1.5,
+        "bloom": 4.6
+      },
+      "styleId": "watercolor_ink"
+    },
+    {
+      "id": "line_art",
+      "title": "线条",
+      "start": 17,
+      "end": 24,
+      "events": {
+        "draw": 0.4,
+        "complete": 4.5
+      },
+      "styleId": "line_art"
+    },
+    {
+      "id": "scientific_diagram",
+      "title": "科学图示",
+      "start": 24,
+      "end": 31,
+      "events": {
+        "focus": 1.8,
+        "focused": 3.3
+      },
+      "styleId": "scientific_diagram"
+    },
+    {
+      "id": "whiteboard",
+      "title": "白板",
+      "start": 31,
+      "end": 38,
+      "events": {
+        "draw": 0.3,
+        "complete": 3.5,
+        "circle": 3.8,
+        "wipe": 5.5
+      },
+      "styleId": "whiteboard"
+    },
+    {
+      "id": "risograph",
+      "title": "Riso",
+      "start": 38,
+      "end": 45,
+      "events": {
+        "blue": 0.5,
+        "red": 2.3,
+        "registered": 4.8
+      },
+      "styleId": "risograph"
+    },
+    {
+      "id": "paper_popup",
+      "title": "纸立体书",
+      "start": 45,
+      "end": 52,
+      "events": {
+        "open": 0.5,
+        "opened": 3.7
+      },
+      "styleId": "paper_popup"
+    }
+  ],
+  "cues": [],
+  "sounds": [
+    {
+      "shot": "collage",
+      "event": "plant",
+      "kind": "tap",
+      "gain": 0.75
+    },
+    {
+      "shot": "collage",
+      "event": "bloom",
+      "kind": "paper",
+      "gain": 0.8
+    },
+    {
+      "shot": "watercolor",
+      "event": "wash",
+      "kind": "brush",
+      "gain": 0.7
+    },
+    {
+      "shot": "line_art",
+      "event": "draw",
+      "kind": "pencil",
+      "gain": 0.5
+    },
+    {
+      "shot": "whiteboard",
+      "event": "circle",
+      "kind": "marker",
+      "gain": 0.5
+    },
+    {
+      "shot": "whiteboard",
+      "event": "wipe",
+      "kind": "wipe",
+      "gain": 0.55
+    },
+    {
+      "shot": "risograph",
+      "event": "red",
+      "kind": "print",
+      "gain": 0.6
+    },
+    {
+      "shot": "paper_popup",
+      "event": "open",
+      "kind": "fold",
+      "gain": 0.7
+    }
+  ],
+  "style": {
+    "styleId": "mixed_style_study",
+    "renderer": "canvas2d"
+  }
+}

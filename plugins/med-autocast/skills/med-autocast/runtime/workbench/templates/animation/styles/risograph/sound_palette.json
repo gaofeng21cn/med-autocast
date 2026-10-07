@@ -1,0 +1,13 @@
+{
+  "style_id": "risograph",
+  "intent": "一次叠版接触，用静默保持画面",
+  "preferred_recorded_sources": [
+    "press_contact",
+    "roller_turn"
+  ],
+  "procedural_study_kinds": "print",
+  "timing_owner": "score.json named events",
+  "music": "choose by patient task and narrative arc; not hardcoded",
+  "silence_is_valid": true,
+  "full_listening_required_for_quality_claim": true
+}

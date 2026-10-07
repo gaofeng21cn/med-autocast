@@ -84,3 +84,5 @@ JavaScript 动画先交付视觉处理稿、两张风格帧、分镜和粗动态
 旧片兼容入口保留时间、舞台、单集三层；新片采用上文五职责模块。旧版[Canvas 基础模块](../../../runtime/workbench/templates/animation/paper_canvas/README.md)只承担纯时间与绘图，医学含义、事件、坐标、品牌和声音仍由本集导演稿持有。没有可信接触关系的翻页先改动作设计；遮挡收在被解释对象内部，固定件有真实接触点，收纳物件与容器一起聚拢。跨镜先设计同一物件的落点承接，不把整篇构图和缓动套用到新集。
 
 纸剧场使用 paper_project preview --shot ID --neighbors 或 --start/--end/--clean 检查动作及切点。retime 只用真实声音更新剪辑边界，动作放不下时导演重新安排，不机械拉伸。assets 素材台先检查透明边缘和连接点，之后写镜头。 具体命令见[单集工具与局部返修](../../../runtime/workbench/docs/20_纸剧场单集工具与局部返修.md)。
+
+按 [代码动画技法与风格工作流](../../../runtime/workbench/docs/26_代码动画技法与风格工作流.md) 读取当前风格的 STYLE.md，再写本集 Treatment；风格不变量不包含特定故事和品牌。先比较可见故事的讲法，做真实代码风格帧和 signature shot 短动作，选定媒介语法后交 `medical-video-animation-craft` 实现。镜头、素材与声音各有职责，不以每镜换肤、强制运镜数或全程响声提高丰富度。

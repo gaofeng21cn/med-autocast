@@ -24,6 +24,8 @@ export function mount(config: {
       .map((b) => `<option value="${b.id}">${b.title}</option>`)
       .join("");
   controls.append(chooser);
+  const initialShot = new URLSearchParams(location.search).get("shot");
+  if (score.shots.some(b => b.id === initialShot)) chooser.value = initialShot!;
   const speed = document.createElement("select");
   speed.setAttribute("aria-label", "播放速度");
   speed.innerHTML =
@@ -74,11 +76,11 @@ export function mount(config: {
     s.camera(camera, () => shot.render(ctx));
     s.tracking = false;
     if (config.brand) brandMark(s, config.brand);
-    if (!clean) caption(s, score, current);
+    const subtitle = !clean ? caption(s, score, current) : undefined;
     s.tracking = true;
     window.__layout = {
       ...s.layout(),
-      subtitle: { x: 70, y: s.height - 105, w: s.width - 140, h: 78 },
+      subtitle,
     };
     window.__state = {
       scene: i + 1,
@@ -88,6 +90,7 @@ export function mount(config: {
       progress: ctx.t / (beat.end - beat.start),
       events: beat.events,
     };
+    window.__styleId = beat.styleId || score.style?.appliedStyleId;
     seek.value = String(current / score.duration);
     clock.textContent = `${current.toFixed(2)} / ${score.duration.toFixed(2)} 秒`;
   }
@@ -95,14 +98,14 @@ export function mount(config: {
   window.__cuts = [...score.shots.map((s) => s.start), score.duration];
   window.__total = score.duration;
   window.__score = score;
-  window.__kitVersion = "1.1.0";
+  window.__kitVersion = "1.2.0";
   window.__rendererId = "canvas2d";
   window.__requestedStyleId = score.style?.styleId;
   window.__styleId = score.style?.appliedStyleId;
   controls.inert = true;
   const ready = (window.__ready = s.load(config.assets).then(async () => {
     await document.fonts.ready;
-    draw(0);
+    draw(range()[0]);
     controls.inert = false;
   }));
   const pause = () => {

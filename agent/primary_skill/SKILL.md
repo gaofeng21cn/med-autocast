@@ -64,3 +64,5 @@ Stage 返回尽量引用真实产物与版本/来源信息，给出质量债务�
 逐集 `preflight-workbench` 通过只证明制作单、母版、publish 视频和 manifest 的引用与字节一致。全季审计还应核对字幕安全区、逐镜 `shot_recipe`、语义事件、无 BGM 审听候选、视频解码和 SHA-256；联系表、静帧、ASR、响度和布局只能定位问题，不能替代连续动态、完整听感或医学审查。`release_eligible`、视觉、连续动态、听感、医学和上传状态分开保留。
 
 每集只保留一个活动 `current/`；被替换候选归档到该集自己的 `archive/<revision>/`。交付文档和生成器按实际目录写归档路径，不能把一集路径推广为全季，也不能把历史归档误报为本轮替换。Progress First 下，版本或文档问题先修 owner 并保留可消费产物，记录 `quality_debt` 或诊断后继续；只有当前性、权限、执行器、身份和明确人工决定等硬边界才停止。方法细节见 `runtime/workbench/docs/25_全季交付回读与经验沉淀.md`。
+
+代码镜头制作与返修交给 `agent/professional_skills/medical-video-animation-craft/SKILL.md`。先读取当前风格的 STYLE.md，把 Treatment 与真实风格帧/短动作接上单集 score；`animation_lab` 提供七种原创媒介动作的可运行样例。实际实现、开放创作出口和质量边界见 `runtime/workbench/docs/26_代码动画技法与风格工作流.md`；样例、可调用工具和注册名不代表医学/艺术质量通过。

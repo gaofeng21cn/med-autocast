@@ -19,3 +19,5 @@
 - `agent/professional_skills/medical-video-content-planner/SKILL.md`
 
 先读 `docs/production-sop.md` 的阶段映射；按 `docs/workspace-adapter.md` 选择实际工具和原输入合同。后续补充或返修从受影响职责继续，不为六阶段顺序重复制作。
+
+检查所选 STYLE.md 的媒介语法是否真实发生，而非只换颜色或加滤镜。用 preview 全文字布局、cue 时长和每帧实际风格定位，但不用字符数/交叠报告批准或否决视频。对照 Treatment 的 signature shot、镜头理由、声音弧线与完整动态；失败回最早 owner，保留其他进度。

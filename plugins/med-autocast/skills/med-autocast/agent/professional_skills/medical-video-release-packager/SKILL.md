@@ -81,3 +81,11 @@ video.mp4
 全季打包时逐集读取当前制作单、`out/current.json`、publish manifest 和视频；代码纸剧场的母版必须是 `out/current.json` 实际指向的文件，`--delivery` 传 `current/manifest.json` 文件。预检返回 `passed` 只表示当前性、引用和字节一致，不能把待审的连续动态、完整听感或医学状态写成通过。
 
 每集只保留一个活动 `current/`。被替换的候选移到对应集的 `archive/<revision>/`，文档生成器从真实目录读取归档，不使用全季固定归档路径。发布清单、观看索引、SHA-256 清单和平台文案生成后必须回读；标题已有问号或感叹号时不要追加重复句号。具体方法见[全季交付回读与经验沉淀](../../../runtime/workbench/docs/25_全季交付回读与经验沉淀.md)。
+
+## 面向用户的单一最新版交付
+
+`publish/<series>/` 是唯一面向用户的交付目录：首页/观看页和各集成片。每集直接放 `video.mp4`、`封面.jpg`（可用时）、字幕、两平台 TXT 和简明交付说明；不放 `current/`、日期/版本子目录、旧版、源码、旁白 WAV、Score、预览或 QA。用户无需在版本间挑选。交付位置不改变原有动态、听感、医学或上传状态。
+
+过程按 OPL 已声明的 Stage 拆分输入、输出与 owner。自然语言交接引用实际内容、工程和审查材料，保存在 `deliveries/<series>/stages/<stage_id>/`；推荐位置用于找材料，不是阻断字段门。精确交付 manifest 位于 `deliveries/<series>/<episode>/manifest.json`，用户最新版指针仍由 `deliveries/<series>/<episode>.json` 记录。旧包完整移到 `archive/deliveries/<series>/<episode>/<revision>/`，再安装新包并回读；不在 publish 留旧入口或归档链接。
+
+代码动画用 `paper_project package` 默认替换本集唯一最新版并在交付目录外保留旧包；`--output` 只用于交付目录外的过程导出。旧多版本纸剧场包可运行 `scripts/organize_delivery.py --workspace <工作区> --series <系列>`，只按精确指针整理，不猜最大版本、不重渲染、不升级审核状态。Stage 职责与交付结构见工作台目录规范。

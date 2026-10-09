@@ -216,14 +216,16 @@ def preflight_native(
         mix = read_object(path("audio/mix-receipt.json", project))
         if mix.get("voice_sha256") != sha(path(plan["voice"], project)):
             raise ValueError("交付后旁白已变化")
-        if sha(path("score.json", delivery_path.parent)) != sha(
+        artifacts = delivery.get("artifacts", {})
+        score_copy = path(artifacts.get("score", "score.json"), delivery_path.parent)
+        narration_copy = path(artifacts.get("narration_script", "narration.json"), delivery_path.parent)
+        if sha(score_copy) != sha(
             path(plan["score"], project)
-        ) or sha(path("narration.json", delivery_path.parent)) != sha(
+        ) or sha(narration_copy) != sha(
             path(plan["narration"], project)
         ):
             raise ValueError("交付文稿与当前项目不一致")
-        for name in ["score.json", "narration.json", "subtitles.srt"]:
-            path(name, delivery_path.parent)
+        path(artifacts.get("subtitles", "subtitles.srt"), delivery_path.parent)
         claims = delivery.get("reviews", {})
         return {
             "schema": "med_autocast_native_preflight/v1",
@@ -377,9 +379,9 @@ def preflight_native(
         or abs(previous - float(expected_duration)) > 0.3
     ):
         raise ValueError("时间轴与登记音轨时长不一致")
-    delivery_path = path(
-        delivery_ref or str(Path(row["publish_root"]) / "manifest.json")
-    )
+    internal_manifest = root / "deliveries" / series / "manifest.json"
+    delivery_path = path(delivery_ref or (str(internal_manifest) if internal_manifest.is_file()
+                                         else str(Path(row["publish_root"]) / "manifest.json")))
     delivery = read_object(delivery_path)
     if (
         delivery.get("schema")
@@ -427,7 +429,7 @@ def preflight_native(
         srt, path("字幕.srt", published.parent), shallow=False
     ):
         raise ValueError("交付字幕与制作单不一致")
-    review_path = published.parent / "审看记录.json"
+    review_path = path(entry["review"], delivery_path.parent) if entry.get("review") else published.parent / "审看记录.json"
     review = read_object(path(review_path)) if review_path.is_file() else {}
     for field, expected in [
         ("production_plan", plan_path),

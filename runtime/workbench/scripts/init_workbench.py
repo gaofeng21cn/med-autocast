@@ -95,8 +95,8 @@ audio_mix:
 - profiles：作者/医生、品牌、声线和部署档案。
 - assets：已审、授权或生成的稳定可分层素材。
 - productions：按系列/单集保存分镜、素材、JS、候选、QA 和 final。
-- publish：当前审看/发布入口；不代表已获医学发布批准。
-- deliveries：内部交接记录；archive：历史只读候选；work/output/tmp：运行态、批量输出和可重建临时文件。
+- publish：面向用户的唯一最新版；直接取视频、封面和平台文案，不放版本子目录。
+- deliveries：内部 Stage 交接与机器清单；archive/deliveries：交付旧版；work/output/tmp：运行态、批量输出和可重建临时文件。
 
 新单集顺序是“患者问题地图 -> 系列故事圣经 -> episode_blueprint/beat grid -> 粗动态分镜 -> 透明分层素材准入 -> JS 实现 -> 连续预览 -> QA -> 编码”。角色、语气和医学审核从 pending 开始；不使用技术 smoke 代替质量样片。
 ''', encoding='utf-8')

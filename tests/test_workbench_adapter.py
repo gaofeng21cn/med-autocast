@@ -128,9 +128,12 @@ class NativeContractTests(unittest.TestCase):
               '--master',str(self.root/self.master),'--review',str(self.root/'review.json')]
         shutil.copytree(REPO/'runtime/workbench/scripts',self.root/'scripts')
         self.assertEqual(run_tool(self.root,'package_review',args),0)
-        updated=json.loads(manifest_path.read_text())
-        self.assertIn(other,updated['episodes'])
-        backups=list((self.root/'publish/s/archive').glob('*/01_example/video.mp4'))
+        updated=json.loads((self.root/"deliveries/s/manifest.json").read_text())
+        self.assertEqual(next(e for e in updated['episodes'] if e.get('id')=='02_other')['custom_review'], 'pending')
+        self.assertFalse(manifest_path.exists())
+        self.assertFalse((self.publish/'审看记录.json').exists())
+        self.assertTrue((self.root/'deliveries/s/01_example/审看记录.json').is_file())
+        backups=list((self.root/'archive/deliveries/s/01_example').glob('*/publish/video.mp4'))
         self.assertEqual(len(backups),1)
         self.assertEqual(backups[0].read_bytes(),(self.root/self.master).read_bytes())
 

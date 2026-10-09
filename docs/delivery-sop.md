@@ -8,4 +8,12 @@ S10 文案只在登记 release_catalog 维护，含义变化交内容策划回�
 
 默认用 [preflight-workbench](workspace-adapter.md) 读取原合同；检查通过只证明对应引用和字节一致。审看包保留欠项，可按授权进入登记的 publish_root；不能另建平行交付入口。旧交付先保留恢复路径，单集更新不得覆盖其他集。公开上传需当前授权和平台回执，技术通过或进入 publish 不等于医学、听感或上传完成。
 
-全季交付时按每集的当前制作单、`out/current.json`、publish manifest 和视频逐一回读。历史候选只归档到对应集自己的 `archive/`，不能把一集的归档路径写成全季共同路径；文档生成器应从实际目录读取归档。交付文档、SHA-256 清单和观看索引生成后再次回读，避免状态和活动版本漂移。Progress First 下，文档或单个回读失败时保留已有审看包并记录质量债务，修复 owner 后继续；不把建议字段缺失当作媒体阻断。
+全季交付时按每集的当前制作单、`out/current.json`、publish manifest 和视频逐一回读。历史交付归档到工作台 `archive/deliveries/<series>/<episode>/<revision>/`，位于用户交付目录之外，不能把一集的归档路径写成全季共同路径；文档生成器应从实际目录读取归档。交付文档、SHA-256 清单和观看索引生成后再次回读，避免状态和活动版本漂移。Progress First 下，文档或单个回读失败时保留已有审看包并记录质量债务，修复 owner 后继续；不把建议字段缺失当作媒体阻断。
+
+## 面向用户的单一最新版交付
+
+`publish/<series>/` 是唯一面向用户的交付目录：首页/观看页和各集成片。每集直接放 `video.mp4`、`封面.jpg`（可用时）、字幕、两平台 TXT 和简明交付说明；不放 `current/`、日期/版本子目录、旧版、源码、旁白 WAV、Score、预览或 QA。用户无需在版本间挑选。交付位置不改变原有动态、听感、医学或上传状态。
+
+过程按 OPL 已声明的 Stage 拆分输入、输出与 owner。自然语言交接引用实际内容、工程和审查材料，保存在 `deliveries/<series>/stages/<stage_id>/`；推荐位置用于找材料，不是阻断字段门。精确交付 manifest 位于 `deliveries/<series>/<episode>/manifest.json`，用户最新版指针仍由 `deliveries/<series>/<episode>.json` 记录。旧包完整移到 `archive/deliveries/<series>/<episode>/<revision>/`，再安装新包并回读；不在 publish 留旧入口或归档链接。
+
+代码动画用 `paper_project package` 默认替换本集唯一最新版并在交付目录外保留旧包；`--output` 只用于交付目录外的过程导出。旧多版本纸剧场包可运行 `scripts/organize_delivery.py --workspace <工作区> --series <系列>`，只按精确指针整理，不猜最大版本、不重渲染、不升级审核状态。Stage 职责与交付结构见工作台目录规范。

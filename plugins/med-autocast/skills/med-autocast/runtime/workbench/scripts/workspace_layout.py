@@ -8,7 +8,7 @@ from typing import Any
 
 
 LAYOUT_SCHEMA = "medical_video_workspace_layout/v1"
-LAYOUT_VERSION = "2026-10"
+LAYOUT_VERSION = "2026-10-latest-delivery"
 
 # These roots describe ownership, not completion. Empty roots are created so a
 # new workspace has predictable places for each kind of work.
@@ -21,8 +21,8 @@ DIRECTORIES: dict[str, str] = {
     "assets/audio": "已授权且可复用的音乐和拟音",
     "assets/references": "来源、许可和被否决素材的参考记录",
     "productions": "按系列和单集保存当前生产工程",
-    "publish": "当前审看/发布投影，不是新的制作权威",
-    "deliveries": "阶段交接和精确交付清单",
+    "publish": "面向用户的唯一最新版：视频、封面、字幕、发布文案和简明首页",
+    "deliveries": "内部 Stage 交接、审核材料与精确交付清单",
     "archive": "只读历史与被替换版本",
     "work/runs": "可恢复的运行状态和后端回执",
     "work/review": "联系表、切点和审片工作文件",
@@ -52,6 +52,15 @@ def manifest(root: Path) -> dict[str, Any]:
             "output": "output",
             "tmp": "tmp",
             "archive": "archive",
+        },
+        "delivery_policy": {
+            "layout": "latest_only",
+            "user_episode": "publish/<series>/<episode>/",
+            "internal_receipt": "deliveries/<series>/<episode>/manifest.json",
+            "stage_handoff": "deliveries/<series>/stages/<stage_id>/",
+            "history": "archive/deliveries/<series>/<episode>/<revision>/",
+            "versions_inside_publish": False,
+            "review_state_separate_from_location": True,
         },
         "compatibility": {
             "legacy_flat_productions": True,
@@ -92,12 +101,14 @@ def _workspace_readme() -> str:
 | `profiles/` | 作者/医生、品牌、声线和本机部署档案 |
 | `assets/` | 可登记、可追溯、可复用的素材库 |
 | `productions/` | `系列/单集/` 的前置、动画、音频、候选、QA 和 `final/` |
-| `publish/` | 当前审看或发布投影 |
-| `deliveries/` | 阶段交接和精确 manifest |
+| `publish/` | 用户最新版成片、封面、字幕和发布文案；每集目录不含版本子目录 |
+| `deliveries/` | 内部 Stage 交接、审核材料和精确 manifest；不是用户交付入口 |
 | `archive/` | 只读历史与被替换版本 |
 | `work/` | 可恢复运行态和审片工作文件 |
 | `output/` | 可重建的预览、抽帧和联系表 |
 | `tmp/` | 可删除缓存和中间文件 |
+
+用户从 `publish/<series>/README.md` 或观看页进入，每集直接取 `video.mp4`；过程材料和历史版本不混入交付。Stage 输入输出保留精确引用，阶段记录放 `deliveries/<series>/stages/<stage_id>/`。
 
 新系列使用 `content/<topic>/<series>/` 与 `productions/<series>/<episode>/`。旧作品可以继续使用已登记的扁平路径；升级布局不会搬动、重命名或删除它们。缺少某个目录是可修复的工作区问题，不是制作质量结论。
 """
@@ -120,6 +131,15 @@ def ensure(root: Path, *, write_markers: bool = True) -> dict[str, Any]:
             encoding="utf-8",
         )
         created.append("workspace.manifest.json")
+
+    if write_markers and manifest_path.exists():
+        existing = json.loads(manifest_path.read_text(encoding='utf-8'))
+        policy = manifest(root)['delivery_policy']
+        if existing.get('delivery_policy') != policy or existing.get('layout_version') != LAYOUT_VERSION:
+            existing['delivery_policy'] = policy
+            existing['layout_version'] = LAYOUT_VERSION
+            manifest_path.write_text(json.dumps(existing, ensure_ascii=False, indent=2) + '\n', encoding='utf-8')
+            created.append('workspace.manifest.json:delivery_policy')
 
     readme_path = root / "WORKSPACE.md"
     if write_markers and not readme_path.exists():

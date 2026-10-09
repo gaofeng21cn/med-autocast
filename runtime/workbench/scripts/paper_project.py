@@ -6,6 +6,8 @@ import argparse, hashlib, html, json, os, re, shutil, subprocess, sys, tempfile,
 from pathlib import Path
 import yaml
 from workbench_config import load_author_profile
+from delivery_layout import locations, install
+from build_release_packages import platform_text
 from render_javascript_animation import renderer_selection_report
 
 BUNDLE = Path(__file__).resolve().parents[1]
@@ -913,61 +915,109 @@ def package(a):
         "full_listening": "pending",
         "medical": "pending",
     }
+    evidence = {}
     if a.review:
         evidence = read(a.review)
         if evidence.get("video_sha256") != r["sha256"]:
             raise ValueError("审看记录必须对应当前视频字节")
         review.update(evidence.get("reviews", {}))
-    target = (
-        a.output.resolve()
-        if a.output
-        else a.workspace / "publish" / c["series_id"] / c["episode_id"] / stamp()
-    )
-    if target.exists():
-        raise ValueError("交付目录已存在，请使用新修订")
-    target.mkdir(parents=True)
-    shutil.copy2(source, target / "video.mp4")
-    shutil.copy2(p / c["score"], target / "score.json")
-    shutil.copy2(p / c["narration"], target / "narration.json")
-    score = read(p / c["score"])
+    loc = locations(a.workspace, c['series_id'], c['episode_id'])
+    target = a.output.resolve() if a.output else loc['user']
+    # Explicit technical exports remain available outside the user delivery tree.
+    internal_export = target != loc['user']
+    if internal_export and target.is_relative_to(loc['user'].parent):
+        raise ValueError("publish 只保留每集最新版；过程导出请放 work/ 或 productions/，不要建立版本子目录")
+    if internal_export and target.exists():
+        raise ValueError("过程导出已存在，请选择独立路径")
+    score = read(p / c['score'])
 
     def tc(t):
         ms = round(t * 1000)
         return f"{ms // 3600000:02}:{ms // 60000 % 60:02}:{ms // 1000 % 60:02},{ms % 1000:03}"
 
-    (target / "subtitles.srt").write_text(
-        "\n\n".join(
-            f"{i + 1}\n{tc(q['start'])} --> {tc(q['end'])}\n{q['text']}"
-            for i, q in enumerate(score["cues"])
-        )
-        + "\n"
-    )
-    if sha(target / "video.mp4") != r["sha256"]:
-        raise ValueError("交付复制不一致")
-    result = {
-        **r,
-        "schema": "paper_review_delivery/v1",
-        "series_id": c["series_id"],
-        "episode_id": c["episode_id"],
-        "project": str(p),
-        "video": "video.mp4",
-        "reviews": review,
-        "release_eligible": False,
-        "uploaded": False,
-    }
-    save(target / "manifest.json", result)
-    (target / "README.md").write_text(
-        f"# {c['title']}\n\n[观看审看片](video.mp4)。本目录为本地审看交付，不等于医学终审或公开发布。\n"
-    )
-    save(
-        a.workspace / "deliveries" / c["series_id"] / (c["episode_id"] + ".json"),
-        {"current": str(target), "manifest": str(target / "manifest.json")},
-    )
-    return {
-        "status": "packaged_and_read_back",
-        "directory": str(target),
-        "release_eligible": False,
-    }
+    scratch = a.workspace / 'tmp'
+    scratch.mkdir(parents=True, exist_ok=True)
+    with tempfile.TemporaryDirectory(prefix='delivery-', dir=scratch) as folder:
+        user = Path(folder) / 'publish'
+        record = Path(folder) / 'record'
+        user.mkdir(); record.mkdir()
+        shutil.copy2(source, user / 'video.mp4')
+        shutil.copy2(p / c['score'], record / 'score.json')
+        shutil.copy2(p / c['narration'], record / 'narration.json')
+        (user / 'subtitles.srt').write_text(
+            "\n\n".join(f"{i + 1}\n{tc(q['start'])} --> {tc(q['end'])}\n{q['text']}"
+                         for i, q in enumerate(score['cues'])) + "\n", encoding='utf-8')
+        if sha(user / 'video.mp4') != r['sha256']:
+            raise ValueError("交付复制不一致")
+        config = yaml.safe_load((a.workspace / 'workbench.yaml').read_text()) or {}
+        catalog_ref = config.get('series', {}).get(c['series_id'], {}).get('release_catalog')
+        entry = None
+        if catalog_ref and (a.workspace / catalog_ref).is_file():
+            catalog = yaml.safe_load((a.workspace / catalog_ref).read_text()) or {}
+            entries = [e for e in catalog.get('episodes', []) if e.get('id') == c['episode_id']]
+            if len(entries) == 1:
+                entry = entries[0]
+        debt = list(r.get('quality_debt', []))
+        if entry:
+            for platform, name in [('xiaohongshu', '小红书文案.txt'), ('channels', '微信视频号文案.txt')]:
+                (user / name).write_text(platform_text(entry, platform), encoding='utf-8')
+        else:
+            debt.append({'code': 'release_copy_pending', 'owner_stage': 'evidence-plan',
+                         'blocks_stage_progress': False})
+        try:
+            subprocess.run(['ffmpeg', '-y', '-v', 'error', '-ss', str(min(3.5, float(score['duration']) / 2)),
+                            '-i', str(source), '-frames:v', '1', str(user / '封面.jpg')], check=True,
+                           stdout=subprocess.DEVNULL, stderr=subprocess.PIPE)
+        except (OSError, subprocess.CalledProcessError):
+            debt.append({'code': 'cover_pending', 'owner_stage': 'review-handoff',
+                         'blocks_stage_progress': False})
+        attachments = {}
+        for src, name, key in [
+            ('audio/narration-normalized.wav', 'narration.wav', 'voice'),
+            ('audio/narration-foley-only.wav', 'narration-foley-only.wav', 'no_music'),
+            ('audio/mix-receipt.json', 'mix-receipt.json', 'mix_receipt'),
+            ('audio/narration-foley-only.receipt.json', 'no-music-receipt.json', 'no_music_receipt'),
+            ('preproduction/music-plan.json', 'music-plan.json', 'music_plan'),
+        ]:
+            if (p / src).is_file():
+                shutil.copy2(p / src, record / name)
+                attachments[key] = name
+        preview_ref = evidence.get('review_scope', {}).get('preview')
+        if preview_ref and Path(preview_ref).is_file():
+            preview = Path(preview_ref)
+            shutil.copy2(preview, record / 'preview.json')
+            attachments['preview'] = 'preview.json'
+            if (preview.parent / 'contact.jpg').is_file():
+                shutil.copy2(preview.parent / 'contact.jpg', record / 'contact.jpg')
+                attachments['contact_sheet'] = 'contact.jpg'
+        final_record = target if internal_export else loc['record']
+        relative = lambda file: os.path.relpath(file, final_record)
+        result = {**r, 'schema': 'paper_review_delivery/v1', 'series_id': c['series_id'],
+                  'episode_id': c['episode_id'], 'project': str(p),
+                  'production_version': p.name, 'video': relative(target / 'video.mp4'),
+                  'delivery_layout': 'internal_export' if internal_export else 'latest_only',
+                  'reviews': review, 'quality_debt': debt, 'release_eligible': False, 'uploaded': False,
+                  'artifacts': {'video': relative(target / 'video.mp4'),
+                                'subtitles': relative(target / 'subtitles.srt'),
+                                'score': 'score.json', 'narration_script': 'narration.json',
+                                'source_project': str(p), **attachments},
+                  'review_scope': evidence.get('review_scope', {}),
+                  'review_evidence': str(a.review.resolve()) if a.review else None}
+        save(record / 'manifest.json', result)
+        (user / '发布交付包.md').write_text(
+            f"# {c['title']}\n\n[观看视频](video.mp4) · [小红书文案](小红书文案.txt) · [视频号文案](微信视频号文案.txt)\n\n"
+            "本目录只保留最新版。视频用于审看，完整动态、听感和医学审核按当前记录分别确认；尚未上传平台。\n",
+            encoding='utf-8')
+        if internal_export:
+            target.mkdir(parents=True)
+            for directory in (user, record):
+                for file in directory.iterdir():
+                    shutil.copy2(file, target / file.name)
+            return {'status': 'packaged_internal_candidate', 'directory': str(target), 'release_eligible': False}
+        pointer = install(a.workspace, c['series_id'], c['episode_id'], user, record)
+    return {'status': 'packaged_and_read_back', 'directory': str(target),
+            'manifest': pointer['manifest'], 'previous_delivery': pointer['previous_delivery'],
+            'quality_debt': debt, 'release_eligible': False}
 
 
 def main():

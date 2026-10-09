@@ -137,11 +137,12 @@
       "output_artifact_advisories": [
         {
           "kind": "review_handoff_package",
-          "recommended_ref": "deliveries/<series>/<episode>/",
-          "purpose": "面向指定审看对象的可直接检查交付物；保留真实待审和缺项状态",
-          "suggested_contents": ["当前母版或可消费候选及其修订信息", "与该版本一致的字幕、旁白和所需平台文案", "阶段 Review 与 Meta Review 的实际范围和结果", "素材来源、许可或授权信息（可用时）", "未解决质量债务、待人工决定和未执行的检查"]
+          "recommended_ref": "publish/<series>/<episode>/",
+          "purpose": "面向用户的唯一最新版视频、封面、字幕和平台文案；不含过程版本和审查材料",
+          "suggested_contents": ["video.mp4", "封面.jpg（可用时）", "字幕", "小红书文案.txt", "微信视频号文案.txt", "简明交付说明"]
         },
-        {"kind": "handoff_manifest", "recommended_ref": "deliveries/<series>/<episode>/manifest.json", "purpose": "便于定位当前交付文件和状态；字段和文件结构按工作区现行包器及用户目标调整"}
+        {"kind": "handoff_manifest", "recommended_ref": "deliveries/<series>/<episode>/manifest.json", "purpose": "便于定位当前交付文件和状态；字段和文件结构按工作区现行包器及用户目标调整"},
+        {"kind": "stage_handoff", "recommended_ref": "deliveries/<series>/stages/review-handoff/", "purpose": "内部阶段输入输出、精确版本、Review/Meta Review引用与质量债；推荐路径不作为启动门"}
       ],
       "tool_refs": [
         {"tool_id": "package_review", "purpose": "组织当前单集审看包并回读字节", "effect": "write"},

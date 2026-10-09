@@ -50,7 +50,7 @@ python3 runtime/native_helpers/med_autocast.py preflight-workbench --workspace /
 
 `--plan` 和 `--master` 来自当前任务确认的独立输入；不从待验证交付清单反推“当前版本”，不按前缀或修改时间猜测。支持制作单 video_production_plan/v2、v3 和交付 medical_video_review_package/v1、medical_video_series_delivery/v2，原文件原地读取，**不要求生成另一套 Med Auto Cast 制作单**。默认从登记 publish_root 读 manifest；可用 --delivery 指定精确清单、--source-review 指定原源片审查记录。
 
-代码纸剧场的 `--plan` 可以是 `project.json`，但 `--master` 必须来自该项目的 `out/current.json`；`--delivery` 必须是精确的 `current/manifest.json` 文件。预检成功只证明当前性、引用和字节一致，不批准连续动态、完整听感、医学质量或公开发布。全季交付后的逐集审计、归档路径和文档回读见[全季交付回读与经验沉淀](../runtime/workbench/docs/25_全季交付回读与经验沉淀.md)。
+代码纸剧场的 `--plan` 可以是 `project.json`，但 `--master` 必须来自该项目的 `out/current.json`；`--delivery` 必须是内部 `deliveries/<series>/<episode>/manifest.json` 文件。预检成功只证明当前性、引用和字节一致，不批准连续动态、完整听感、医学质量或公开发布。全季交付后的逐集审计、归档路径和文档回读见[全季交付回读与经验沉淀](../runtime/workbench/docs/25_全季交付回读与经验沉淀.md)。
 
 预检核对集号、实际路径、镜头区间、母版复制字节、可用时的审看记录与字幕、两份 TXT 和登记 release_catalog 全文。拒用状态优先于残留区间；源 ID 缺少真实文件映射时保留缺证据，不能猜测批准。原复核声明原样返回，不升格为新的质量批准。工具不解码成片、不判医学正确性、不授权上传；原 animation_gate、技术 QA 和专业复核仍须按任务范围执行。
 
@@ -84,3 +84,11 @@ JS 与纸剧场统一使用随包渲染器；预览和正式编码不再因 --pr
 完整操作见[单集工具与局部返修](../runtime/workbench/docs/20_纸剧场单集工具与局部返修.md)。纸剧场预检的 --plan 为 project.json，当前单集从 workbench.yaml.series 的 episodes 中发现，交付指针在 deliveries/SERIES/EPISODE.json。
 
 `animation_lab` 是随包优先的代码动画能力入口：`list` 查询七个风格方法；`create --project <新空目录> --complete` 创建并构建原创样例、音效、预览和 MP4；失败后从 build/audio/preview/render 继续。通过 `workbench_tool.py --workspace <工作台> --name animation_lab -- ...` 调用。样例不含人物、品牌、医学解剖或旁白；实际单集继续用 paper_project。细节见 `runtime/workbench/docs/26_代码动画技法与风格工作流.md`。
+
+## 面向用户的单一最新版交付
+
+`publish/<series>/` 是唯一面向用户的交付目录：首页/观看页和各集成片。每集直接放 `video.mp4`、`封面.jpg`（可用时）、字幕、两平台 TXT 和简明交付说明；不放 `current/`、日期/版本子目录、旧版、源码、旁白 WAV、Score、预览或 QA。用户无需在版本间挑选。交付位置不改变原有动态、听感、医学或上传状态。
+
+过程按 OPL 已声明的 Stage 拆分输入、输出与 owner。自然语言交接引用实际内容、工程和审查材料，保存在 `deliveries/<series>/stages/<stage_id>/`；推荐位置用于找材料，不是阻断字段门。精确交付 manifest 位于 `deliveries/<series>/<episode>/manifest.json`，用户最新版指针仍由 `deliveries/<series>/<episode>.json` 记录。旧包完整移到 `archive/deliveries/<series>/<episode>/<revision>/`，再安装新包并回读；不在 publish 留旧入口或归档链接。
+
+代码动画用 `paper_project package` 默认替换本集唯一最新版并在交付目录外保留旧包；`--output` 只用于交付目录外的过程导出。旧多版本纸剧场包可运行 `scripts/organize_delivery.py --workspace <工作区> --series <系列>`，只按精确指针整理，不猜最大版本、不重渲染、不升级审核状态。Stage 职责与交付结构见工作台目录规范。

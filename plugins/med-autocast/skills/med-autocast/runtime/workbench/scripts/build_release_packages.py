@@ -11,6 +11,7 @@ from pathlib import Path
 import yaml
 
 from delivery_contract import release_eligible
+from delivery_layout import archive_destination
 from workbench_config import ROOT, series_paths
 
 
@@ -18,7 +19,7 @@ def catalog_context(catalog: dict, catalog_path: Path, root: Path = ROOT) -> dic
     paths = series_paths(catalog["series_id"], root)
     if catalog_path.resolve() != paths["release_catalog"].resolve():
         raise ValueError("Catalog path differs from the series registry")
-    return {**catalog, "_paths": paths}
+    return {**catalog, "_paths": paths, "_workspace": root.resolve()}
 
 
 def source_links(catalog: dict, episode: dict) -> dict[str, str]:
@@ -237,8 +238,8 @@ def publish_manifest(catalog: dict, episodes: list[dict], reports: dict[str, dic
             "number": int(episode["number"]),
             "episode_id": episode["id"],
             "title": episode["title"],
-            "release_directory": episode['id'],
-            "video": f"{episode['id']}/video.mp4" if ready else None,
+            "release_directory": str(catalog["_paths"]["publish_root"] / episode["id"]),
+            "video": str(catalog["_paths"]["publish_root"] / episode["id"] / "video.mp4") if ready else None,
             "duration_seconds": qa.get("duration_seconds") if ready else None,
             "sha256": qa.get("sha256") if ready else None,
             "delivery_status": (
@@ -352,6 +353,10 @@ def main() -> None:
                 errors.append(f"missing source: {required}")
 
         release = paths["publish_root"] / episode_id
+        if not args.check and release.is_dir() and final_video.is_file() and (release / "video.mp4").is_file() and sha256(release / "video.mp4") != sha256(final_video):
+            previous = archive_destination(catalog['_workspace'], catalog['series_id'], episode_id)
+            previous.mkdir(parents=True, exist_ok=True)
+            release.rename(previous / 'publish')
         ensure_directory(release, args.check, errors)
         if qa is not None and release_eligible(qa):
             if not final_video.is_file():
@@ -392,11 +397,16 @@ def main() -> None:
         errors,
     )
     ensure_file(
-        publish_root / "manifest.json",
+        catalog["_workspace"] / "deliveries" / catalog["series_id"] / "manifest.json",
         publish_manifest(catalog, episodes, reports),
         args.check,
         errors,
     )
+    legacy_manifest = publish_root / 'manifest.json'
+    if not args.check and legacy_manifest.is_file():
+        backup = archive_destination(catalog['_workspace'], catalog['series_id'], '_index')
+        backup.mkdir(parents=True, exist_ok=True)
+        legacy_manifest.rename(backup / 'manifest.json')
     if errors:
         print(json.dumps({"status": "failed", "errors": errors}, ensure_ascii=False, indent=2))
         raise SystemExit(1)

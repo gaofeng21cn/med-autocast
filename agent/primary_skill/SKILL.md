@@ -74,3 +74,6 @@ Stage 返回尽量引用真实产物与版本/来源信息，给出质量债务�
 过程按 OPL 已声明的 Stage 拆分输入、输出与 owner。自然语言交接引用实际内容、工程和审查材料，保存在 `deliveries/<series>/stages/<stage_id>/`；推荐位置用于找材料，不是阻断字段门。精确交付 manifest 位于 `deliveries/<series>/<episode>/manifest.json`，用户最新版指针仍由 `deliveries/<series>/<episode>.json` 记录。旧包完整移到 `archive/deliveries/<series>/<episode>/<revision>/`，再安装新包并回读；不在 publish 留旧入口或归档链接。
 
 代码动画用 `paper_project package` 默认替换本集唯一最新版并在交付目录外保留旧包；`--output` 只用于交付目录外的过程导出。旧多版本纸剧场包可运行 `scripts/organize_delivery.py --workspace <工作区> --series <系列>`，只按精确指针整理，不猜最大版本、不重渲染、不升级审核状态。Stage 职责与交付结构见工作台目录规范。
+
+
+中文旁白先由内容/导演按语境确定多音字与术语读音，再由后端原生发音控制执行。IndexTTS 2.5 的 `tts_text` 与正文分离，注音变化纳入缓存；已明确拒用的旧 take 不得复用。首句与高风险词所在整段、场景接缝及最终混音分别听辨；普通 ASR 同字转写、响度和注音输入成功不等于发音通过。听辨缺项保留候选与质量债，不伪造审核。见 `runtime/workbench/docs/27_中文配音发音控制与听辨SOP.md`。

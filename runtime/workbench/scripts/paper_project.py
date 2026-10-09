@@ -386,13 +386,18 @@ def assert_built(p):
 
 
 def assert_narration(p, c):
+    from render_narration import narration_signature, audio_rejected
     receipt = p / "audio/narration_beats.json"
     if receipt.exists():
-        signature = lambda beats: [(b["id"], b["text"]) for b in beats]
-        if signature(read(receipt)["beats"]) != signature(
+        beats = read(receipt)["beats"]
+        if narration_signature(beats) != narration_signature(
             read(p / c["narration"])["beats"]
         ):
-            raise ValueError("旁白文稿已变化，请重新配音改动声段")
+            raise ValueError("旁白正文或发音控制已变化，请重新配音改动声段")
+        for beat in beats:
+            take = Path(beat["audio"]).with_suffix(".json")
+            if take.is_file() and audio_rejected(read(take)):
+                raise ValueError(f"声段 {beat['id']} 已被明确拒用，请重新配音该声段")
 
 
 def narrate(a):
@@ -974,6 +979,8 @@ def package(a):
         attachments = {}
         for src, name, key in [
             ('audio/narration-normalized.wav', 'narration.wav', 'voice'),
+            ('audio/narration_beats.json', 'narration_beats.json', 'narration_receipt'),
+            ('audio/pronunciation-review.json', 'pronunciation-review.json', 'pronunciation_review'),
             ('audio/narration-foley-only.wav', 'narration-foley-only.wav', 'no_music'),
             ('audio/mix-receipt.json', 'mix-receipt.json', 'mix_receipt'),
             ('audio/narration-foley-only.receipt.json', 'no-music-receipt.json', 'no_music_receipt'),

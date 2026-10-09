@@ -77,4 +77,5 @@ definitions:
       capabilities:
         reference_voice: true
         chinese: true
+        pronunciation_control: native_annotations
       implementation_docs: backends/indextts/README.md

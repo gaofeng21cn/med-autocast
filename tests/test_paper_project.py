@@ -267,3 +267,31 @@ class ProjectTests(unittest.TestCase):
                 again = rn.synthesize(root, narration, output)
             self.assertEqual(again["reused"], ["B01"])
             self.assertEqual(again["generated"], [])
+            # A pronunciation-only edit must invalidate the old take, while
+            # preserving the public script and the previously successful audio.
+            pp.save(narration, {"beats": [{"id": "B01", "text": "一句话", "tts_text": "<一|YI2>句话"}]})
+            with patch.object(rn.subprocess, "run", side_effect=successful):
+                corrected = rn.synthesize(root, narration, output, selected=["B01"])
+            self.assertEqual(corrected["generated"], ["B01"])
+            self.assertEqual(corrected["beats"][0]["text"], "一句话")
+            self.assertEqual(corrected["beats"][0]["tts_text"], "<一|YI2>句话")
+            self.assertNotEqual(corrected["beats"][0]["audio"], str(take))
+            self.assertEqual(take.with_suffix(".json").read_bytes(), receipt)
+            corrected_take = Path(corrected["beats"][0]["audio"])
+            corrected_meta = pp.read(corrected_take.with_suffix(".json"))
+            corrected_meta["pronunciation_review"] = {"status": "rejected", "notes": "wrong reading"}
+            pp.save(corrected_take.with_suffix(".json"), corrected_meta)
+            # Known bad audio cannot be reused even if its SHA and cache key match.
+            with patch.object(rn.subprocess, "run", side_effect=successful):
+                retried = rn.synthesize(root, narration, output, selected=["B01"])
+            self.assertEqual(retried["generated"], ["B01"])
+            self.assertEqual(pp.read(corrected_take.with_suffix(".json"))["pronunciation_review"]["status"], "pending")
+
+    def test_pronunciation_control_is_part_of_narration_identity(self):
+        p = self.root
+        pp.save(p / "audio/narration_beats.json", {"beats": [{"id": "B01", "text": "还清楚"}]})
+        pp.save(p / "narration.json", {"beats": [{"id": "B01", "text": "还清楚", "tts_text": "<还|HAI2>清楚"}]})
+        with self.assertRaisesRegex(ValueError, "发音控制已变化"):
+            pp.assert_narration(p, {"narration": "narration.json"})
+        with self.assertRaisesRegex(ValueError, "与正文不同"):
+            rn.tts_text({"id": "B01", "text": "还清楚", "tts_text": "<仍|HAI2>清楚"})

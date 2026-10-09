@@ -27,3 +27,6 @@ Meta Review 是成片交接前的跨阶段审阅层。它把当前候选、导�
 - `human_gate`：需要明确的医生、作者或发布负责人决定
 
 阶段提示、专业 Skill、工具和推荐产物由 `contracts/stage_capability_bundle.json` 定位。Meta Review 是一次跨阶段判断，不为自己再启动 `producer -> reviewer -> repairer -> re-reviewer` formal review 循环；常规 Stage 的质量循环仍由 OPL 按原策略执行。
+
+
+中文旁白按完整语境确定多音字和医学术语读音。配音输入可用后端原生注音，字幕保留正文；先听首句与高风险词所在整段，局部重配同步时码并复核最终混音。普通中文 ASR 同字转写、注音输入成功与响度结果不能证明实际读音。当前 `audio/pronunciation-review.json` 是听辨索引，未覆盖听辨保持待审；已明确拒用的旧音不得复用。详见 `runtime/workbench/docs/27_中文配音发音控制与听辨SOP.md`。

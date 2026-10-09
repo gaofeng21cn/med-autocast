@@ -27,7 +27,7 @@ def main():
         np.random.seed(job["seed"])
         model.infer(
             spk_audio_prompt=job["reference"],
-            text=b["text"],
+            text=b.get("tts_text", b["text"]),
             output_path=b["output"],
             lang=job["language"],
             use_emo_text=True,

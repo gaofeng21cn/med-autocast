@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Single-episode narration, exact segment selection, one registered voice baseline."""
 
-import argparse, hashlib, json, os, subprocess, sys, tempfile, wave
+import argparse, hashlib, json, os, re, subprocess, sys, tempfile, wave
 from pathlib import Path
 from workbench_config import (
     load_author_profile,
@@ -21,6 +21,33 @@ def digest(value):
 def save(path, data):
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(json.dumps(data, ensure_ascii=False, indent=2) + "\n")
+
+
+ANNOTATION = re.compile(r"<([^<>|]+)\|([^<>|]+)>")
+
+
+def tts_text(beat):
+    """Keep editorial text separate from native IndexTTS pronunciation input."""
+    value = beat.get("tts_text", beat["text"])
+    if not isinstance(value, str) or not value.strip():
+        raise ValueError(f"声段 {beat['id']} 的配音专用文本为空")
+    if ANNOTATION.sub(lambda m: m[1], value) != beat["text"]:
+        raise ValueError(f"声段 {beat['id']} 的注音还原后与正文不同；请保留同一正文")
+    return value
+
+
+def narration_signature(beats):
+    return [(b["id"], b["text"], tts_text(b)) for b in beats]
+
+
+def audio_rejected(meta):
+    # Pending review is consumable; an explicit rejection is not a valid take.
+    for field in ("pronunciation_review", "full_listening", "tone_consistency"):
+        review = meta.get(field)
+        status = review.get("status") if isinstance(review, dict) else review
+        if status in ("rejected", "failed"):
+            return True
+    return False
 
 
 def synthesize(root, narration, output, series=None, selected=None, force=False):
@@ -88,7 +115,13 @@ def synthesize(root, narration, output, series=None, selected=None, force=False)
     jobs = []
     records = []
     for b in rows:
-        key = digest({"text": b["text"], "settings": settings})
+        spoken = tts_text(b)
+        if spoken != b["text"] and spec["definition"] != "indextts_2_5":
+            raise ValueError("当前后端不支持 IndexTTS 原生注音；请适配该后端的发音控制，不会朗读标记或静默换声线")
+        cache_input = {"text": b["text"], "settings": settings}
+        if spoken != b["text"]:
+            cache_input["tts_text"] = spoken
+        key = digest(cache_input)
         target = output / "segments" / f"{key}.wav"
         receipt = target.with_suffix(".json")
         valid = target.is_file() and receipt.is_file()
@@ -96,6 +129,8 @@ def synthesize(root, narration, output, series=None, selected=None, force=False)
             meta = json.loads(receipt.read_text())
             valid = (
                 meta.get("sha256") == hashlib.sha256(target.read_bytes()).hexdigest()
+                and meta.get("tts_text", meta.get("text")) == spoken
+                and not audio_rejected(meta)
             )
         if selected and b["id"] not in selected and not valid:
             raise ValueError(
@@ -187,6 +222,8 @@ def synthesize(root, narration, output, series=None, selected=None, force=False)
                         "cache_key": b["key"],
                         "sha256": hashlib.sha256(target.read_bytes()).hexdigest(),
                         "text": b["text"],
+                        "tts_text": tts_text(b),
+                        "pronunciation_review": {"status": "pending"},
                         "baseline": settings,
                         "full_listening": "pending",
                     },
@@ -248,6 +285,26 @@ def synthesize(root, narration, output, series=None, selected=None, force=False)
         "tone_consistency": "pending",
     }
     save(output / "narration_beats.json", result)
+    save(output / "pronunciation-review.json", {
+        "schema": "narration_pronunciation_review/v1",
+        "source": result["source"],
+        "voice": str(normalized),
+        "voice_sha256": hashlib.sha256(normalized.read_bytes()).hexdigest(),
+        "status": "pending",
+        "method": "先审听各声段原音，再复核最终混音；注音输入与ASR同字转写均不证明实际读音",
+        "beats": [{
+            "id": b["id"], "text": b["text"], "tts_text": tts_text(b),
+            "audio": b["audio"],
+            "sha256": hashlib.sha256(Path(b["audio"]).read_bytes()).hexdigest(),
+            "start": b["start"], "end": b["end"],
+            "requested_pronunciations": [
+                {"text": m[1], "pronunciation": m[2]} for m in ANNOTATION.finditer(tts_text(b))
+            ],
+            "review": json.loads(Path(b["audio"]).with_suffix(".json").read_text()).get(
+                "pronunciation_review", {"status": "pending"}
+            ),
+        } for b in records],
+    })
     return result
 
 

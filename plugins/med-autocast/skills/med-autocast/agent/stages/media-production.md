@@ -20,3 +20,6 @@
 - `agent/professional_skills/medical-video-release-packager/SKILL.md`
 
 先读 `docs/production-sop.md` 的阶段映射；按 `docs/workspace-adapter.md` 选择实际工具和原输入合同。后续补充或返修从受影响职责继续，不为六阶段顺序重复制作。
+
+
+中文旁白按完整语境确定多音字和医学术语读音。配音输入可用后端原生注音，字幕保留正文；先听首句与高风险词所在整段，局部重配同步时码并复核最终混音。普通中文 ASR 同字转写、注音输入成功与响度结果不能证明实际读音。当前 `audio/pronunciation-review.json` 是听辨索引，未覆盖听辨保持待审；已明确拒用的旧音不得复用。详见 `runtime/workbench/docs/27_中文配音发音控制与听辨SOP.md`。

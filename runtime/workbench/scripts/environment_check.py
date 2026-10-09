@@ -97,6 +97,11 @@ def narration_dependencies(workspace: Path, packages: dict) -> dict:
 def check(workspace: Path) -> dict:
     workspace = workspace.resolve()
     setup = f'bash {shlex.quote(str(workspace / "scripts/setup_workbench.sh"))}'
+    try:
+        from workspace_layout import status as layout_status
+        layout = layout_status(workspace)
+    except Exception as exc:  # Keep diagnostics useful for older workspaces.
+        layout = {'state': 'unknown', 'error': str(exc), 'repairable': True}
     required = {
         'python_3_11': {'state': 'ready' if sys.version_info >= (3, 11) else 'missing',
                         'version': platform.python_version(), 'interpreter': sys.executable, 'fix': '安装 Python 3.11+'},
@@ -136,6 +141,7 @@ def check(workspace: Path) -> dict:
     configured = ready and configuration['state'] == 'ready'
     environment_ready = configured and narration['state'] not in ('missing', 'needs_setup')
     return {'schema': 'med_autocast_environment/v1', 'read_only': True, 'workspace': str(workspace),
+            'workspace_layout': layout,
             'platform': platform.platform(), 'required': required, 'configuration': configuration,
             'selected_narration': narration,
             'optional_media': {

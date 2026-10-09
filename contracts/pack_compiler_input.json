@@ -128,6 +128,7 @@
     "runtime/workbench/scripts/render_series_tts.py",
     "runtime/workbench/scripts/setup_workbench.sh",
     "runtime/workbench/scripts/transcribe_series_whisper.py",
+    "runtime/workbench/scripts/workspace_layout.py",
     "runtime/workbench/scripts/workbench_config.py",
     "runtime/workbench/templates/profiles/author_profile.example.yaml",
     "runtime/workbench/templates/profiles/backend_profile.example.yaml",

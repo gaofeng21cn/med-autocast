@@ -58,7 +58,7 @@ node scripts/smoke_local_animation.mjs
 
 检查报告列出缺项、实际解释器、浏览器启动结果和对应修复命令；未选中的模型缺失不阻断核心安装。`selected_narration` 单独报告当前声音依赖：选了 Edge 就检查 edge-tts，选了 IndexTTS 就检查运行时、模型配置和参考音频路径；缺项时整体返回 `needs_setup`，仍保留独立的 `core_ready`。`ready` 仅表示环境和配置通过，不代表模型完整或合成成功，`production_ready` 始终为 false。语气稳定性、素材与医学关系、整片视听、发布资格必须按制作 SOP 另行验收。
 
-已有工作台先用其原安装脚本或随包 `environment_check --workspace <目录>` 检查。旧工作区缺新入口时由智能体比较后增量更新，不整目录覆盖；新建隔离工作区也是可选路径。具体工具调用见[工作台接入](workspace-adapter.md)，IndexTTS 见[后端说明](../runtime/workbench/backends/indextts/README.md)。
+已有工作台先用其原安装脚本或随包 `environment_check --workspace <目录>` 检查。旧工作区缺新入口时可执行 `python3 runtime/workbench/scripts/init_workbench.py --workspace <目录> --upgrade`，或运行该工作区的 `scripts/setup_workbench.sh`；两者只补齐缺失目录、入口脚本和入口标记，不整目录覆盖。新建隔离工作区也是可选路径。具体工具调用见[工作台接入](workspace-adapter.md)，IndexTTS 见[后端说明](../runtime/workbench/backends/indextts/README.md)。
 
 首片创作、分层素材、字幕与固定表达的默认方法见[新用户首片 SOP](../runtime/workbench/docs/14_新用户首片SOP.md)。
 

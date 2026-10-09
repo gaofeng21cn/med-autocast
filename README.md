@@ -65,7 +65,7 @@ Med Auto Cast（MAC）是面向医生、健康教育工作者和医学内容创�
 opl packages install med-autocast --json
 ```
 
-安装后新建任务，告诉 Med Auto Cast 制作目录、主题、受众和大致时长。智能体可按[安装与环境准备](docs/installation.md)在空目录初始化工作台，安装本地 JS 制作依赖并检查浏览器、中文字体和当前选用的声音环境；无需先配置视频模型、远端 GPU 或 NAS。默认允许不露脸、无头像，作者身份与声音仍须在正式制作时确认。已有制作项目可按[项目接入说明](docs/workspace-adapter.md)继续使用。
+安装后新建任务，告诉 Med Auto Cast 制作目录、主题、受众和大致时长。智能体可按[安装与环境准备](docs/installation.md)在空目录初始化工作台，生成 `WORKSPACE.md` 与 `workspace.manifest.json`，安装本地 JS 制作依赖并检查浏览器、中文字体和当前选用的声音环境；无需先配置视频模型、远端 GPU 或 NAS。已有工作区可增量补齐缺失目录，不会覆盖现有作品。默认允许不露脸、无头像，作者身份与声音仍须在正式制作时确认。已有制作项目可按[项目接入说明](docs/workspace-adapter.md)继续使用。
 
 源码与随仓插件载体的改进只有在后续 OCI 软件包发布并安装后，才会进入普通用户的已安装版本；具体资格与验收范围见[当前能力与验证范围](docs/status.md)。
 

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Initialize an empty workspace without overwriting existing user data."""
+"""Initialize or non-destructively upgrade a Med Auto Cast workspace."""
 from __future__ import annotations
 
 import argparse
@@ -7,15 +7,28 @@ import json
 from pathlib import Path
 import shutil
 
+from workspace_layout import ensure
+
 SOURCE = Path(__file__).resolve().parents[1]
 
 
-def initialize(target: Path) -> dict:
+def _check_location(target: Path) -> Path:
     target = target.resolve()
-    if target.exists() and (not target.is_dir() or any(target.iterdir())):
-        raise ValueError('只初始化空目录；已有工作区请运行其 setup_workbench.sh，不覆盖专用代码和档案')
+    # A copied workbench owns its top-level scripts and may upgrade itself;
+    # the packaged runtime/workbench tree has no workbench.yaml and remains
+    # protected from accidental initialization.
+    if target == SOURCE and (target / 'workbench.yaml').is_file():
+        return target
     if target == SOURCE or SOURCE.is_relative_to(target) or target.is_relative_to(SOURCE):
         raise ValueError('制作工作区应位于随包 runtime/workbench 之外，避免混入插件文件')
+    return target
+
+
+def initialize(target: Path) -> dict:
+    """Create a new isolated workspace and its explicit directory contract."""
+    target = _check_location(target)
+    if target.exists() and (not target.is_dir() or any(target.iterdir())):
+        raise ValueError('只初始化空目录；已有工作区请使用 --upgrade 或 setup_workbench.sh，不覆盖专用代码和档案')
     target.mkdir(parents=True, exist_ok=True)
     for name in ('scripts', 'backends', 'templates', 'docs'):
         shutil.copytree(SOURCE / name, target / name,
@@ -73,9 +86,7 @@ audio_mix:
     backend.parent.mkdir(parents=True)
     shutil.copyfile(SOURCE / 'templates/profiles/backend_profile.example.yaml', backend)
     shutil.copyfile(SOURCE / 'templates/workbench.example.yaml', target / 'workbench.yaml')
-    for name in ('content', 'profiles', 'assets', 'productions', 'publish',
-                 'deliveries', 'archive', 'work', 'output', 'tmp'):
-        (target / name).mkdir(exist_ok=True)
+    layout = ensure(target)
     (target / 'README.md').write_text('''# 医学动画工作台
 
 先运行 `bash scripts/setup_workbench.sh --check`。告诉 Med Auto Cast 主题、受众和时长即可开始；首步先建立作者/医生形象、品牌识别和声音基线，再进入纸剧场分镜与素材准备。默认本机 JS 手绘拼贴；有授权参考声线时使用本机 IndexTTS，Edge TTS 只在没有专用声线或用户明确跳过时保底。
@@ -89,17 +100,39 @@ audio_mix:
 
 新单集顺序是“患者问题地图 -> 系列故事圣经 -> episode_blueprint/beat grid -> 粗动态分镜 -> 透明分层素材准入 -> JS 实现 -> 连续预览 -> QA -> 编码”。角色、语气和医学审核从 pending 开始；不使用技术 smoke 代替质量样片。
 ''', encoding='utf-8')
-    (target / '.gitignore').write_text('.venv/\nnode_modules/\n__pycache__/\noutputs/\n.env\n', encoding='utf-8')
+    (target / '.gitignore').write_text(
+        '.venv/\nnode_modules/\n__pycache__/\n*.pyc\n.env\n.DS_Store\n'
+        '# 可重建批量输出和临时文件；work/ 可能包含恢复回执，保留其可追踪性\n'
+        'output/\ntmp/\n',
+        encoding='utf-8',
+    )
     return {'status': 'initialized', 'workspace': str(target), 'author_baseline': 'pending',
+            'layout': layout,
             'next': '运行 scripts/setup_workbench.sh；首次创作先确定作者形象与声音基线'}
+
+
+def upgrade(target: Path) -> dict:
+    """Add missing layout roots and markers without changing existing files."""
+    target = _check_location(target)
+    if not target.is_dir() or not (target / 'workbench.yaml').is_file():
+        raise ValueError('升级需要包含 workbench.yaml 的已有工作区；不自动猜测目录身份')
+    layout = ensure(target)
+    return {
+        'status': 'upgraded' if layout['created'] else 'already_present',
+        'workspace': str(target),
+        'layout': layout,
+        'next': '运行 scripts/environment_check.py --workspace <目录> --pretty；缺项是可修复诊断，不代表内容或发布通过',
+    }
 
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--workspace', required=True, type=Path)
+    parser.add_argument('--upgrade', action='store_true', help='为已有工作区补齐缺失目录和入口标记，不复制或覆盖文件')
     args = parser.parse_args()
     try:
-        print(json.dumps(initialize(args.workspace), ensure_ascii=False))
+        result = upgrade(args.workspace) if args.upgrade else initialize(args.workspace)
+        print(json.dumps(result, ensure_ascii=False))
     except (OSError, ValueError) as exc:
         parser.exit(1, str(exc) + '\n')
 

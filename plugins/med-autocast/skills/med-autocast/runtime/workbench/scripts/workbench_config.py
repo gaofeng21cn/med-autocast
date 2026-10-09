@@ -15,6 +15,11 @@ try:
 except ImportError:  # pragma: no cover - surfaced as an actionable validation error
     yaml = None
 
+try:
+    from workspace_layout import status as layout_status
+except ImportError:  # pragma: no cover - compatibility with older copied workspaces
+    layout_status = None
+
 
 ROOT = Path(os.environ.get("MED_AUTOCAST_WORKSPACE_ROOT", Path(__file__).resolve().parents[1])).resolve()
 WORKBENCH = ROOT / "workbench.yaml"
@@ -203,6 +208,11 @@ def validate(root: Path = ROOT, series_id: str | None = None) -> dict[str, Any]:
     workbench_path = root / "workbench.yaml"
     errors: list[str] = []
     assets: list[dict[str, Any]] = []
+    layout = layout_status(root) if layout_status else {
+        "state": "unknown",
+        "repairable": True,
+        "note": "旧工作区缺少 workspace_layout.py；运行 setup_workbench.sh 增量更新",
+    }
     try:
         workbench = load_workbench(workbench_path)
         author_path, author = load_author_profile(workbench=workbench, series_id=series_id, root=root)
@@ -289,6 +299,7 @@ def validate(root: Path = ROOT, series_id: str | None = None) -> dict[str, Any]:
             "video_instances": sorted(backends.get("video", {})),
             "audio_instances": sorted(backends.get("audio", {})),
         },
+        "workspace_layout": layout,
         "errors": errors,
     }
 

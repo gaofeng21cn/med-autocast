@@ -41,6 +41,13 @@ def mapping(path: Path, *, yaml_format: bool = False) -> dict:
 
 
 def inspect_workspace(root: Path) -> dict:
+    bundle = Path(__file__).resolve().parents[1] / 'workbench/scripts'
+    sys.path.insert(0, str(bundle))
+    try:
+        from workspace_layout import status as layout_status
+        layout = layout_status(root)
+    except Exception as exc:  # Older copied workspaces remain inspectable.
+        layout = {'state': 'unknown', 'repairable': True, 'error': str(exc)}
     config = mapping(local_path(root, 'workbench.yaml'), yaml_format=True)
     if config.get('schema') != 'medical_video_workbench/v2':
         raise ContractError('不支持的 workbench schema')
@@ -60,9 +67,10 @@ def inspect_workspace(root: Path) -> dict:
                 p = local_path(root, ref, exists=False)
                 locations[key] = {'ref': ref, 'exists': p.exists()}
         series.append({'series_id': sid, 'declared_status': item.get('status'), 'episode_count': item.get('episode_count'), 'locations': locations, 'projects': item.get('episodes', {})})
-    scripts = {name: (root/'scripts'/name).is_file() for name in ('media_backend.py','workbench_config.py','build_release_packages.py','build_keyframe_library.py')}
+    scripts = {name: (root/'scripts'/name).is_file() for name in ('media_backend.py','workbench_config.py','build_release_packages.py','build_keyframe_library.py','init_workbench.py','workspace_layout.py')}
     return {'schema': 'med_autocast_workspace_inspection/v1', 'read_only': True,
             'workspace_root': str(root.resolve()), 'profiles': profile_readback, 'series': series,
+            'workspace_layout': layout,
             'workbench_entrypoints': scripts,
             'keyframe_catalog_exists': (root/'assets/keyframes/catalog.json').is_file(),
             'animation_catalog_exists': (root/'assets/paper-theatre/catalog.json').is_file(),

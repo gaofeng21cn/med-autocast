@@ -15,7 +15,7 @@ description: 使用 Med Auto Cast 规划、制作、修订和审查医学科普�
 
 首次准备本地环境由智能体按`docs/installation.md`调用随包 `runtime/workbench/scripts/setup_workbench.sh --workspace <新目录>`；先检查已有工作区，不能覆盖其专用实现。环境就绪、作者基线、真实语音/成片验收分开；可选模型不阻断核心安装。
 
-1. 以 `workspace_root` 定位制作工作台，读取 workbench.yaml、`runtime/workbench/docs/17_工作台目录结构与资产生命周期.md` 与当前选集制作单。用仓库的 `runtime/native_helpers/med_autocast.py inspect --workspace <绝对路径>` 只读检查可用路径；不要把当前 cwd 当作制作工作区。
+1. 以 `workspace_root` 定位制作工作台，读取 `workbench.yaml`、`workspace.manifest.json`（若存在）、`WORKSPACE.md`（若存在）、`runtime/workbench/docs/17_工作台目录结构与资产生命周期.md` 与当前选集制作单。用仓库的 `runtime/native_helpers/med_autocast.py inspect --workspace <绝对路径>` 只读检查可用路径和 `workspace_layout`；缺少布局标记时可调用 `init_workbench.py --upgrade` 或工作区 `setup_workbench.sh` 增量修复，不把它当成内容或质量硬门；不要把当前 cwd 当作制作工作区。
 2. 新作者或新系列先由 `medical-video-series-producer` 核对作者表达基线、系列登记与完整样片依据；执行原 `workbench_config validate --series`。选题与证据交 `agent/professional_skills/medical-video-content-planner/SKILL.md`；故事、画面解释与时间轴交 `medical-video-director`；真实媒体缺口交 `medical-video-backends`。具体路径见 `agent/stages/manifest.json`。
 3. S07/S08 由导演、后端与 `medical-video-release-packager` 共同完成配音、字幕、选段、品牌、混音和合成；具体工具见 `docs/workspace-adapter.md`。成片和候选交 `medical-video-visual-qa`，交付交 `medical-video-release-packager`，跨阶段恢复与资产沉淀交 `medical-video-series-producer`，均位于 `agent/professional_skills/`。
 4. 先复用已审资产和未变音轨。精简恢复原任务，保留单一 writer。每项通过状态必须对应真实证据；技术、静态、连续动态、完整听感、医学与上传分开。交付到 publish 表示审看入口，不能据此宣称已上传或可公开发布。
@@ -32,7 +32,7 @@ description: 使用 Med Auto Cast 规划、制作、修订和审查医学科普�
 
 六阶段与原十阶段职责映射见 `docs/production-sop.md`。完整专业方法、模板和通用工具随包存于 `runtime/workbench/`；旧制作单保留原入口；纸剧场统一使用随包 paper_project，避免预览和正式渲染调用不同版本。默认交付预检使用 `med_autocast.py preflight-workbench`，直接读取原制作单和交付清单，不另外维护 Med Auto Cast 制作状态。
 
-新用户只需提供主题、受众与大致时长；其余由智能体完成。首步默认建立品牌识别、医生形象和授权声线基线；已有系列复用其作者档案中的人物、声线与品牌出场方式。人物基线不要求每集出镜；某集仅用固定品牌印记仍属于该系列，不记录为跳过形象。用户也可显式跳过人物基线或专用声线，制作通用纸剧场；只有无专用声线或明确跳过时才用 Edge，记录 `voice.mode: edge` 并重置声音待审。不得因专用声线后端故障静默切换。工具入口为 `configure_voice --mode edge|reference`。按 `runtime/workbench/docs/14_新用户首片SOP.md` 完成首片。
+新用户只需提供主题、受众与大致时长；其余由智能体完成。初始化后的入口以 `WORKSPACE.md` 和 `workspace.manifest.json` 为目录导航，以 `workbench.yaml` 为配置权威；目录缺项可增量修复，不能据此声称成片质量。首步默认建立品牌识别、医生形象和授权声线基线；已有系列复用其作者档案中的人物、声线与品牌出场方式。人物基线不要求每集出镜；某集仅用固定品牌印记仍属于该系列，不记录为跳过形象。用户也可显式跳过人物基线或专用声线，制作通用纸剧场；只有无专用声线或明确跳过时才用 Edge，记录 `voice.mode: edge` 并重置声音待审。不得因专用声线后端故障静默切换。工具入口为 `configure_voice --mode edge|reference`。按 `runtime/workbench/docs/14_新用户首片SOP.md` 完成首片。
 
 
 新建或重构代码动画采用 `runtime/workbench/templates/animation/paper_theatre/` 的 TypeScript/Canvas 镜头模块，方法见 `runtime/workbench/docs/19_纸剧场模块架构与镜头打磨.md`。先做导演与 animatic，再准入透明素材；素材清单持有路径和连接点，score 持有事件时间，镜头持有构图与相机，播放器只装配。独立镜头预览、动作样本与版本对照用于持续打磨，不把复用解释为固定构图或故事。保持单集版本冻结和自定义镜头出口；通用模板不含医生、疾病和品牌。

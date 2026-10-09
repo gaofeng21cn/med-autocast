@@ -12,7 +12,8 @@ from unittest.mock import patch
 REPO = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(REPO / 'runtime/workbench/scripts'))
 import environment_check as envcheck
-from init_workbench import initialize
+from init_workbench import initialize, upgrade
+from workspace_layout import DIRECTORIES
 from workbench_config import validate, resolve_font, select_audio_backend
 
 
@@ -29,6 +30,21 @@ class EnvironmentTests(unittest.TestCase):
         self.assertEqual(report['backend_profile']['default_audio'], 'edge_tts_local')
         self.assertEqual(report['author_profile']['assets'], [])
         self.assertTrue((self.root / 'package-lock.json').is_file())
+        self.assertTrue((self.root / 'workspace.manifest.json').is_file())
+        self.assertTrue((self.root / 'WORKSPACE.md').is_file())
+        self.assertTrue(all((self.root / path).is_dir() for path in DIRECTORIES))
+
+    def test_upgrade_only_adds_missing_layout_and_preserves_existing_files(self):
+        initialize(self.root)
+        marker = self.root / 'workbench.yaml'
+        before = marker.read_bytes()
+        (self.root / 'assets/paper-theatre').rmdir()
+        report = upgrade(self.root)
+        self.assertEqual(report['status'], 'upgraded')
+        self.assertTrue((self.root / 'assets/paper-theatre').is_dir())
+        self.assertEqual(marker.read_bytes(), before)
+        again = upgrade(self.root)
+        self.assertEqual(again['status'], 'already_present')
 
     def test_existing_workspace_never_overwritten(self):
         initialize(self.root)

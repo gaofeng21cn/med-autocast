@@ -4,6 +4,6 @@
 
 在 Med Auto Cast 中按 [工具接入](../../docs/workspace-adapter.md) 使用；新实例参考 templates/workbench.example.yaml 和 profiles 模板。目录职责和资产流转见 [工作台目录结构与资产生命周期](docs/17_工作台目录结构与资产生命周期.md)。修改来源工具的业务行为时必须验证真实输入输出，不能仅缩短说明或复制名称来宣称能力等价。
 
-源码适配仅将工作区根交给显式环境变量 MED_AUTOCAST_WORKSPACE_ROOT；原合成器、字幕、混音、质量合同和文案格式保持原实现。工作区已有脚本优先，明确 --bundled 才强制使用随包实现。
+源码适配仅将工作区根交给显式环境变量 MED_AUTOCAST_WORKSPACE_ROOT；原合成器、字幕、混音、质量合同和文案格式保持原实现。工作区已有脚本优先，明确 --bundled 才强制使用随包实现。初始化器会生成 `workspace.manifest.json` 与 `WORKSPACE.md`，已有工作区可用 `init_workbench.py --upgrade` 增量补目录和入口标记，不覆盖作品。
 
 新系列的稳定结构是 `content/<topic_id>/`、`productions/<series_id>/<episode_id>/`、`assets/`、`publish/<series_id>/`；`work/`、`output/`、`tmp/` 是不同生命周期的运行态。旧工作区可以保留历史路径，迁移前必须检索引用并保留恢复指针。

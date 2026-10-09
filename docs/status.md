@@ -28,6 +28,10 @@ Med Auto Cast 以 `publisher: one-person-lab` 和 `standard_agent` 角色加入 
 
 生产媒体、完整听审、医学复核与平台上传仍由具体制作任务分别验收。
 
+## 2026-10-08 工作区布局初始化能力
+
+工作台新增共享 `workspace_layout` 事实层和非破坏性 `init_workbench.py --upgrade`。新工作区会创建内容、作者/部署档案、可复用素材库、系列/单集生产、发布投影、交付、归档、运行态、预览和临时目录，并写入 `workspace.manifest.json` 与 `WORKSPACE.md`。`med_autocast.py inspect`、`environment_check.py` 和 `workbench_config validate` 会回报布局状态；缺目录只形成可修复诊断，不阻断 Progress First 的可消费产物，也不替代视觉、听感、医学或发布判断。当前制作工作台已实际升级并回读为 `ready`；源码测试与资源/载体一致性检查通过。该能力尚未自动迁移已有系列的生产路径，也不代表现有成片获得新的质量批准。
+
 ## 2026-10-01 Video Shotcraft 方法适配
 
 新增 `docs/video-shotcraft方法适配.md`，吸收镜头配方卡、单镜主运动、`prepare -> action -> reaction -> settle -> hold/rest` 动作弧、首帧/动作 strip/邻镜/整片审片、固定 seed 与显式时间、旁白/BGM/拟音分轨和带 BGM/无 BGM 双版本交付。方法作为导演与 Stage 交接建议，遵循 Progress First，不把 `shot_recipe` 或任何结构化字段变成阻断 DSL。工作台对垂体瘤全季的 12 集当前技术候选已生成静态审查报告；该报告只定位字幕重叠、长句、泛化事件名和多修订目录等返修点，不替代连续动态、完整听感、医学终审或公开发布授权。

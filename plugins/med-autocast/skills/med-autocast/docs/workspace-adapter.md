@@ -58,7 +58,16 @@ python3 runtime/native_helpers/med_autocast.py preflight-workbench --workspace /
 
 ## 新工作区与迁移
 
-按[安装与迁移](../runtime/workbench/docs/10_安装与迁移.md)初始化核心环境，并从随包 runtime/workbench/templates 复制作者、后端及系列模板。`runtime/workbench` 是通用核心来源，不含私人档案、媒体或权重；新工作区可复制核心 scripts、backends、templates、依赖清单，再登记自己的 workbench.yaml；推荐直接执行 `bash runtime/workbench/scripts/setup_workbench.sh --workspace <新建空目录>` 自动完成初始化和依赖安装。已有工作区不整体覆盖，先保留并核对本机改动。
+按[安装与迁移](../runtime/workbench/docs/10_安装与迁移.md)初始化核心环境，并从随包 runtime/workbench/templates 复制作者、后端及系列模板。`runtime/workbench` 是通用核心来源，不含私人档案、媒体或权重；新工作区可复制核心 scripts、backends、templates、依赖清单，再登记自己的 workbench.yaml；推荐直接执行 `bash runtime/workbench/scripts/setup_workbench.sh --workspace <新建空目录>` 自动完成初始化、标准目录和依赖安装。初始化会生成 `workspace.manifest.json` 与 `WORKSPACE.md`，两者只描述目录职责，不声称质量或发布状态。
+
+已有工作区不整体覆盖。若工作区缺少新目录或初始化入口，先执行：
+
+```sh
+python3 runtime/workbench/scripts/init_workbench.py \
+  --workspace /absolute/workspace --upgrade
+```
+
+或用该工作区的 `scripts/setup_workbench.sh`；升级只补齐缺失目录和入口标记。`med_autocast.py inspect` 与 `environment_check.py` 会回报 `workspace_layout` 的 `ready/partial` 状态，`partial` 是可修复诊断，不是 Stage 硬门，也不覆盖旧生产路径。
 
 核心依赖 PyYAML、Pillow、FFmpeg/ffprobe、ImageMagick 与配置字体；Python 3.11 以上。GPU、IndexTTS、Whisper、MLX/CUDA 的环境与模型保持独立。随包部署脚本只在明确安装/迁移任务中运行，不因一次检查自动安装模型或重启服务。
 # JS 动画与旁白基线入口

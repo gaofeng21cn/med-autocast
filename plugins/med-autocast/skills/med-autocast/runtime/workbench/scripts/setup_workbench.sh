@@ -25,11 +25,21 @@ done
 node -e 'if (Number(process.versions.node.split(".")[0]) < 20) { console.error("需要 Node.js 20+"); process.exit(1); }'
 if [[ ! -f "$workbench_root/workbench.yaml" ]]; then
   "$bootstrap_python" -B "$source_root/scripts/init_workbench.py" --workspace "$workbench_root"
+else
+  # Repair only missing layout roots/markers; preserve all existing projects.
+  "$bootstrap_python" -B "$source_root/scripts/init_workbench.py" --workspace "$workbench_root" --upgrade
 fi
 workbench_root="$(cd "$workbench_root" && pwd)"
-# Do not put runtimes in the versioned plugin cache or overwrite an old workspace.
-for file in requirements.txt package-lock.json scripts/environment_check.py; do
-  [[ -f "$workbench_root/$file" ]] || { echo "已有工作区缺少 $file；请由智能体核对本机改动后增量更新，或用 --workspace 新建空目录。" >&2; exit 1; }
+# Repair only missing portable entrypoints. Existing workspace files remain the
+# owner's version and are never replaced by this setup command.
+for file in requirements.txt package.json package-lock.json scripts/environment_check.py scripts/init_workbench.py scripts/workspace_layout.py; do
+  if [[ ! -f "$workbench_root/$file" ]]; then
+    source_file="$source_root/$file"
+    [[ -f "$source_file" ]] || { echo "随包缺少 $file；请检查安装内容。" >&2; exit 1; }
+    mkdir -p "$(dirname "$workbench_root/$file")"
+    cp "$source_file" "$workbench_root/$file"
+    echo "Added missing workbench entrypoint: $file" >&2
+  fi
 done
 runtime="$workbench_root/.venv"
 if [[ ! -x "$runtime/bin/python" ]]; then

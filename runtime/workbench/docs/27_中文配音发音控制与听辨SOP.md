@@ -16,6 +16,16 @@
 
 ## 当前工具用法
 
+全季可先生成非阻断的发音审计索引，定位高风险语境，再按段听辨：
+
+```bash
+python3 scripts/audit_pronunciation.py \
+  --workspace <工作台> --episodes <当前集清单.json> \
+  --output work/<series>/pronunciation-audit.json
+```
+
+它只列出“还”“重影”“长期”“生长”“调整”“抽血”等语境和当前 `tts_text`/Review 状态，不把规则命中当成错读，也不会阻断其他 Stage。
+
 `narration.json` 可为单个声段增加 `tts_text`：
 
 ```json

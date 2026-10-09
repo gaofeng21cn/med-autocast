@@ -68,3 +68,6 @@ metadata:
 
 
 中文发音先按完整语境确定，IndexTTS 2.5 的 `tts_text` 可用 `<还|HAI2>` 控制配音，`text` 保持审定正文；不跨后端直接发送该标签。改发音控制即重新合成目标段，明确拒用的旧音不得作为缓存复用。先审听首句/高风险术语所在整段，再听最终混音，未听保持 pending。 方法见[中文配音发音控制与听辨](../../../runtime/workbench/docs/27_中文配音发音控制与听辨SOP.md)。
+
+
+全季可运行 `scripts/audit_pronunciation.py` 生成高风险语境索引；它是 Review 定位材料，不是自动错读判定或阻断门。

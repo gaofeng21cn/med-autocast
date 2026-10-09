@@ -50,6 +50,7 @@ try {
       duration:window.__total,
       cuts:window.__cuts || [0, window.__total],
       cues:window.__score?.cues || [],
+      shots:window.__score?.shots || [],
       renderer_runtime: {
         renderer_id: window.__rendererId || null,
         requested_style_id: window.__requestedStyleId || window.__score?.style?.styleId || null,
@@ -98,6 +99,25 @@ try {
     execFileSync('ffmpeg',['-y','-loglevel','error','-pattern_type','glob','-i',path.join(output,`strip-s${index+1}-*.png`),'-vf','scale=400:-1,tile=4x3:padding=8:margin=8:color=white','-frames:v','1',path.join(output,sheet)]);
     motionStrips.push({scene:index+1,from:start,to:end,frames:files,sheet});
   }
+  // Subsecond flashes, contact and release can fall between uniform strip poses.
+  // Event images are inspection evidence, never semantic approval or a new gate.
+  const eventFrames=[];
+  for (const shot of timeline.shots) {
+   if(!Number.isFinite(shot.start)||!Number.isFinite(shot.end)||shot.end<=shot.start) continue;
+   for (const [event,local] of Object.entries(shot.events || {})) {
+    if (!Number.isFinite(local)) continue;
+    const at=shot.start+local;
+    if(at<rangeStart || at>=rangeEnd) continue;
+    for(const [phase,offset] of [['before',-.10],['at',0],['after',.12]]) {
+      const time=Math.max(shot.start,Math.min(shot.end-1/30,at+offset));
+      if(time<rangeStart || time>=rangeEnd) continue;
+      await page.evaluate(t=>window.__seek(t),time);
+      const name=`event-${String(shot.id).replace(/[^\p{L}\p{N}_-]/gu,'_')}-${String(event).replace(/[^\p{L}\p{N}_-]/gu,'_')}-${phase}.png`;
+      await page.locator('#film').screenshot({path:path.join(output,name)});
+      eventFrames.push({shot:shot.id,event,phase,time,file:name});
+    }
+   }
+  }
   const randomAccessChecks=[];
   for (let scene=1;scene<cuts.length;scene++) {
     const first = frames.filter(f=>f.scene===scene)[3];
@@ -113,7 +133,7 @@ try {
     if (!passed) errors.push(`乱序 seek 不确定: ${first.time.toFixed(3)}s`);
   }
   execFileSync('ffmpeg', ['-y','-loglevel','error','-pattern_type','glob','-i',path.join(output,'[0-9][0-9][0-9]-*.png'),'-vf',`scale=400:-1,tile=5x${Math.ceil(frames.length/5)}:padding=8:margin=8:color=white`,'-frames:v','1',path.join(output,'contact.jpg')]);
-  const report = {status:errors.length ? 'failed' : 'previewed', project, output, duration:timeline.duration, range:[rangeStart,rangeEnd], scenes:cuts.length-1, frames, motionStrips, errors, renderer_runtime:timeline.renderer_runtime, contact_sheet:path.join(output,'contact.jpg'), release_eligible:false};
+  const report = {status:errors.length ? 'failed' : 'previewed', project, output, duration:timeline.duration, range:[rangeStart,rangeEnd], scenes:cuts.length-1, frames, motionStrips, eventFrames, errors, renderer_runtime:timeline.renderer_runtime, contact_sheet:path.join(output,'contact.jpg'), release_eligible:false};
   report.text_observations=observeCues({cues:timeline.cues});
   report.quality_debt=frames.flatMap(f=>f.layout_findings.map(d=>({...d,time:f.time,scene:f.scene,owner_stage:'visual-review'})));
   report.semantic_quality_approved=false;

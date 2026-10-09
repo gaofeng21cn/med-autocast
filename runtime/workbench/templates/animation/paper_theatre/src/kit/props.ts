@@ -64,3 +64,28 @@ export function clipFastener(stage: Stage, x: number, y: number, angle = -0.1) {
     g.stroke();
   });
 }
+
+// The spine owns the fold. At full opening, the cover rests at the left edge
+// instead of obscuring a document. Contents retain the director's coordinates.
+export function paperFolder(
+  stage: Stage, pose: Pose, width: number, openness: number,
+  contents: () => void, options: {height?: number; color?: string} = {},
+) {
+  const height = options.height ?? width * .57;
+  const open = Math.max(0, Math.min(1, openness));
+  stage.group(pose, () => {
+    stage.paper({x:0,y:0,w:width,h:height,color:options.color ?? '#6d8884',seed:203,lift:4,name:'case-folder'});
+    stage.paper({x:-width*.33,y:-height*.50,w:width*.27,h:23,color:options.color ?? '#6d8884',seed:204,lift:1,name:'folder-tab'});
+    stage.paper({x:0,y:0,w:width*.94,h:height*.91,color:'#eee6d5',seed:205,lift:1,name:'folder-lining'});
+    contents();
+    stage.group({x:-width*.5,y:0}, () => {
+      const g=stage.g; g.scale(Math.max(.018, Math.cos(open*Math.PI/2)),1);
+      stage.paper({x:width*.5,y:0,w:width,h:height,color:options.color ?? '#74958f',seed:209,lift:open*5,name:'folder-cover'});
+      // A small cut-paper document symbol gives a closed cover an object identity.
+      g.save(); g.shadowColor='transparent';g.strokeStyle='#e7dec599';g.lineWidth=2;
+      g.strokeRect(width*.34,-height*.19,width*.17,height*.33);
+      for(let i=0;i<3;i++){g.beginPath();g.moveTo(width*.375,-height*.10+i*height*.065);g.lineTo(width*.475,-height*.10+i*height*.065);g.stroke();}
+      g.restore();
+    });
+  });
+}

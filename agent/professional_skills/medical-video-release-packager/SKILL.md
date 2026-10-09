@@ -80,7 +80,7 @@ video.mp4
 
 全季打包时逐集读取当前制作单、`out/current.json`、内部交付 manifest 和 publish 视频；代码纸剧场的母版必须是 `out/current.json` 实际指向的文件，`--delivery` 传内部 `deliveries/<series>/<episode>/manifest.json` 文件。预检返回 `passed` 只表示当前性、引用和字节一致，不能把待审的连续动态、完整听感或医学状态写成通过。
 
-每集只保留一个活动 `current/`。被替换的候选移到对应集的 `archive/<revision>/`，文档生成器从真实目录读取归档，不使用全季固定归档路径。发布清单、观看索引、SHA-256 清单和平台文案生成后必须回读；标题已有问号或感叹号时不要追加重复句号。具体方法见[全季交付回读与经验沉淀](../../../runtime/workbench/docs/25_全季交付回读与经验沉淀.md)。
+用户每集目录直接保留唯一最新版视频、封面、字幕和文案。被替换的交付移到工作台 `archive/deliveries/<series>/<episode>/<revision>/`，文档生成器从真实目录读取归档，不使用全季固定归档路径。发布清单、观看索引、SHA-256 清单和平台文案生成后必须回读；标题已有问号或感叹号时不要追加重复句号。具体方法见[全季交付回读与经验沉淀](../../../runtime/workbench/docs/25_全季交付回读与经验沉淀.md)。
 
 ## 面向用户的单一最新版交付
 

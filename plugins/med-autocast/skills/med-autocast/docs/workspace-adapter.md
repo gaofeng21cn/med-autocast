@@ -48,7 +48,7 @@ OPL 阶段输出以可引用产物为中心：返回真实 `artifact_refs` 与�
 python3 runtime/native_helpers/med_autocast.py preflight-workbench --workspace /absolute/workspace --series SERIES --episode EPISODE --plan productions/SERIES/EPISODE/review/REVISION/production_plan.yaml --master productions/SERIES/EPISODE/review/REVISION/video.mp4
 ```
 
-`--plan` 和 `--master` 来自当前任务确认的独立输入；不从待验证交付清单反推“当前版本”，不按前缀或修改时间猜测。支持制作单 video_production_plan/v2、v3 和交付 medical_video_review_package/v1、medical_video_series_delivery/v2，原文件原地读取，**不要求生成另一套 Med Auto Cast 制作单**。默认从登记 publish_root 读 manifest；可用 --delivery 指定精确清单、--source-review 指定原源片审查记录。
+`--plan` 和 `--master` 来自当前任务确认的独立输入；不从待验证交付清单反推“当前版本”，不按前缀或修改时间猜测。支持制作单 video_production_plan/v2、v3 和交付 medical_video_review_package/v1、medical_video_series_delivery/v2，原文件原地读取，**不要求生成另一套 Med Auto Cast 制作单**。默认读内部 deliveries 系列清单，旧工作区兼容读取 publish_root 的历史 manifest；可用 --delivery 指定精确清单、--source-review 指定原源片审查记录。
 
 代码纸剧场的 `--plan` 可以是 `project.json`，但 `--master` 必须来自该项目的 `out/current.json`；`--delivery` 必须是内部 `deliveries/<series>/<episode>/manifest.json` 文件。预检成功只证明当前性、引用和字节一致，不批准连续动态、完整听感、医学质量或公开发布。全季交付后的逐集审计、归档路径和文档回读见[全季交付回读与经验沉淀](../runtime/workbench/docs/25_全季交付回读与经验沉淀.md)。
 

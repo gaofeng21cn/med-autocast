@@ -238,8 +238,8 @@ def publish_manifest(catalog: dict, episodes: list[dict], reports: dict[str, dic
             "number": int(episode["number"]),
             "episode_id": episode["id"],
             "title": episode["title"],
-            "release_directory": str(catalog["_paths"]["publish_root"] / episode["id"]),
-            "video": str(catalog["_paths"]["publish_root"] / episode["id"] / "video.mp4") if ready else None,
+            "release_directory": os.path.relpath(catalog["_paths"]["publish_root"] / episode["id"], catalog["_workspace"] / "deliveries" / catalog["series_id"]),
+            "video": os.path.relpath(catalog["_paths"]["publish_root"] / episode["id"] / "video.mp4", catalog["_workspace"] / "deliveries" / catalog["series_id"]) if ready else None,
             "duration_seconds": qa.get("duration_seconds") if ready else None,
             "sha256": qa.get("sha256") if ready else None,
             "delivery_status": (

@@ -255,7 +255,7 @@ for check in (False, True):
         pack.ensure_file(target / filename, pack.platform_text(episode, platform), check, errors)
     pack.ensure_file(target / "发布交付包.md", pack.package_markdown(catalog, episode, qa), check, errors)
     pack.ensure_file(paths["publish_root"] / "README.md", pack.publish_index(catalog, episodes, reports), check, errors)
-    pack.ensure_file(paths["publish_root"] / "manifest.json", pack.publish_manifest(catalog, episodes, reports), check, errors)
+    pack.ensure_file(catalog["_workspace"] / "deliveries" / catalog["series_id"] / "manifest.json", pack.publish_manifest(catalog, episodes, reports), check, errors)
     assert not errors, errors
 ```
 

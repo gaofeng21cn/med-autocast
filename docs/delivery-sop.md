@@ -8,7 +8,7 @@ S10 文案只在登记 release_catalog 维护，含义变化交内容策划回�
 
 默认用 [preflight-workbench](workspace-adapter.md) 读取原合同；检查通过只证明对应引用和字节一致。审看包保留欠项，可按授权进入登记的 publish_root；不能另建平行交付入口。旧交付先保留恢复路径，单集更新不得覆盖其他集。公开上传需当前授权和平台回执，技术通过或进入 publish 不等于医学、听感或上传完成。
 
-全季交付时按每集的当前制作单、`out/current.json`、publish manifest 和视频逐一回读。历史交付归档到工作台 `archive/deliveries/<series>/<episode>/<revision>/`，位于用户交付目录之外，不能把一集的归档路径写成全季共同路径；文档生成器应从实际目录读取归档。交付文档、SHA-256 清单和观看索引生成后再次回读，避免状态和活动版本漂移。Progress First 下，文档或单个回读失败时保留已有审看包并记录质量债务，修复 owner 后继续；不把建议字段缺失当作媒体阻断。
+全季交付时按每集的当前制作单、`out/current.json`、内部交付 manifest 和 publish 视频逐一回读。历史交付归档到工作台 `archive/deliveries/<series>/<episode>/<revision>/`，位于用户交付目录之外，不能把一集的归档路径写成全季共同路径；文档生成器应从实际目录读取归档。交付文档、SHA-256 清单和观看索引生成后再次回读，避免状态和活动版本漂移。Progress First 下，文档或单个回读失败时保留已有审看包并记录质量债务，修复 owner 后继续；不把建议字段缺失当作媒体阻断。
 
 ## 面向用户的单一最新版交付
 

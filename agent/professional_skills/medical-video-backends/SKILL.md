@@ -71,3 +71,5 @@ metadata:
 
 
 全季可运行 `scripts/audit_pronunciation.py` 生成高风险语境索引；它是 Review 定位材料，不是自动错读判定或阻断门。
+
+优先消费上游已标注读音的配音稿，按当前模型真实词表生成 model_text 并保留请求输入；IndexTTS 的 jqx-u/ü 转换不能忽略。只重配受影响声段，拒用音不复用，未变轨继续使用。 方法见[初版质量与高效返修](../../../runtime/workbench/docs/28_初版质量与高效返修流程.md)。

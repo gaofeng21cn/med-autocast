@@ -84,3 +84,5 @@ H3按[调研策略](../../../runtime/workbench/docs/12_H3调研与制作策略.m
 纸剧场新集使用 paper_project init；现有作品使用 adopt 原地登记，不重建已审媒体。inspect 回读当前项目；library 只读检索并支持独立归档、完整看图库和精确版本复制。源码、动作样例、分轨音乐及来源随包保存，旧片不随库升级改变。恢复先读实际输入和回执，避免重新生成未变音轨。具体命令见[单集工具与局部返修](../../../runtime/workbench/docs/20_纸剧场单集工具与局部返修.md)、[素材策展](../../../runtime/workbench/docs/23_可复用素材保管与策展.md)。
 
 全季恢复或交付时，先从 `workbench.yaml`、系列登记、每集 `project.json` 与 `out/current.json` 重建当前版本，再检查内部交付 manifest 与 publish 视频；不要从旧 checkpoint、目录排序或修改时间猜版本。逐集技术预检通过后再汇总全季审计。用户每集目录直接保留唯一最新版文件，Score、旁白和QA留过程目录；旧交付归档到工作台 `archive/deliveries/<series>/<episode>/<revision>/`；文档应按实际目录记录归档路径。发现版本漂移、旧文档或审计缺口时，保留可消费媒体并记录质量债务，修复 owner 后继续，不把 Progress First 改成脚本硬阻断。方法见[全季交付回读与经验沉淀](../../../runtime/workbench/docs/25_全季交付回读与经验沉淀.md)。
+
+提高初版下限靠患者任务、联合导演稿、语境注音、首句/术语小样与代表镜头。返修用 paper_project revise 复制独立文件，不硬链接可编辑工程；只重做受影响依赖，一次正式编码与打包。 方法见[初版质量与高效返修](../../../runtime/workbench/docs/28_初版质量与高效返修流程.md)。

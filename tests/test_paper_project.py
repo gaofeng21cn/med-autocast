@@ -207,6 +207,7 @@ class ProjectTests(unittest.TestCase):
         model = root / "models"
         model.mkdir()
         (model / "config.yaml").write_text("config")
+        (model / "pinyin.vocab").write_text("YI2\nXVE4\nHAI2\n")
         reference = root / "reference.wav"
         reference.write_bytes(b"voice")
         python = runtime / ".venv/bin/python"
@@ -295,3 +296,58 @@ class ProjectTests(unittest.TestCase):
             pp.assert_narration(p, {"narration": "narration.json"})
         with self.assertRaisesRegex(ValueError, "与正文不同"):
             rn.tts_text({"id": "B01", "text": "还清楚", "tts_text": "<仍|HAI2>清楚"})
+
+    def test_native_vocabulary_resolves_blood_and_rejects_unknown_token(self):
+        self.assertEqual(rn.indextts_text("抽<血|XUE4>", {"XVE4"}), "抽<血|XVE4>")
+        self.assertEqual(rn.indextts_text("<还|HAI2>清楚", {"HAI2"}), "<还|HAI2>清楚")
+        with self.assertRaisesRegex(ValueError, "不支持注音"):
+            rn.indextts_text("<血|XYZ4>", {"XVE4"})
+
+    def test_retime_preserves_editorial_caption_breaks(self):
+        p = self.root
+        pp.save(p / "project.json", {"schema": "paper_project/v1", "series_id": "s", "episode_id": "e",
+            "score": "score.json", "voice": "voice.wav", "beat_shots": {"B01": "s1"}})
+        (p / "voice.wav").write_bytes(b"new-voice")
+        pp.save(p / "score.json", {"duration": 10, "shots": [{"id": "s1", "start": 0, "end": 10, "events": {"contact": 2}}],
+            "cues": [{"start": 1, "end": 4, "text": "第一句。"}, {"start": 4, "end": 9, "text": "第二句。"}]})
+        pp.save(p / "audio/narration_beats.json", {"duration": 12, "beats": [{"id": "B01", "text": "第一句。第二句。", "start": 1, "end": 11}]})
+        args = argparse.Namespace(project=p, workspace=p, reference_score=None)
+        with patch.object(pp, "get_project", return_value=(p, pp.read(p / "project.json"))):
+            pp.retime(args)
+        score = pp.read(p / "score.json")
+        self.assertEqual([q["text"] for q in score["cues"]], ["第一句。", "第二句。"])
+        self.assertEqual(score["shots"][0]["events"], {"contact": 2})
+
+    def test_revision_edit_does_not_mutate_source(self):
+        src = self.root / "v1"; src.mkdir()
+        pp.save(src / "project.json", {"narration": "narration.json", "score": "score.json"})
+        pp.save(src / "narration.json", {"beats": [{"id": "B01", "text": "原文"}]})
+        pp.save(src / "score.json", {"cues": []})
+        target = self.root / "v2"
+        pp.revise(argparse.Namespace(workspace=self.root, project=target, from_project=src))
+        (target / "narration.json").write_text("new")
+        self.assertEqual(pp.read(src / "narration.json")["beats"][0]["text"], "原文")
+
+    def test_pronunciation_audit_checks_each_word_and_rejected_take(self):
+        import yaml
+        p = self.root / "productions/s/e/v1"
+        pp.save(p / "project.json", {"narration": "input.json"})
+        pp.save(p / "input.json", {"beats": [{"id": "B01", "text": "还看得到重影。",
+            "tts_text": "<还|HAI2>看得到重影。"}]})
+        take = p / "audio/segments/one.wav"
+        take.parent.mkdir(parents=True)
+        take.write_bytes(b"audio")
+        pp.save(take.with_suffix(".json"), {"pronunciation_review": {"status": "rejected"}})
+        pp.save(p / "audio/narration_beats.json", {"beats": [{"id": "B01", "audio": str(take)}]})
+        (self.root / "workbench.yaml").write_text(yaml.safe_dump({
+            "series": {"s": {"episodes": {"e": {"project": "productions/s/e/v1"}}}}}))
+        script, _ = resolve_tool(self.root, "audit_pronunciation")
+        self.assertIn("runtime/workbench", str(script))
+        output = self.root / "audit.json"
+        subprocess.run([sys.executable, str(script), "--workspace", str(self.root),
+            "--series", "s", "--output", str(output)], check=True, capture_output=True)
+        audit = pp.read(output)
+        rows = {r["phrase"]: r for r in audit["targets"]}
+        self.assertTrue(rows["还"]["tts_control_present"])
+        self.assertFalse(rows["重影"]["tts_control_present"])
+        self.assertEqual(len(audit["confirmed_errors"]), 2)

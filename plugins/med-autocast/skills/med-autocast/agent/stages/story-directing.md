@@ -21,3 +21,5 @@
 - `agent/professional_skills/medical-video-visual-qa/SKILL.md`
 
 先读 `docs/production-sop.md` 的阶段映射；按 `docs/workspace-adapter.md` 选择实际工具和原输入合同。后续补充或返修从受影响职责继续，不为六阶段顺序重复制作。
+
+旁白初稿就注明多音字、医学术语、数字单位和缩写的语境读音；联合定稿交付审定正文与可执行配音输入（如 IndexTTS tts_text），先做首句/术语整段和代表镜头小样。不是等成片发现错读才补标记。 方法见 `runtime/workbench/docs/28_初版质量与高效返修流程.md`。

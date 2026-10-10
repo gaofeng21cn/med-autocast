@@ -3,4 +3,8 @@ schema: medical_video_workbench/v2
 active_profiles:
   author: profiles/authors/example_author.yaml
   media_backends: profiles/backends/example_deployment.yaml
+authorities:
+  workflow: docs/04_医学科普视频系列SOP.md
+  first_draft_quality: docs/28_初版质量与高效返修流程.md
+  pronunciation: docs/27_中文配音发音控制与听辨SOP.md
 series: {}

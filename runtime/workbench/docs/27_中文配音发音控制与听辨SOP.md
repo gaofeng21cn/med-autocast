@@ -6,6 +6,12 @@
 
 正文、配音专用输入、实际音频是三个对象。字幕和发布文案使用审定正文；配音输入可含后端原生注音；质量判断针对当前音频。机器核对正文身份、音频字节和缓存，AI/审听者判断语义及实际读音。注音输入成功、普通中文 ASR 同字转写、响度通过均不是发音通过。
 
+## 配音稿交接就完成语境注音
+
+多音字的正确读音属于配音稿，不是合成后补救项。内容策划写初稿时检查完整语境，导演联合收敛时将首句、多音字和医学术语的期望读音随稿交给制作。对于实际会合成的中文稿，优先准备可直接消费的 `tts_text`，不只在旁边写“注意读音”。可附 `pronunciation_notes` 说明词、所在声段/上下文、期望读音及理由；形式灵活，缺项记质量债，不让机械词表决定全文含义。品牌和疾病专用词表存作者/系列档案，通用 Skill 不写死品牌。
+
+同一“还”可在不同句中读 hái 或 huán；整词、数字单位和缩写也要按语境处理。不得按单字全局自动注音。低歧义正文不必逐字加标签。未知医学词先查可靠读音，再做完整声段小样；先改变表达本身仅适用于内容与导演确认的同义改写。
+
 ## 制作顺序
 
 1. 内容策划和导演通读全文，按语境标出多音字、医学术语、数字单位、缩写、引号与停顿边界。优先覆盖开头第一句及之前出现过的问题词。记录词所在声段、完整上下文、期望读音与理由；可用 Markdown 或 narration 中的补充说明，不用词表缺项阻断其他制作。
@@ -20,11 +26,11 @@
 
 ```bash
 python3 scripts/audit_pronunciation.py \
-  --workspace <工作台> --episodes <当前集清单.json> \
+  --workspace <工作台> --series <系列ID> \
   --output work/<series>/pronunciation-audit.json
 ```
 
-它只列出“还”“重影”“长期”“生长”“调整”“抽血”等语境和当前 `tts_text`/Review 状态，不把规则命中当成错读，也不会阻断其他 Stage。
+它只列出“还”“重影”“长期”“生长”“调整”“抽血”等语境和对应词在 `tts_text` 中的注音覆盖、实际模型输入与 Review 状态，不把规则命中当成错读，也不会阻断其他 Stage。
 
 `narration.json` 可为单个声段增加 `tts_text`：
 
@@ -38,6 +44,8 @@ python3 scripts/audit_pronunciation.py \
 }
 ```
 
+后端在启动推理前按实际模型的 `pinyin.vocab` 转换并核对标签。例如标准拼音 `XUE4` 在当前 IndexTTS 词表中为 `XVE4`；jqx 后的 u/ü 不能凭标签看起来正确就推定被执行。声段回执分别保存 `tts_text` 和真正送入模型的 `model_text`。不支持的 token 只限制该次合成，其他镜头和素材工作继续。
+
 去掉注音标签后必须还原同一正文；正文不能偷换成拼音，也不为绕开读音任意降低表达质量。`paper_project narrate --beat B01` 将配音输入纳入缓存，未变声段继续复用。`audio/pronunciation-review.json` 提供全段原音、当前轨道哈希、时间与请求读音，默认 pending；它是听辨索引，不是自动发音判定器。
 
 确认旧声段读错时，在其 `audio/segments/<cache_key>.json` 的 `pronunciation_review` 记录 `status: rejected`、词/上下文、期望与实际听到的读音、审听者和该 WAV 的 sha256。冻结历史不改写，在新修订中保留旧音与用户反馈。render_narration 不复用明确拒用 take；paper_project 的混音/导出/交付不会把已拒用段当有效旁白。pending 可继续制作和候选审看。
@@ -47,3 +55,5 @@ python3 scripts/audit_pronunciation.py \
 ## Review 与 Meta Review
 
 Review 查实际读音和全段听感；Meta Review 查读音问题是否被修复、源音到字幕/镜头/最终混音是否同版、覆盖范围是否真实。缺失记录或尚未审听作为质量债继续交接；已知读错且没有安全新 take 时继续其他 Stage，并明确受影响声音不能用于有效交付。声音审核与医学审核、动态审核和平台发布分开。
+
+`build_no_music_mix --project P` 导出当前旁白＋拟音的独立无 BGM 版本，先核对已完成 mix 的旁白和 Score 字节；不改变正式混音。可通过 MAC workbench_tool 调用。配音前注音索引与配音后听辨是不同用途，不将“有标注”当成“读对”。

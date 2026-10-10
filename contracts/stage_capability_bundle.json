@@ -49,21 +49,23 @@
       "review_scope": ["evidence_fit", "audience_fit", "series_coverage", "baseline_clarity"]
     },
     "story-directing": {
-      "work_packages": ["episode_blueprint", "visual_treatment", "beat_grid", "shot_plan", "animatic"],
+      "work_packages": ["episode_blueprint", "visual_treatment", "beat_grid", "shot_plan", "animatic", "pronunciation_annotated_narration"],
       "input_artifact_advisories": [{"kind": "series_bible", "required": false, "purpose": "系列共同世界和分集边界"}, {"kind": "evidence_bundle", "required": false, "purpose": "本集医学事实和不确定性"}, {"kind": "author_baseline", "required": false, "purpose": "人物、声音、品牌和风格基线"}],
       "output_artifact_advisories": [
         {"kind": "episode_blueprint", "recommended_ref": "productions/<series>/<episode>/episode_blueprint.yaml"},
         {"kind": "visual_treatment", "recommended_ref": "productions/<series>/<episode>/visual_treatment.md"},
         {"kind": "shot_plan", "recommended_ref": "productions/<series>/<episode>/shot_plan.json"},
         {"kind": "animatic", "recommended_ref": "productions/<series>/<episode>/review/animatic/"},
-        {"kind": "executable_style_frame", "recommended_ref": "productions/<series>/<episode>/review/style-frame/", "purpose": "真实构图与 signature shot 短动作；可消费草稿，不是启动门"}
+        {"kind": "executable_style_frame", "recommended_ref": "productions/<series>/<episode>/review/style-frame/", "purpose": "真实构图与 signature shot 短动作；可消费草稿，不是启动门"},
+        {"kind": "pronunciation_annotated_narration", "recommended_ref": "productions/<series>/<episode>/preproduction/narration.json", "purpose": "审定正文、语境读音与可执行配音输入；形式建议不阻断制作"}
       ],
       "tool_refs": [
         {"tool_id": "paper_project", "surface": "workbench_tool", "purpose": "检查镜头、素材和邻镜预览；library 只读查询纸件、环境、动作和组件", "effect": "write_when_authorized"},
         {"tool_id": "build_timeline_review", "surface": "workbench_tool", "purpose": "把旁白、字幕和画面放在同一时间轴定位", "effect": "write_when_authorized"},
         {"tool_id": "render_javascript_animation", "surface": "workbench_tool", "purpose": "在正式编码前预览动作和构图", "effect": "write_when_authorized"},
         {"tool_id": "check_animation_assets", "surface": "workbench_tool", "purpose": "检查素材来源、分层和镜头覆盖", "effect": "read_only"},
-        {"tool_id": "animation_lab", "surface": "workbench_tool", "purpose": "按需加载风格方法并实际看原创媒介动作样例；不覆盖现有单集", "effect": "write_when_authorized"}
+        {"tool_id": "animation_lab", "surface": "workbench_tool", "purpose": "按需加载风格方法并实际看原创媒介动作样例；不覆盖现有单集", "effect": "write_when_authorized"},
+        {"tool_id": "audit_pronunciation", "surface": "workbench_tool", "purpose": "配音前按具体语境定位注音遗漏，不判定读音正确", "effect": "write_when_authorized"}
       ],
       "route_back_targets": ["evidence-plan"],
       "review_scope": ["patient_task", "visual_causality", "style_fit", "animatic_readability", "subtitle_safe_area"]
@@ -83,7 +85,9 @@
         {"tool_id": "render_edge_tts", "surface": "workbench_tool", "purpose": "无专用声线时的整篇保底旁白", "effect": "generate"},
         {"tool_id": "paper_project", "surface": "workbench_tool", "purpose": "单集制作与返修；library 显式复制精确素材版本、保存图像及代码/动作/声音；init/adopt 选择本集风格与 renderer", "effect": "write"},
         {"tool_id": "render_javascript_animation", "surface": "workbench_tool", "purpose": "统一预览和正式渲染入口", "effect": "write"},
-        {"tool_id": "animation_lab", "surface": "workbench_tool", "purpose": "按需加载风格方法并实际看原创媒介动作样例；不覆盖现有单集", "effect": "write_when_authorized"}
+        {"tool_id": "animation_lab", "surface": "workbench_tool", "purpose": "按需加载风格方法并实际看原创媒介动作样例；不覆盖现有单集", "effect": "write_when_authorized"},
+        {"tool_id": "audit_pronunciation", "surface": "workbench_tool", "purpose": "按当前项目定位逐词注音、真实原音与听辨待审范围，不批准实际发音", "effect": "write_when_authorized"},
+        {"tool_id": "build_no_music_mix", "surface": "workbench_tool", "purpose": "导出当前旁白与拟音的无BGM审听音轨，保留正式混音", "effect": "write_when_authorized"}
       ],
       "route_back_targets": ["story-directing"],
       "review_scope": ["asset_currentness", "voice_consistency", "timeline_alignment", "renderer_reproducibility"]
@@ -101,7 +105,9 @@
         {"tool_id": "build_timeline_review", "surface": "workbench_tool", "purpose": "同步查看画面、PCM、SRT和ASR定位", "effect": "write_when_authorized"},
         {"tool_id": "audio_baseline", "surface": "workbench_tool", "purpose": "检测响度异常并定位听审重点", "effect": "write_when_authorized"},
         {"tool_id": "render_javascript_animation", "surface": "workbench_tool", "purpose": "生成固定帧和动作 strip", "effect": "write_when_authorized"},
-        {"tool_id": "animation_lab", "surface": "workbench_tool", "purpose": "按需加载风格方法并实际看原创媒介动作样例；不覆盖现有单集", "effect": "write_when_authorized"}
+        {"tool_id": "animation_lab", "surface": "workbench_tool", "purpose": "按需加载风格方法并实际看原创媒介动作样例；不覆盖现有单集", "effect": "write_when_authorized"},
+        {"tool_id": "audit_pronunciation", "surface": "workbench_tool", "purpose": "按当前项目定位逐词注音、真实原音与听辨待审范围，不批准实际发音", "effect": "write_when_authorized"},
+        {"tool_id": "build_no_music_mix", "surface": "workbench_tool", "purpose": "导出当前旁白与拟音的无BGM审听音轨，保留正式混音", "effect": "write_when_authorized"}
       ],
       "route_back_targets": ["evidence-plan", "story-directing", "media-production"],
       "review_scope": ["technical", "visual", "continuous_motion", "full_listening", "medical"]
@@ -122,7 +128,8 @@
       "tool_refs": [
         {"tool_id": "med_autocast.py preflight-workbench", "surface": "native_helper", "purpose": "确认当前制作单、候选和交付指针一致", "effect": "read_only"},
         {"tool_id": "paper_project", "surface": "workbench_tool", "purpose": "读取精确版本和邻镜审片证据", "effect": "read_only"},
-        {"tool_id": "qa_series_videos", "surface": "workbench_tool", "purpose": "复核最终候选的技术与交付范围", "effect": "write_when_authorized"}
+        {"tool_id": "qa_series_videos", "surface": "workbench_tool", "purpose": "复核最终候选的技术与交付范围", "effect": "write_when_authorized"},
+        {"tool_id": "audit_pronunciation", "surface": "workbench_tool", "purpose": "按当前项目定位逐词注音、真实原音与听辨待审范围，不批准实际发音", "effect": "write_when_authorized"}
       ],
       "route_back_targets": ["evidence-plan", "story-directing", "media-production", "visual-review"],
       "review_scope": ["stage_fit", "cross_stage_consistency", "review_coverage", "quality_debt_impact", "route_decision"]

@@ -50,6 +50,23 @@ def audio_rejected(meta):
     return False
 
 
+def indextts_text(value, vocabulary):
+    """Resolve jqx-u spelling against the actual model vocabulary, not a guess."""
+    def replace(match):
+        word, phones = match.groups()
+        if not re.search(r"[\u4e00-\u9fff]", word):
+            return match[0]
+        tokens = phones.upper().split()
+        actual = []
+        for token in tokens:
+            canonical = re.sub(r"^([JQX])[UÜ]", r"\1V", token)
+            if canonical not in vocabulary:
+                raise ValueError(f"IndexTTS 当前词表不支持注音 {token}（{word}）；请修正本段发音输入")
+            actual.append(canonical)
+        return "<" + word + "|" + " ".join(actual) + ">"
+    return ANNOTATION.sub(replace, value)
+
+
 def synthesize(root, narration, output, series=None, selected=None, force=False):
     root = Path(root).resolve()
     output = Path(output).resolve()
@@ -118,9 +135,17 @@ def synthesize(root, narration, output, series=None, selected=None, force=False)
         spoken = tts_text(b)
         if spoken != b["text"] and spec["definition"] != "indextts_2_5":
             raise ValueError("当前后端不支持 IndexTTS 原生注音；请适配该后端的发音控制，不会朗读标记或静默换声线")
+        actual = spoken
+        if ANNOTATION.search(spoken) and spec["definition"] == "indextts_2_5":
+            vocab = model / "pinyin.vocab"
+            if not vocab.is_file():
+                raise ValueError("缺少 IndexTTS 拼音词表，无法核对原生注音；未启动模型推理")
+            actual = indextts_text(spoken, set(vocab.read_text().splitlines()))
         cache_input = {"text": b["text"], "settings": settings}
         if spoken != b["text"]:
             cache_input["tts_text"] = spoken
+        if actual != spoken:
+            cache_input["model_text"] = actual
         key = digest(cache_input)
         target = output / "segments" / f"{key}.wav"
         receipt = target.with_suffix(".json")
@@ -130,6 +155,7 @@ def synthesize(root, narration, output, series=None, selected=None, force=False)
             valid = (
                 meta.get("sha256") == hashlib.sha256(target.read_bytes()).hexdigest()
                 and meta.get("tts_text", meta.get("text")) == spoken
+                and meta.get("model_text", meta.get("tts_text", meta.get("text"))) == actual
                 and not audio_rejected(meta)
             )
         if selected and b["id"] not in selected and not valid:
@@ -138,8 +164,8 @@ def synthesize(root, narration, output, series=None, selected=None, force=False)
             )
         if not valid or (force and (not selected or b["id"] in selected)):
             target.parent.mkdir(exist_ok=True)
-            jobs.append({**b, "output": str(target), "key": key})
-        records.append({**b, "audio": str(target), "cache_key": key})
+            jobs.append({**b, "model_text": actual, "output": str(target), "key": key})
+        records.append({**b, "model_text": actual, "audio": str(target), "cache_key": key})
     if jobs:
         # Synthesize into a private staging directory; failed retries preserve successful takes.
         staging = tempfile.TemporaryDirectory(prefix="mac-takes-", dir=output)
@@ -223,6 +249,7 @@ def synthesize(root, narration, output, series=None, selected=None, force=False)
                         "sha256": hashlib.sha256(target.read_bytes()).hexdigest(),
                         "text": b["text"],
                         "tts_text": tts_text(b),
+                        "model_text": b["model_text"],
                         "pronunciation_review": {"status": "pending"},
                         "baseline": settings,
                         "full_listening": "pending",
@@ -294,6 +321,7 @@ def synthesize(root, narration, output, series=None, selected=None, force=False)
         "method": "先审听各声段原音，再复核最终混音；注音输入与ASR同字转写均不证明实际读音",
         "beats": [{
             "id": b["id"], "text": b["text"], "tts_text": tts_text(b),
+            "model_text": b["model_text"],
             "audio": b["audio"],
             "sha256": hashlib.sha256(Path(b["audio"]).read_bytes()).hexdigest(),
             "start": b["start"], "end": b["end"],

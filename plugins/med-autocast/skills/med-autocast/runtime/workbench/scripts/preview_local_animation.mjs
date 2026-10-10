@@ -6,6 +6,7 @@ import path from 'node:path';
 import {execFileSync} from 'node:child_process';
 import {once} from 'node:events';
 import {observeLayout,observeCues} from './layout_observations.mjs';
+import {captureFilm} from './capture_frame.mjs';
 
 const config = JSON.parse(await fs.readFile(process.argv[2], 'utf8'));
 const project = path.resolve(config.project_root);
@@ -75,7 +76,7 @@ try {
       declared_texts:(()=>{ try { return typeof window.TEXTS==='function' ? window.TEXTS(time) : null; } catch(error) { return {status:'unavailable',error:String(error)}; } })(),
     }; }, point.time);
     const filename = `${String(index).padStart(3,'0')}-s${point.scene}-${point.time.toFixed(2)}.png`;
-    await page.locator('#film').screenshot({path:path.join(output,filename)});
+    await captureFilm(page,width,height,path.join(output,filename));
     const overlaps = [];
     const layout = state.layout;
     if (layout?.subtitle && Array.isArray(layout.subjects)) {
@@ -92,7 +93,7 @@ try {
       const time=Math.min(timeline.duration-1/30,start+span*(pose+.25)/12);
       await page.evaluate(t=>window.__seek(t),time);
       const filename=`strip-s${index+1}-${String(pose).padStart(2,'0')}.png`;
-      await page.locator('#film').screenshot({path:path.join(output,filename)});
+      await captureFilm(page,width,height,path.join(output,filename));
       files.push(filename);
     }
     const sheet=`strip-s${index+1}.jpg`;
@@ -113,7 +114,7 @@ try {
       if(time<rangeStart || time>=rangeEnd) continue;
       await page.evaluate(t=>window.__seek(t),time);
       const name=`event-${String(shot.id).replace(/[^\p{L}\p{N}_-]/gu,'_')}-${String(event).replace(/[^\p{L}\p{N}_-]/gu,'_')}-${phase}.png`;
-      await page.locator('#film').screenshot({path:path.join(output,name)});
+      await captureFilm(page,width,height,path.join(output,name));
       eventFrames.push({shot:shot.id,event,phase,time,file:name});
     }
    }
@@ -123,11 +124,11 @@ try {
     const first = frames.filter(f=>f.scene===scene)[3];
     if (!first) continue;
     await page.evaluate(time => window.__seek(time), first.time);
-    const sequential = await page.locator('#film').screenshot();
+    const sequential = await captureFilm(page,width,height);
     await page.evaluate(time => window.__seek(time), timeline.duration-1/30);
     await page.evaluate(time => window.__seek(time), 0);
     await page.evaluate(time => window.__seek(time), first.time);
-    const randomAccess = await page.locator('#film').screenshot();
+    const randomAccess = await captureFilm(page,width,height);
     const passed=sequential.equals(randomAccess);
     randomAccessChecks.push({scene,time:first.time,passed});
     if (!passed) errors.push(`乱序 seek 不确定: ${first.time.toFixed(3)}s`);

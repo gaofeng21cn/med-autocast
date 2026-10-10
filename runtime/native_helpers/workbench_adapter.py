@@ -24,6 +24,8 @@ TOOLS = {
         "generate",
         "按明确旁白输入和声段生成；自动选择登记的独立声音环境",
     ),
+    "audit_pronunciation": ("write", "从当前系列定位具体词的注音覆盖、原音与待听范围；不判断发音通过"),
+    "build_no_music_mix": ("write", "导出绑定当前旁白与事件的无BGM审听音轨；不改正式混音"),
     "workbench_config": ("read_only", "配置、作者覆盖、依赖和资产校验"),
     "media_backend": ("network_read", "后端解析和按需服务诊断；不生成媒体"),
     "configure_voice": ("write", "显式选择参考声线或 Edge，保留参考音频并重置声线待审"),
@@ -63,7 +65,7 @@ TOOLS = {
 }
 
 
-CANONICAL_TOOLS = {"animation_lab", "paper_project", "render_narration", "render_javascript_animation"}
+CANONICAL_TOOLS = {"animation_lab", "paper_project", "render_narration", "render_javascript_animation", "audit_pronunciation", "build_no_music_mix"}
 
 
 def resolve_tool(root: Path, name: str, bundled=False) -> tuple[Path, Path]:

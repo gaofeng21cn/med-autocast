@@ -5,6 +5,7 @@ import fs from 'node:fs/promises';
 import path from 'node:path';
 import {spawn, execFileSync} from 'node:child_process';
 import {once} from 'node:events';
+import {captureFilm} from './capture_frame.mjs';
 const config = JSON.parse(await fs.readFile(process.argv[2], 'utf8'));
 const project = path.resolve(config.project_root);
 const target = path.resolve(config.output);
@@ -72,7 +73,7 @@ try {
     if(!last||last.shot!==identity.shot||last.style_id!==identity.style_id||last.renderer_id!==identity.renderer_id)
       styleSequence.push({...identity,start:frame/fps});
     if(errors.length) throw Error(errors.join('\n'));
-    const png=await page.locator('#film').screenshot({type:'png'});
+    const png=await captureFilm(page,width,height);
     if(pipeError || encoder.exitCode!==null) throw Error(fferror||String(pipeError||'编码提前结束'));
     if(!encoder.stdin.write(png)) await once(encoder.stdin,'drain');
     if(frame===0 || frame===Math.floor(frames/2) || frame===frames-1) await fs.writeFile(path.join(temp,`frame-${frame}.png`),png);

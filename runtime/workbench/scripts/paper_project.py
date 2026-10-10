@@ -319,6 +319,7 @@ def inspect(a):
         if (p / "out/current.json").exists()
         else None,
         "commands": [
+            "revise",
             "assets",
             "library",
             "narrate",
@@ -366,6 +367,32 @@ def build(a):
     return {"status": "built", "project": str(p), "entry": c["entry"]}
 
 
+def revise(a):
+    """Create independent editable bytes; register a successor after it is rendered."""
+    source = a.from_project.resolve()
+    target = a.project.resolve()
+    if not source.is_relative_to(a.workspace) or not target.is_relative_to(a.workspace):
+        raise ValueError("修订源与目标须位于当前工作区")
+    if target.exists():
+        raise ValueError("修订目标已存在；请恢复现有修订或选择新的明确路径")
+    config = read(source / "project.json")
+    shutil.copytree(source, target, ignore=shutil.ignore_patterns(
+        "out", "qa", "dist", "history", "node_modules", "__pycache__"))
+    evidence = source / "qa/asset-reviews"
+    if evidence.is_dir():
+        shutil.copytree(evidence, target / "qa/asset-reviews")
+    for name in ("project.json", config["narration"], config["score"]):
+        if (target / name).is_file() and os.path.samefile(source / name, target / name):
+            raise ValueError("修订文件没有隔离；未注册为当前版本")
+    save(target / "revision.json", {
+        "source_project": str(source), "source_score_sha256": sha(source / config["score"]),
+        "source_narration_sha256": sha(source / config["narration"]),
+        "copy_method": "independent_files", "registered_as_current": False,
+        "review_inheritance": "unchanged_asset_evidence_only",
+    })
+    return {"status": "revision_created", "project": str(target), "source": str(source)}
+
+
 def assert_built(p):
     if not (p / "dist/build-receipt.json").exists():
         raise ValueError("请先 build，生成绑定当前源码的 JS")
@@ -386,7 +413,7 @@ def assert_built(p):
 
 
 def assert_narration(p, c):
-    from render_narration import narration_signature, audio_rejected
+    from render_narration import narration_signature, audio_rejected, indextts_text, tts_text, ANNOTATION
     receipt = p / "audio/narration_beats.json"
     if receipt.exists():
         beats = read(receipt)["beats"]
@@ -395,6 +422,14 @@ def assert_narration(p, c):
         ):
             raise ValueError("旁白正文或发音控制已变化，请重新配音改动声段")
         for beat in beats:
+            baseline = read(receipt).get("baseline", {})
+            vocab = Path(baseline.get("model_root", ".")) / "pinyin.vocab"
+            spoken = tts_text(beat)
+            if baseline.get("definition") == "indextts_2_5" and ANNOTATION.search(spoken):
+                if not vocab.is_file():
+                    raise ValueError("无法核对当前 IndexTTS 注音词表")
+                if beat.get("model_text", spoken) != indextts_text(spoken, set(vocab.read_text().splitlines())):
+                    raise ValueError(f"声段 {beat['id']} 原生注音未按当前词表转换，请重配该声段")
             take = Path(beat["audio"]).with_suffix(".json")
             if take.is_file() and audio_rejected(read(take)):
                 raise ValueError(f"声段 {beat['id']} 已被明确拒用，请重新配音该声段")
@@ -404,6 +439,9 @@ def narrate(a):
     p, c = get_project(a)
     from render_narration import synthesize
 
+    prior = p / "audio/narration_beats.json"
+    if prior.is_file():
+        save(p / "audio/previous-narration_beats.json", read(prior))
     result = synthesize(
         a.workspace, p / c["narration"], p / "audio", c["series_id"], a.beat, a.force
     )
@@ -417,6 +455,8 @@ def narrate(a):
 def retime(a):
     p, c = get_project(a)
     score = read(p / c["score"])
+    reference = getattr(a, "reference_score", None)
+    old_score = read(reference) if reference else read(p / c["score"])
     receipt = read(p / "audio/narration_beats.json")
     mapping = c["beat_shots"]
     byshot = {mapping.get(b["id"]): b for b in receipt["beats"]}
@@ -434,11 +474,29 @@ def retime(a):
     for i, s in enumerate(score["shots"]):
         s.update(start=cuts[i], end=cuts[i + 1])
     score["duration"] = receipt["duration"]
-    # Captions are editorial text; whole-utterance timing is only a review draft.
-    score["cues"] = [
-        {"start": b["start"], "end": b["end"], "text": b["text"]}
-        for b in receipt["beats"]
-    ]
+    # Editorial line breaks survive voice edits. Retiming is only a time proposal.
+    prior = p / "audio/previous-narration_beats.json"
+    prior_beats = {b["id"]: b for b in read(prior).get("beats", [])} if prior.is_file() and not reference else {}
+    old_shots = {s["id"]: s for s in old_score.get("shots", [])}
+    cues = []
+    for shot, beat in zip(score["shots"], ordered):
+        old = old_shots.get(shot["id"])
+        pieces = [q for q in old_score.get("cues", [])
+                  if old and old["start"] <= (q["start"] + q["end"]) / 2 < old["end"]]
+        previous = prior_beats.get(beat["id"])
+        source_start, source_end = ((previous["start"], previous["end"])
+                                    if previous and previous.get("text") == beat["text"]
+                                    else (old["start"], old["end"]) if old else (0, 1))
+        if pieces and source_end > source_start:
+            scale = (beat["end"] - beat["start"]) / (source_end - source_start)
+            for q in pieces:
+                start = max(shot["start"], beat["start"] + (q["start"] - source_start) * scale)
+                end = min(shot["end"], beat["start"] + (q["end"] - source_start) * scale)
+                if end > start:
+                    cues.append({**q, "start": start, "end": end})
+        else:
+            cues.append({"start": beat["start"], "end": beat["end"], "text": beat["text"]})
+    score["cues"] = cues
     overflow = [
         s["id"]
         for s in score["shots"]
@@ -459,6 +517,8 @@ def retime(a):
         {
             "voice_sha256": sha(p / c["voice"]),
             "caption_status": "draft",
+            "caption_breaks": "preserved_when_available",
+            "reference_score": str(reference) if reference else None,
             "score_sha256": sha(p / c["score"]),
         },
     )
@@ -466,6 +526,7 @@ def retime(a):
         "status": "retimed",
         "duration": score["duration"],
         "caption_status": "draft",
+        "caption_breaks": "preserved_when_available",
         "note": "未拉伸动作，需校准句级字幕",
     }
 
@@ -1047,8 +1108,11 @@ def main():
         s.add_argument("--renderer", help="单集 renderer 选择；未激活后端不阻断前置工作")
         s.add_argument("--style-profile-ref")
     sub.add_parser("inspect")
+    s = sub.add_parser("revise")
+    s.add_argument("--from-project", type=Path, required=True, help="明确源工程；独立复制可编辑文件，不使用硬链接")
     sub.add_parser("build")
-    sub.add_parser("retime")
+    s = sub.add_parser("retime")
+    s.add_argument("--reference-score", type=Path, help="可选：用精确旧版Score恢复原字幕断句，不改变当前镜头动作")
     s = sub.add_parser("library")
     s.add_argument("--query")
     s.add_argument("--kind", help="按已登记类型检索，不强制类型枚举")

@@ -15,3 +15,5 @@
 - `agent/professional_skills/medical-video-director/SKILL.md`
 
 先读 `docs/production-sop.md` 的阶段映射；按 `docs/workspace-adapter.md` 选择实际工具和原输入合同。后续补充或返修从受影响职责继续，不为六阶段顺序重复制作。
+
+系列资料中维护已知术语及读音来源，作者/声线与品牌按档案读取；不将疾病词表写进通用 Skill。 方法见 `runtime/workbench/docs/28_初版质量与高效返修流程.md`。

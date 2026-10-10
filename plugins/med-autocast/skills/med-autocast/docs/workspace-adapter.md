@@ -14,7 +14,7 @@ python3 runtime/native_helpers/workbench_tool.py --workspace /absolute/workspace
 python3 runtime/native_helpers/workbench_tool.py --workspace /absolute/workspace --name environment_check -- --pretty
 ```
 
-`inspect`、`tools`、`assets` 和预检只读。`workbench_tool.py` 同步调用一个明确工具，不创建队列或调度器；其效果与原工具一致。所有调用的 cwd 都是制作工作区；paper_project、render_narration、render_javascript_animation 固定使用随包实现，其他旧制作单工具优先原 scripts，缺少时使用随包版本。核心解释器自动选工作区 .venv；工具清单显示真实执行路径与解释器。`--bundled` 显式选择随包版本。工具接收的剩余参数原样传递；生成、下载、合成、检查输出和打包需处于本次授权范围。
+`inspect`、`tools`、`assets` 和预检只读。`workbench_tool.py` 同步调用一个明确工具，不创建队列或调度器；其效果与原工具一致。所有调用的 cwd 都是制作工作区；paper_project、render_narration、render_javascript_animation、audit_pronunciation 固定使用随包实现，其他旧制作单工具优先原 scripts，缺少时使用随包版本。核心解释器自动选工作区 .venv；工具清单显示真实执行路径与解释器。`--bundled` 显式选择随包版本。工具接收的剩余参数原样传递；生成、下载、合成、检查输出和打包需处于本次授权范围。
 
 阶段推荐顺序由 `agent/stages/manifest.json` 和 `contracts/stage_capability_bundle.json` 共同说明：`visual-review` 后进入独立 `meta-review`，再到 `review-handoff`；交付后按需进入 `asset-curation` 集中沉淀。素材策展专业能力同时供导演准备和制作中调用；欠项不阻断已有交付。Meta Review 读取精确候选和已有 Review 判断最早返修职责，不创建第二 writer，不替代医学或发布负责人。
 
@@ -92,3 +92,5 @@ JS 与纸剧场统一使用随包渲染器；预览和正式编码不再因 --pr
 过程按 OPL 已声明的 Stage 拆分输入、输出与 owner。自然语言交接引用实际内容、工程和审查材料，保存在 `deliveries/<series>/stages/<stage_id>/`；推荐位置用于找材料，不是阻断字段门。精确交付 manifest 位于 `deliveries/<series>/<episode>/manifest.json`，用户最新版指针仍由 `deliveries/<series>/<episode>.json` 记录。旧包完整移到 `archive/deliveries/<series>/<episode>/<revision>/`，再安装新包并回读；不在 publish 留旧入口或归档链接。
 
 代码动画用 `paper_project package` 默认替换本集唯一最新版并在交付目录外保留旧包；`--output` 只用于交付目录外的过程导出。旧多版本纸剧场包可运行 `scripts/organize_delivery.py --workspace <工作区> --series <系列>`，只按精确指针整理，不猜最大版本、不重渲染、不升级审核状态。Stage 职责与交付结构见工作台目录规范。
+
+`audit_pronunciation --workspace W --series SERIES --output work/SERIES/pronunciation-audit.json` 从登记当前工程读取每个词的注音覆盖与真实原音状态。它可在配音前发现遗漏、配音后定位听辨范围，只写定位报告，未合成也可使用，不批准实际读音。

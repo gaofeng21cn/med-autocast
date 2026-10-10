@@ -43,12 +43,10 @@ def main():
         )
         cues.append(
             {
-                "start": max(beat["start"], segments[0]["start"])
-                if segments
-                else beat["start"],
-                "end": min(beat["end"], segments[-1]["end"])
-                if segments
-                else beat["end"],
+                # A recognizer can omit the opening phrase or final words.
+                # Its partial window must not squeeze the complete editorial text.
+                "start": beat["start"],
+                "end": beat["end"],
                 "text": beat["text"],
             }
         )
@@ -59,6 +57,7 @@ def main():
         "beats": result,
         "full_listening": "pending",
         "text_authority": "narration.json",
+        "timing_scope": "ASR窗口用于定位，整段提案保留真实声段区间；分句由导演结合原音校准",
     }
     (a.output / "alignment.json").write_text(
         json.dumps(data, ensure_ascii=False, indent=2) + "\n"

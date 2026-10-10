@@ -8,6 +8,7 @@ import subprocess
 import sys
 import tempfile
 import unittest
+from types import SimpleNamespace
 from unittest.mock import patch
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -346,6 +347,22 @@ class ProjectTests(unittest.TestCase):
         cue = pp.read(p / "score.json")["cues"][0]
         self.assertEqual(cue["start"], .65)
         self.assertEqual(cue["end"], 10.65)
+
+    def test_partial_asr_does_not_drop_editorial_opening_caption(self):
+        import align_narration
+        voice = self.root / "voice.wav"
+        voice.write_bytes(b"voice")
+        pp.save(self.root / "receipt.json", {"audio": str(voice), "beats": [{
+            "id": "B01", "text": "第一句。后一条说明。", "audio": str(voice), "start": .65, "end": 10.65}]})
+        model = SimpleNamespace(transcribe=lambda *args, **kwargs: {
+            "text": "后一条说明", "segments": [{"start": 4.2, "end": 9.8, "words": []}]})
+        fake = SimpleNamespace(load_model=lambda *args, **kwargs: model)
+        argv = ["align_narration", "--receipt", str(self.root / "receipt.json"),
+            "--output", str(self.root / "alignment"), "--model", "local"]
+        with patch.dict(sys.modules, {"whisper": fake}), patch.object(sys, "argv", argv):
+            align_narration.main()
+        cue = pp.read(self.root / "alignment/cues.proposed.json")["cues"][0]
+        self.assertEqual((cue["start"], cue["end"], cue["text"]), (.65, 10.65, "第一句。后一条说明。"))
 
     def test_pronunciation_audit_checks_each_word_and_rejected_take(self):
         import yaml

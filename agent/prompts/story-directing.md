@@ -25,3 +25,5 @@
 先读 `docs/production-sop.md` 的阶段映射；按 `docs/workspace-adapter.md` 选择实际工具和原输入合同。后续补充或返修从受影响职责继续，不为六阶段顺序重复制作。
 
 按所选 STYLE.md 的媒介方法写本集 Treatment，比较有实质区别的故事讲法后确定观看事件、开头/结尾、signature shot、镜头理由与声音弧线。先做真实风格帧与短动作；`animation_lab` 供学习原件。不要照搬示例故事/时码或强制运镜数，未完成项交接质量债。方法见 `runtime/workbench/docs/26_代码动画技法与风格工作流.md`。
+
+交接旁白时已按全文语境确定多音字、医学术语、数字单位和缩写的读音，给出可消费的配音专用输入及停顿意图（如 IndexTTS tts_text 与正文分离）。优先做首句/高风险整段和代表镜头小样，不把注音责任留到最终听审。方法见 runtime/workbench/docs/28_初版质量与高效返修流程.md。

@@ -32,3 +32,5 @@
 先读 `docs/production-sop.md` 的阶段映射；按 `docs/workspace-adapter.md` 选择实际工具和原输入合同。后续补充或返修从受影响职责继续，不为六阶段顺序重复制作。
 
 代码动画由 `medical-video-animation-craft` 按导演意图落实。复用 kit 的路径弧长、关键帧轨道、材质与接触动作，单集 score 仍是唯一时间事实；自定义绘制保留。先实现一个真实风格镜头，再扩展整片，音色选择与重要事件同步。`animation_lab` 是独立能力样例，不覆盖单集，不改变作者声线。方法见 `runtime/workbench/docs/26_代码动画技法与风格工作流.md`。
+
+消费上游已注音的配音稿；启动推理前核对实际模型词表，记录请求 tts_text 与实际 model_text。独立返修只重配命中段，retime 保留字幕语义断句。调用已登记 audit_pronunciation 定位逐词覆盖及 build_no_music_mix 导出无BGM候选，不将机器定位当成发音通过。

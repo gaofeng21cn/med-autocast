@@ -476,7 +476,11 @@ def retime(a):
     score["duration"] = receipt["duration"]
     # Editorial line breaks survive voice edits. Retiming is only a time proposal.
     prior = p / "audio/previous-narration_beats.json"
-    prior_beats = {b["id"]: b for b in read(prior).get("beats", [])} if prior.is_file() and not reference else {}
+    reference_narration = getattr(a, "reference_narration", None)
+    if not reference_narration and reference and (reference.parent / "narration_beats.json").is_file():
+        reference_narration = reference.parent / "narration_beats.json"
+    source_receipt = reference_narration or (prior if prior.is_file() and not reference else None)
+    prior_beats = {b["id"]: b for b in read(source_receipt).get("beats", [])} if source_receipt else {}
     old_shots = {s["id"]: s for s in old_score.get("shots", [])}
     cues = []
     for shot, beat in zip(score["shots"], ordered):
@@ -519,6 +523,7 @@ def retime(a):
             "caption_status": "draft",
             "caption_breaks": "preserved_when_available",
             "reference_score": str(reference) if reference else None,
+            "reference_narration": str(source_receipt) if source_receipt else None,
             "score_sha256": sha(p / c["score"]),
         },
     )
@@ -1018,6 +1023,7 @@ def package(a):
         config = yaml.safe_load((a.workspace / 'workbench.yaml').read_text()) or {}
         catalog_ref = config.get('series', {}).get(c['series_id'], {}).get('release_catalog')
         entry = None
+        catalog = {}
         if catalog_ref and (a.workspace / catalog_ref).is_file():
             catalog = yaml.safe_load((a.workspace / catalog_ref).read_text()) or {}
             entries = [e for e in catalog.get('episodes', []) if e.get('id') == c['episode_id']]
@@ -1071,6 +1077,15 @@ def package(a):
                                 'source_project': str(p), **attachments},
                   'review_scope': evidence.get('review_scope', {}),
                   'review_evidence': str(a.review.resolve()) if a.review else None}
+        if entry:
+            result['copy_revision'] = catalog.get('copy_revision')
+            result['publication_copy'] = {
+                'catalog': str(a.workspace / catalog_ref),
+                'catalog_sha256': sha(a.workspace / catalog_ref),
+                'artifacts': {platform: {'path': str(target / name), 'sha256': sha(user / name)}
+                    for platform, name in [('xiaohongshu', '小红书文案.txt'), ('channels', '微信视频号文案.txt')]},
+                'editorial_review': entry.get('copy_review', 'pending'),
+            }
         save(record / 'manifest.json', result)
         (user / '发布交付包.md').write_text(
             f"# {c['title']}\n\n[观看视频](video.mp4) · [小红书文案](小红书文案.txt) · [视频号文案](微信视频号文案.txt)\n\n"
@@ -1113,6 +1128,7 @@ def main():
     sub.add_parser("build")
     s = sub.add_parser("retime")
     s.add_argument("--reference-score", type=Path, help="可选：用精确旧版Score恢复原字幕断句，不改变当前镜头动作")
+    s.add_argument("--reference-narration", type=Path, help="可选：原声段回执，用真实声音区间映射字幕；优先读取参考Score同目录回执")
     s = sub.add_parser("library")
     s.add_argument("--query")
     s.add_argument("--kind", help="按已登记类型检索，不强制类型枚举")

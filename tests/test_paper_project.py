@@ -328,6 +328,25 @@ class ProjectTests(unittest.TestCase):
         (target / "narration.json").write_text("new")
         self.assertEqual(pp.read(src / "narration.json")["beats"][0]["text"], "原文")
 
+    def test_reference_caption_timing_uses_voice_not_shot_padding(self):
+        p = self.root
+        config = {"score": "score.json", "voice": "voice.wav", "beat_shots": {"B01": "s1"}}
+        (p / "voice.wav").write_bytes(b"voice")
+        score = {"duration": 10, "shots": [{"id": "s1", "start": 0, "end": 10, "events": {}}],
+            "cues": [{"start": .65, "end": 8.65, "text": "原文"}]}
+        pp.save(p / "score.json", score)
+        reference = p / "reference/score.json"
+        pp.save(reference, score)
+        pp.save(reference.parent / "narration_beats.json", {
+            "beats": [{"id": "B01", "text": "原文", "start": .65, "end": 8.65}]})
+        pp.save(p / "audio/narration_beats.json", {"duration": 12,
+            "beats": [{"id": "B01", "text": "原文", "start": .65, "end": 10.65}]})
+        with patch.object(pp, "get_project", return_value=(p, config)):
+            pp.retime(argparse.Namespace(project=p, workspace=p, reference_score=reference))
+        cue = pp.read(p / "score.json")["cues"][0]
+        self.assertEqual(cue["start"], .65)
+        self.assertEqual(cue["end"], 10.65)
+
     def test_pronunciation_audit_checks_each_word_and_rejected_take(self):
         import yaml
         p = self.root / "productions/s/e/v1"

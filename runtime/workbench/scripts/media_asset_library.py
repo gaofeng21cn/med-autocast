@@ -64,11 +64,11 @@ def locate(workspace, explicit=None):
                   Path.home() / 'Library/Application Support/OPL/state')).expanduser()
     # Framework installs headless capabilities in its internal native carrier.
     # Inspect both supported native cache homes; no download or state mutation.
+    candidates.append(state / 'codex-plugin-marketplaces/mac-media-assets/plugins/mac-media-assets')
     for cache in [state / 'internal-package-carrier/plugins/cache/mac-media-assets',
                   codex / 'plugins/cache/mac-media-assets']:
         if cache.is_dir():
             candidates.extend(path.parents[2] for path in cache.glob('**/skills/mac-media-assets/SKILL.md'))
-    candidates.append(state / 'codex-plugin-marketplaces/mac-media-assets/plugins/mac-media-assets')
     for root in candidates:
         root = root.resolve()
         if valid(root):

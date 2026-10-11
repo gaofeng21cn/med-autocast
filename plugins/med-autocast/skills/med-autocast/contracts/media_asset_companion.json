@@ -1,0 +1,26 @@
+{
+  "schema": "mac_media_asset_companion/v1",
+  "package_id": "mac-media-assets",
+  "repository": "https://github.com/gaofeng21cn/mac-media-assets.git",
+  "installation": {
+    "entrypoint": "runtime/workbench/scripts/setup_workbench.sh",
+    "tool": "media_asset_library ensure",
+    "default": "automatic",
+    "existing_library": "reuse_without_fetch_or_overwrite",
+    "access_failure": "diagnostic_then_continue",
+    "plugin_install_only": "carrier_installation_does_not_run_workspace_setup"
+  },
+  "creation_policy": {
+    "discover_before_directing": true,
+    "inspect_actual_payloads": true,
+    "reuse_quota": null,
+    "allow_adapt_replace_and_new_creation": true,
+    "library_unavailable_blocks_stage": false
+  },
+  "authority": {
+    "doctor_voice_and_brand": "workspace_author_profile",
+    "current_shot_review": "current_episode",
+    "media_file_integrity": "asset_library"
+  },
+  "skill_locator": "<resolved_library_root>/skills/mac-media-assets/SKILL.md"
+}

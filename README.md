@@ -89,3 +89,6 @@ opl packages install med-autocast --json
 
 Apache License 2.0，详见 [LICENSE](LICENSE)。Copyright 2026 FengGao Lab
 contributors。
+
+
+MAC 配套独立媒体库 [mac-media-assets](https://github.com/gaofeng21cn/mac-media-assets)；标准工作台安装自动获取或复用，导演先检索并审看原件。素材可适配、替换或新创，不锁创作；访问失败仍可继续。见[接入说明](docs/media-assets-integration.md)。

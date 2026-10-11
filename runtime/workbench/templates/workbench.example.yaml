@@ -9,7 +9,9 @@ authorities:
   pronunciation: docs/27_中文配音发音控制与听辨SOP.md
   asset_library_sop: docs/29_医学视频资产库与初稿前置质量SOP.md
 asset_library:
-  mode: optional_external_repo
+  mode: auto_install_optional_repo
+  auto_install: true
+  repository: https://github.com/gaofeng21cn/mac-media-assets.git
   root: ../mac-media-assets
   catalog: ../mac-media-assets/catalog/assets.jsonl
   query_tool: ../mac-media-assets/tools/query_assets.py

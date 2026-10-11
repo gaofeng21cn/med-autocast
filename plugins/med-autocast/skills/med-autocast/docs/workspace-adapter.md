@@ -107,3 +107,6 @@ python3 runtime/native_helpers/med_autocast.py assets \
 ```
 
 该入口会调用配置的 `query_tool`，返回资产版本、来源、载荷和 Review 边界；它不复制素材、不改单集 manifest，也不把外部库状态解释为医学或发布批准。外挂库不存在、工具失败或输出不可解析时返回诊断并继续本地工作台流程。同步和 SHA-256 校验由外挂库的 `sync_from_workbench.py`、`verify_catalog.py` 完成，真正复用仍需当前单集重新登记和审看。
+
+
+独立资产库在标准工作台 setup 中自动获取或复用；已有本地库不覆盖，离线/私有权限失败保留诊断并继续新创。导演先 query 并看原件，制作 use 复制精确版本后重新审查当前镜头；不设复用率。实际命令及载体安装边界见 [独立库接入](media-assets-integration.md)。

@@ -25,7 +25,28 @@
     "plugin_source_path": "."
   },
   "dependency_profiles": [],
-  "capability_dependencies": [],
+  "capability_dependencies": [
+    {
+      "module_id": "media-assets",
+      "package_id": "mac-media-assets",
+      "required": false,
+      "dependency_kind": "optional_enhancement",
+      "capability_abi": "mac-media-assets.v1",
+      "required_export_ids": [
+        "mac-media-assets"
+      ],
+      "required_module_ids": [
+        "mac-media-assets.discovery",
+        "mac-media-assets.media"
+      ],
+      "authority_boundary": {
+        "can_write_domain_truth": false,
+        "can_sign_owner_receipt": false,
+        "can_create_typed_blocker": false,
+        "can_write_runtime_queue": false
+      }
+    }
+  ],
   "source_repo": "https://github.com/gaofeng21cn/med-autocast.git",
   "schema_ref": "one-person-lab/contracts/opl-framework/agent-package-manifest.schema.json",
   "presentation": {

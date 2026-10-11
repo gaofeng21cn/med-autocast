@@ -30,3 +30,6 @@ description: 保管、检索和策展医学代码动画的可复用纸件、环�
 ## 外挂库接入
 
 跨工作区资产通过工作台 `workbench.yaml.asset_library.root` 指向外挂仓库。准备新集时先查询并实际查看载荷，交付后同步有复用价值的纸件、动作源码、BGM 分轨和失败原因；精确版本写入本集 manifest/uses。查询或同步不是启动门，外部库不可用时继续 Progress First。初稿前置动作见 `runtime/workbench/docs/29_医学视频资产库与初稿前置质量SOP.md`。
+
+
+独立 `mac-media-assets` 是默认发现入口。先用 `media_asset_library query --query <视觉锚点>` 或 native `assets --library external` 检索，再实际查看 `resolved_payloads` 的原图/动作与本库 Skill。按本集故事决定复用、适配、另找合法素材或 ImageGen 新创，不设复用率，不让已有素材决定故事、构图、风格或镜头数。库缺失、无匹配或旧素材不合适时继续新创与其他工作，质量债随交接保留。实际取用用 `media_asset_library use --project <单集路径> --id <精确外库ID>`，沿用工作台版本包与 uses，复制后当前镜头重新审查；作者范围仍按作者档案约束。安装/发现方法见 `docs/media-assets-integration.md`。

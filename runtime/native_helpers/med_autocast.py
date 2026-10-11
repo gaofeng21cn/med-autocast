@@ -69,7 +69,8 @@ def inspect_workspace(root: Path) -> dict:
                 locations[key] = {'ref': ref, 'exists': p.exists()}
         series.append({'series_id': sid, 'declared_status': item.get('status'), 'episode_count': item.get('episode_count'), 'locations': locations, 'projects': item.get('episodes', {})})
     scripts = {name: (root/'scripts'/name).is_file() for name in ('media_backend.py','workbench_config.py','build_release_packages.py','build_keyframe_library.py','init_workbench.py','workspace_layout.py')}
-    return {'schema': 'med_autocast_workspace_inspection/v1', 'read_only': True,
+    from media_asset_library import report as asset_status
+    return {'asset_library': asset_status(root), 'schema': 'med_autocast_workspace_inspection/v1', 'read_only': True,
             'workspace_root': str(root.resolve()), 'profiles': profile_readback, 'series': series,
             'workspace_layout': layout,
             'workbench_entrypoints': scripts,
@@ -123,51 +124,11 @@ def query_animation_assets(root: Path, query=None, kind=None, scope=None) -> dic
 
 
 def query_external_assets(root: Path, query=None, kind=None, scope=None, series=None) -> dict:
-    """Query the optional cross-workspace asset repo without making it a hard dependency."""
-    config = mapping(local_path(root, 'workbench.yaml'), yaml_format=True)
-    spec = config.get('asset_library') or {}
-    repo_ref = spec.get('root') or spec.get('repo')
-    if not repo_ref:
-        return {'schema': 'med_autocast_asset_query/v1', 'library': 'external',
-                'status': 'unconfigured', 'read_only': True, 'count': 0, 'assets': [],
-                'note': 'workbench.yaml 未配置外挂资产库；继续本地资产发现'}
-    repo = Path(repo_ref).expanduser()
-    if not repo.is_absolute():
-        repo = (root / repo).resolve()
-    tool_ref = spec.get('query_tool') or str(repo / 'tools/query_assets.py')
-    tool = Path(tool_ref).expanduser()
-    if not tool.is_absolute():
-        tool = (root / tool).resolve()
-    if not tool.is_file():
-        return {'schema': 'med_autocast_asset_query/v1', 'library': 'external',
-                'status': 'unavailable', 'read_only': True, 'count': 0, 'assets': [],
-                'repo': str(repo), 'note': '外挂资产查询工具不存在；保留诊断并继续 Progress First'}
-    command = [sys.executable, str(tool), '--json']
-    for flag, value in (('--query', query), ('--kind', kind), ('--scope', scope), ('--series', series)):
-        if value:
-            command.extend([flag, value])
-    try:
-        completed = subprocess.run(command, capture_output=True, text=True, timeout=30)
-    except (OSError, subprocess.TimeoutExpired) as exc:
-        return {'schema': 'med_autocast_asset_query/v1', 'library': 'external',
-                'status': 'unavailable', 'read_only': True, 'count': 0, 'assets': [],
-                'repo': str(repo), 'diagnostic': str(exc),
-                'note': '外挂资产查询失败；不阻断本地制作'}
-    if completed.returncode != 0:
-        return {'schema': 'med_autocast_asset_query/v1', 'library': 'external',
-                'status': 'unavailable', 'read_only': True, 'count': 0, 'assets': [],
-                'repo': str(repo), 'diagnostic': completed.stderr.strip() or completed.stdout.strip(),
-                'note': '外挂资产查询返回诊断；不阻断本地制作'}
-    try:
-        assets = json.loads(completed.stdout or '[]')
-    except json.JSONDecodeError as exc:
-        return {'schema': 'med_autocast_asset_query/v1', 'library': 'external',
-                'status': 'diagnostic', 'read_only': True, 'count': 0, 'assets': [],
-                'repo': str(repo), 'diagnostic': str(exc),
-                'note': '外挂资产输出不可解析；继续本地制作'}
-    return {'schema': 'med_autocast_asset_query/v1', 'library': 'external',
-            'status': 'available', 'read_only': True, 'count': len(assets), 'assets': assets,
-            'repo': str(repo), 'note': '外部资产仅供发现；实际复用仍需本集素材登记和当前镜头审看'}
+    """Discover the installed companion without downloading during a read-only query."""
+    bundle = Path(__file__).resolve().parents[1] / 'workbench/scripts'
+    sys.path.insert(0, str(bundle))
+    from media_asset_library import query as external_query
+    return external_query(root, text=query, kind=kind, scope=scope, series=series)
 
 
 def interval(value) -> tuple[float,float]:

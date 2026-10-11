@@ -31,7 +31,7 @@ def _ensure_asset_library_config(target: Path) -> dict:
     text = config.read_text(encoding='utf-8')
     if any(line.strip() == 'asset_library:' for line in text.splitlines()):
         return {'path': str(config), 'created': False, 'status': 'present'}
-    block = '''\nasset_library:\n  mode: optional_external_repo\n  root: ../mac-media-assets\n  catalog: ../mac-media-assets/catalog/assets.jsonl\n  query_tool: ../mac-media-assets/tools/query_assets.py\n  sync_tool: ../mac-media-assets/tools/sync_from_workbench.py\n  verify_tool: ../mac-media-assets/tools/verify_catalog.py\n  note: 外部资产库不可用时继续本地工作台流程并记录质量债，不阻断 Progress First\n'''
+    block = '''\nasset_library:\n  mode: auto_install_optional_repo\n  auto_install: true\n  repository: https://github.com/gaofeng21cn/mac-media-assets.git\n  root: ../mac-media-assets\n  catalog: ../mac-media-assets/catalog/assets.jsonl\n  query_tool: ../mac-media-assets/tools/query_assets.py\n  sync_tool: ../mac-media-assets/tools/sync_from_workbench.py\n  verify_tool: ../mac-media-assets/tools/verify_catalog.py\n  note: 外部资产库不可用时继续本地工作台流程并记录质量债，不阻断 Progress First\n'''
     config.write_text(text.rstrip() + block, encoding='utf-8')
     return {'path': str(config), 'created': True, 'status': 'added_optional_pointer'}
 

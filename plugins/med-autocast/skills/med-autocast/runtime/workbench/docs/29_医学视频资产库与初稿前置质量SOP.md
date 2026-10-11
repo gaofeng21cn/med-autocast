@@ -45,3 +45,6 @@ python3 /path/to/mac-media-assets/tools/verify_catalog.py
 ```
 
 校验只证明登记、文件存在和 SHA-256 一致；资产库不可用时继续 Progress First，记录诊断和质量债，不静默声称资产或成片通过。
+
+
+独立资产库在标准工作台 setup 中自动获取或复用；已有本地库不覆盖，离线/私有权限失败保留诊断并继续新创。导演先 query 并看原件，制作 use 复制精确版本后重新审查当前镜头；不设复用率。实际命令及载体安装边界见 [独立库接入](../../../docs/media-assets-integration.md)。

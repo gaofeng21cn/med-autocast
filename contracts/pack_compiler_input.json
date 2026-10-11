@@ -145,7 +145,8 @@
     "runtime/workbench/templates/series/episodes/NN_slug/03_story_package.yaml",
     "runtime/workbench/templates/series/production_plan.example.yaml",
     "runtime/workbench/templates/series/visual_delivery_manifest.example.json",
-    "runtime/workbench/templates/workbench.example.yaml"
+    "runtime/workbench/templates/workbench.example.yaml",
+    "runtime/workbench/scripts/media_asset_library.py"
   ],
   "source_refs": {
     "stage_graph_source_ref": "agent/stages/manifest.json",

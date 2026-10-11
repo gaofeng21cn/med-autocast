@@ -63,3 +63,6 @@ node scripts/smoke_local_animation.mjs
 首片创作、分层素材、字幕与固定表达的默认方法见[新用户首片 SOP](../runtime/workbench/docs/14_新用户首片SOP.md)。
 
 维护者可用已初始化的隔离工作区运行真实渲染回归：设置 `MED_AUTOCAST_TEST_WORKSPACE=<工作区绝对路径>`，再用该工作区 `.venv/bin/python -B -m unittest discover -s tests -v`。测试使用临时非医学素材和静音音轨，验证共享 HTML 定帧、编码、缺资源拦截及旧 render/mux 接口，不下载模型、不播放声音、不改真实作品。未设置该变量时会明确跳过此项，不能计作真实渲染验收。
+
+
+独立资产库在标准工作台 setup 中自动获取或复用；已有本地库不覆盖，离线/私有权限失败保留诊断并继续新创。导演先 query 并看原件，制作 use 复制精确版本后重新审查当前镜头；不设复用率。实际命令及载体安装边界见 [独立库接入](media-assets-integration.md)。

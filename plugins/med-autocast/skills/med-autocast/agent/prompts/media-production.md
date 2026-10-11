@@ -36,3 +36,6 @@
 消费上游已注音的配音稿；启动推理前核对实际模型词表，记录请求 tts_text 与实际 model_text。独立返修只重配命中段，retime 保留字幕语义断句。调用已登记 audit_pronunciation 定位逐词覆盖及 build_no_music_mix 导出无BGM候选，不将机器定位当成发音通过。
 
 可运动单件检查真实 alpha 与多底色边缘，区分假棋盘、全不透明背景、破洞及光晕；环境板可以不透明。源码、素材、Score/品牌变更后调用 paper_project build，再 preview 受影响窗口及邻镜，最后 render。回读本次 preview.json/实际帧和 out/current.json 指向的媒体及回执，退出码不证明画面或MP4已产生。模型词表先在首句/高风险整段小样验证，保留 tts_text/model_text；听辨仍单列。过期构建先修复，其他可消费工作继续，不沿用旧 bundle、不静默换声线。
+
+
+独立 `mac-media-assets` 是默认发现入口。先用 `media_asset_library query --query <视觉锚点>` 或 native `assets --library external` 检索，再实际查看 `resolved_payloads` 的原图/动作与本库 Skill。按本集故事决定复用、适配、另找合法素材或 ImageGen 新创，不设复用率，不让已有素材决定故事、构图、风格或镜头数。库缺失、无匹配或旧素材不合适时继续新创与其他工作，质量债随交接保留。实际取用用 `media_asset_library use --project <单集路径> --id <精确外库ID>`，沿用工作台版本包与 uses，复制后当前镜头重新审查；作者范围仍按作者档案约束。安装/发现方法见 `docs/media-assets-integration.md`。

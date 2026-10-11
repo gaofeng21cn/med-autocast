@@ -91,3 +91,6 @@ Supporting guides are currently in Chinese.
 
 Apache License 2.0. See [LICENSE](LICENSE). Copyright 2026 FengGao Lab
 contributors.
+
+
+The independent [mac-media-assets](https://github.com/gaofeng21cn/mac-media-assets) companion is fetched or reused by the standard workbench setup. Directors inspect actual assets before use and may adapt, replace or create new material. Offline or private-repository access failures remain non-blocking. See [integration and installation boundaries](docs/media-assets-integration.md).

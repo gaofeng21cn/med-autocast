@@ -47,6 +47,8 @@ if [[ ! -x "$runtime/bin/python" ]]; then
 fi
 "$runtime/bin/python" -c 'import sys; sys.exit(0 if sys.version_info >= (3,11) else "已有 .venv 需要升级到 Python 3.11+")'
 "$runtime/bin/python" -m pip install -r "$workbench_root/requirements.txt"
+# Independent media companion: failures remain non-blocking creative diagnostics.
+"$runtime/bin/python" -B "$source_root/scripts/media_asset_library.py" ensure --workspace "$workbench_root"
 (cd "$workbench_root" && npm ci --workspaces=false --no-audit --no-fund)
 if [[ -z "${CHROME_PATH:-}" ]]; then
   "$workbench_root/node_modules/.bin/playwright" install chromium

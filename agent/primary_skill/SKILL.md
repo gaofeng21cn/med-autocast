@@ -84,10 +84,13 @@ Stage 返回尽量引用真实产物与版本/来源信息，给出质量债务�
 
 ## 跨工作区医学视频资产库
 
-工作台配置存在 `asset_library` 时，先用外挂仓库的只读查询发现纸片、环境板、动作组件和 BGM 分轨，再回到当前工作区登记实际复用版本。MAC 可直接调用：
+安装工作台时 `setup_workbench.sh` 默认调用 `media_asset_library ensure` 自动获取或复用独立 `mac-media-assets`；已有内容不覆盖，私有访问或离线失败只生成诊断。仅安装插件载体不执行工作台安装，首次准备工作台应使用随包 setup。路径发现与真实取用见 `docs/media-assets-integration.md`。制作时先用外挂仓库的只读查询发现纸片、环境板、动作组件和 BGM 分轨，再回到当前工作区登记实际复用版本。MAC 可直接调用：
 
 ```sh
 python3 runtime/native_helpers/med_autocast.py assets --workspace <workspace> --library external --query 纸景
 ```
 
 外挂库缺失、同步失败或记录不完整时保留诊断和质量债，继续本地候选、故事、动画和声音工作；资产库只提供稳定起点，不替代当前镜头的比例、动作、连续动态、听感或医学 Review。
+
+
+独立 `mac-media-assets` 是默认发现入口。先用 `media_asset_library query --query <视觉锚点>` 或 native `assets --library external` 检索，再实际查看 `resolved_payloads` 的原图/动作与本库 Skill。按本集故事决定复用、适配、另找合法素材或 ImageGen 新创，不设复用率，不让已有素材决定故事、构图、风格或镜头数。库缺失、无匹配或旧素材不合适时继续新创与其他工作，质量债随交接保留。实际取用用 `media_asset_library use --project <单集路径> --id <精确外库ID>`，沿用工作台版本包与 uses，复制后当前镜头重新审查；作者范围仍按作者档案约束。安装/发现方法见 `docs/media-assets-integration.md`。

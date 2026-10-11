@@ -34,3 +34,5 @@
 代码动画由 `medical-video-animation-craft` 按导演意图落实。复用 kit 的路径弧长、关键帧轨道、材质与接触动作，单集 score 仍是唯一时间事实；自定义绘制保留。先实现一个真实风格镜头，再扩展整片，音色选择与重要事件同步。`animation_lab` 是独立能力样例，不覆盖单集，不改变作者声线。方法见 `runtime/workbench/docs/26_代码动画技法与风格工作流.md`。
 
 消费上游已注音的配音稿；启动推理前核对实际模型词表，记录请求 tts_text 与实际 model_text。独立返修只重配命中段，retime 保留字幕语义断句。调用已登记 audit_pronunciation 定位逐词覆盖及 build_no_music_mix 导出无BGM候选，不将机器定位当成发音通过。
+
+可运动单件检查真实 alpha 与多底色边缘，区分假棋盘、全不透明背景、破洞及光晕；环境板可以不透明。源码、素材、Score/品牌变更后调用 paper_project build，再 preview 受影响窗口及邻镜，最后 render。回读本次 preview.json/实际帧和 out/current.json 指向的媒体及回执，退出码不证明画面或MP4已产生。模型词表先在首句/高风险整段小样验证，保留 tts_text/model_text；听辨仍单列。过期构建先修复，其他可消费工作继续，不沿用旧 bundle、不静默换声线。

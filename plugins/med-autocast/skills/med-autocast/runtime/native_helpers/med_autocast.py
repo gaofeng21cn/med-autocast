@@ -7,6 +7,7 @@ from __future__ import annotations
 import argparse
 import json
 import math
+import subprocess
 import sys
 from pathlib import Path
 
@@ -121,6 +122,54 @@ def query_animation_assets(root: Path, query=None, kind=None, scope=None) -> dic
             'read_only': True, 'note': '持久素材与工程发现结果分开标记；复用仍需按新镜头审看'}
 
 
+def query_external_assets(root: Path, query=None, kind=None, scope=None, series=None) -> dict:
+    """Query the optional cross-workspace asset repo without making it a hard dependency."""
+    config = mapping(local_path(root, 'workbench.yaml'), yaml_format=True)
+    spec = config.get('asset_library') or {}
+    repo_ref = spec.get('root') or spec.get('repo')
+    if not repo_ref:
+        return {'schema': 'med_autocast_asset_query/v1', 'library': 'external',
+                'status': 'unconfigured', 'read_only': True, 'count': 0, 'assets': [],
+                'note': 'workbench.yaml 未配置外挂资产库；继续本地资产发现'}
+    repo = Path(repo_ref).expanduser()
+    if not repo.is_absolute():
+        repo = (root / repo).resolve()
+    tool_ref = spec.get('query_tool') or str(repo / 'tools/query_assets.py')
+    tool = Path(tool_ref).expanduser()
+    if not tool.is_absolute():
+        tool = (root / tool).resolve()
+    if not tool.is_file():
+        return {'schema': 'med_autocast_asset_query/v1', 'library': 'external',
+                'status': 'unavailable', 'read_only': True, 'count': 0, 'assets': [],
+                'repo': str(repo), 'note': '外挂资产查询工具不存在；保留诊断并继续 Progress First'}
+    command = [sys.executable, str(tool), '--json']
+    for flag, value in (('--query', query), ('--kind', kind), ('--scope', scope), ('--series', series)):
+        if value:
+            command.extend([flag, value])
+    try:
+        completed = subprocess.run(command, capture_output=True, text=True, timeout=30)
+    except (OSError, subprocess.TimeoutExpired) as exc:
+        return {'schema': 'med_autocast_asset_query/v1', 'library': 'external',
+                'status': 'unavailable', 'read_only': True, 'count': 0, 'assets': [],
+                'repo': str(repo), 'diagnostic': str(exc),
+                'note': '外挂资产查询失败；不阻断本地制作'}
+    if completed.returncode != 0:
+        return {'schema': 'med_autocast_asset_query/v1', 'library': 'external',
+                'status': 'unavailable', 'read_only': True, 'count': 0, 'assets': [],
+                'repo': str(repo), 'diagnostic': completed.stderr.strip() or completed.stdout.strip(),
+                'note': '外挂资产查询返回诊断；不阻断本地制作'}
+    try:
+        assets = json.loads(completed.stdout or '[]')
+    except json.JSONDecodeError as exc:
+        return {'schema': 'med_autocast_asset_query/v1', 'library': 'external',
+                'status': 'diagnostic', 'read_only': True, 'count': 0, 'assets': [],
+                'repo': str(repo), 'diagnostic': str(exc),
+                'note': '外挂资产输出不可解析；继续本地制作'}
+    return {'schema': 'med_autocast_asset_query/v1', 'library': 'external',
+            'status': 'available', 'read_only': True, 'count': len(assets), 'assets': assets,
+            'repo': str(repo), 'note': '外部资产仅供发现；实际复用仍需本集素材登记和当前镜头审看'}
+
+
 def interval(value) -> tuple[float,float]:
     if not isinstance(value,list) or len(value)!=2:
         raise ContractError('区间必须为 [start,end]')
@@ -214,7 +263,7 @@ def main():
         p=sub.add_parser(name);p.add_argument('--workspace',type=Path,required=True)
         if name=='assets':
             p.add_argument('--category');p.add_argument('--series')
-            p.add_argument('--library', choices=['keyframes', 'animation'], default='keyframes')
+            p.add_argument('--library', choices=['keyframes', 'animation', 'external'], default='keyframes')
             p.add_argument('--query');p.add_argument('--kind');p.add_argument('--scope')
         if name=='preflight':
             p.add_argument('--delivery',required=True);p.add_argument('--current',required=True);p.add_argument('--source-review',required=True)
@@ -230,6 +279,7 @@ def main():
         if a.command=='inspect':result=inspect_workspace(root)
         elif a.command=='assets':
             result = (query_animation_assets(root, a.query, a.kind, a.scope) if a.library == 'animation'
+                      else query_external_assets(root, a.query, a.kind, a.scope, a.series) if a.library == 'external'
                       else query_assets(root, a.category, a.series))
         elif a.command=='preflight':result=preflight(root,a.delivery,a.current,a.source_review)
         else:

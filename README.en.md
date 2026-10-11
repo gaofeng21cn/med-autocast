@@ -69,6 +69,10 @@ Start a new task after installation and give Med Auto Cast a production folder, 
 
 Source changes and the in-repository plugin carrier reach ordinary installed users only after a subsequent OCI package release and installation. See [current capabilities and validation](docs/status.md) for the exact qualification boundary.
 
+## MAC Media Assets
+
+[mac-media-assets](https://github.com/gaofeng21cn/mac-media-assets) is MAC's separate medical explainer asset repository for cutouts, backgrounds, motion components, composition references, and BGM stems. Configure it through the workbench's `asset_library` section and query it with `assets --library external`. Local production can continue when the library is unavailable; asset review does not approve a new shot. Repository access is required.
+
 ## Learn More
 
 - [Production workflow](docs/production-sop.md): from topics and scripts to video handoff.

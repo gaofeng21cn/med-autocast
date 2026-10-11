@@ -7,4 +7,13 @@ authorities:
   workflow: docs/04_医学科普视频系列SOP.md
   first_draft_quality: docs/28_初版质量与高效返修流程.md
   pronunciation: docs/27_中文配音发音控制与听辨SOP.md
+  asset_library_sop: docs/29_医学视频资产库与初稿前置质量SOP.md
+asset_library:
+  mode: optional_external_repo
+  root: ../mac-media-assets
+  catalog: ../mac-media-assets/catalog/assets.jsonl
+  query_tool: ../mac-media-assets/tools/query_assets.py
+  sync_tool: ../mac-media-assets/tools/sync_from_workbench.py
+  verify_tool: ../mac-media-assets/tools/verify_catalog.py
+  note: 外部资产库不可用时继续本地工作台流程并记录质量债，不阻断 Progress First
 series: {}

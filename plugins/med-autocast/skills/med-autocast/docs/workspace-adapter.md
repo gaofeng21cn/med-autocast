@@ -94,3 +94,16 @@ JS 与纸剧场统一使用随包渲染器；预览和正式编码不再因 --pr
 代码动画用 `paper_project package` 默认替换本集唯一最新版并在交付目录外保留旧包；`--output` 只用于交付目录外的过程导出。旧多版本纸剧场包可运行 `scripts/organize_delivery.py --workspace <工作区> --series <系列>`，只按精确指针整理，不猜最大版本、不重渲染、不升级审核状态。Stage 职责与交付结构见工作台目录规范。
 
 `audit_pronunciation --workspace W --series SERIES --output work/SERIES/pronunciation-audit.json` 从登记当前工程读取每个词的注音覆盖与真实原音状态。它可在配音前发现遗漏、配音后定位听辨范围，只写定位报告，未合成也可使用，不批准实际读音。
+
+## 外挂医学视频资产库（可选）
+
+当工作区 `workbench.yaml` 声明 `asset_library` 时，MAC 可以只读查询跨工作区资产：
+
+```sh
+python3 runtime/native_helpers/med_autocast.py assets \
+  --workspace /绝对/工作台 \
+  --library external \
+  --query 纸景
+```
+
+该入口会调用配置的 `query_tool`，返回资产版本、来源、载荷和 Review 边界；它不复制素材、不改单集 manifest，也不把外部库状态解释为医学或发布批准。外挂库不存在、工具失败或输出不可解析时返回诊断并继续本地工作台流程。同步和 SHA-256 校验由外挂库的 `sync_from_workbench.py`、`verify_catalog.py` 完成，真正复用仍需当前单集重新登记和审看。

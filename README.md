@@ -69,6 +69,10 @@ opl packages install med-autocast --json
 
 源码与随仓插件载体的改进只有在后续 OCI 软件包发布并安装后，才会进入普通用户的已安装版本；具体资格与验收范围见[当前能力与验证范围](docs/status.md)。
 
+## MAC Media Assets
+
+[mac-media-assets](https://github.com/gaofeng21cn/mac-media-assets) 是 MAC 的独立医学科普媒体资产库，统一保管纸片、背景、动作组件、构图参考与 BGM 分轨。通过工作台 `asset_library` 配置接入，使用 `assets --library external` 只读查询；未配置或暂时不可用时仍可继续本地制作。资产的原审查范围不自动继承为新镜头通过。
+
 ## 进一步了解
 
 - [制作流程](docs/production-sop.md)：从选题、脚本到成片交付。

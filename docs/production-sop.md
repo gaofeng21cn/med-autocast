@@ -38,3 +38,7 @@
 代码动画前置步骤补充：患者观看任务与故事变化 -> 选 STYLE 媒介方法 -> Treatment 与 signature shot -> 真实风格帧和短动作 -> 声画 animatic -> 分层素材与逐镜制作 -> 正常速度视听 Review -> 精确版本策展。已有产物允许跳转/并行/返修，目录和字段只是建议，不能阻断进度。角色及调用见 `runtime/workbench/docs/26_代码动画技法与风格工作流.md`。
 
 初版质量与返修效率见[初版质量与高效返修](../runtime/workbench/docs/28_初版质量与高效返修流程.md)。story-directing输出语境注音与配音专用稿；media-production核对真实模型输入。读音意图前置、听辨仍独立，不把审听当成写稿质量的替代。
+
+批量扩展前区分代表镜头的技法验证与完整代表集的叙事/视听复核；未覆盖的风险作为质量债继续推进独立工作。新工作区或增量升级提供 `work/first-draft-review.md`，复制系列模板时使用 `08_first_draft_review.md`。两者只引用实际产物，不构成第二套制作状态。真实alpha、语境注音、小样、当前构建/媒体回读按初版质量流程执行，不新增脚本闸门。
+
+资产库前置动作遵循 `runtime/workbench/docs/29_医学视频资产库与初稿前置质量SOP.md`：先查询和实际查看纸件、动作与 BGM，再写视觉导演稿；先做代表镜头与完整代表集；外挂库不可用时保留质量债并继续 Progress First。MAC 的 `assets --library external` 只读发现，不替代当前镜头 Review。

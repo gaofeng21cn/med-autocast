@@ -40,7 +40,23 @@ export function caption(s: Stage, score: Score, t: number) {
   g.font = '500 27px "PingFang SC",sans-serif';
   g.textAlign = "center";
   g.textBaseline = "middle";
-  g.fillStyle = "#253f3b";
+  // A textured dark paper floor needs a light caption. Sample its current
+  // rendered pixels deterministically instead of adding an opaque color band.
+  let luminance = 200;
+  try {
+    const samples = [0.25, 0.375, 0.5, 0.625, 0.75].map(x => {
+      const d = g.getImageData(Math.round(s.width*x), s.height-67, 1, 1).data;
+      return d[0]*.2126 + d[1]*.7152 + d[2]*.0722;
+    });
+    luminance = samples.reduce((a,b) => a+b,0)/samples.length;
+  } catch { /* Local rendering normally permits pixel reads. */ }
+  const dark = luminance < 142;
+  g.shadowColor = "transparent";
+  g.lineJoin = "round";
+  g.lineWidth = dark ? 3.6 : 2.3;
+  g.strokeStyle = dark ? "#263733" : "rgba(255,249,234,.78)";
+  g.strokeText(c.text, s.width / 2, s.height - 67);
+  g.fillStyle = dark ? "#fff8e8" : "#253f3b";
   g.fillText(c.text, s.width / 2, s.height - 67);
   const m = g.measureText(c.text);
   const rect = { x: s.width/2-m.width/2, y: s.height-84,

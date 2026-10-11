@@ -482,8 +482,19 @@ def retime(a):
     source_receipt = reference_narration or (prior if prior.is_file() and not reference else None)
     prior_beats = {b["id"]: b for b in read(source_receipt).get("beats", [])} if source_receipt else {}
     old_shots = {s["id"]: s for s in old_score.get("shots", [])}
-    cues = []
-    for shot, beat in zip(score["shots"], ordered):
+    # Repeating retime for an unchanged voice must not repeatedly remap beat
+    # padding onto itself. Keep already adopted editorial cues when the exact
+    # voice and actual shot cuts are unchanged; an explicit reference still wins.
+    timing_path = p / "audio/timing-receipt.json"
+    timing = read(timing_path) if timing_path.is_file() else {}
+    same_voice = timing.get("voice_sha256") == sha(p / c["voice"])
+    same_cuts = len(old_score.get("shots", [])) == len(score["shots"]) and all(
+        abs(old["start"] - shot["start"]) < 1e-6 and abs(old["end"] - shot["end"]) < 1e-6
+        for old, shot in zip(old_score.get("shots", []), score["shots"])
+    )
+    preserve_adopted_cues = not reference and same_voice and same_cuts
+    cues = list(old_score.get("cues", [])) if preserve_adopted_cues else []
+    for shot, beat in ([] if preserve_adopted_cues else zip(score["shots"], ordered)):
         old = old_shots.get(shot["id"])
         pieces = [q for q in old_score.get("cues", [])
                   if old and old["start"] <= (q["start"] + q["end"]) / 2 < old["end"]]

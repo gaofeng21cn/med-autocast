@@ -46,7 +46,9 @@
       "knowledge_refs": [
         "agent/knowledge/domain_boundary.md",
         "docs/production-sop.md",
-        "docs/workspace-adapter.md"
+        "docs/workspace-adapter.md",
+        "runtime/workbench/docs/28_初版质量与高效返修流程.md",
+        "runtime/workbench/docs/29_医学视频资产库与初稿前置质量SOP.md"
       ],
       "quality_gate_refs": [
         "agent/quality_gates/evidence-plan.md"
@@ -97,7 +99,9 @@
         "agent/knowledge/domain_boundary.md",
         "docs/production-sop.md",
         "docs/workspace-adapter.md",
-        "runtime/workbench/docs/26_代码动画技法与风格工作流.md"
+        "runtime/workbench/docs/26_代码动画技法与风格工作流.md",
+        "runtime/workbench/docs/28_初版质量与高效返修流程.md",
+        "runtime/workbench/docs/29_医学视频资产库与初稿前置质量SOP.md"
       ],
       "quality_gate_refs": [
         "agent/quality_gates/story-directing.md"
@@ -153,7 +157,9 @@
         "agent/knowledge/domain_boundary.md",
         "docs/production-sop.md",
         "docs/workspace-adapter.md",
-        "runtime/workbench/docs/26_代码动画技法与风格工作流.md"
+        "runtime/workbench/docs/26_代码动画技法与风格工作流.md",
+        "runtime/workbench/docs/28_初版质量与高效返修流程.md",
+        "runtime/workbench/docs/29_医学视频资产库与初稿前置质量SOP.md"
       ],
       "quality_gate_refs": [
         "agent/quality_gates/media-production.md"
@@ -211,7 +217,8 @@
         "agent/knowledge/domain_boundary.md",
         "docs/production-sop.md",
         "docs/workspace-adapter.md",
-        "runtime/workbench/docs/26_代码动画技法与风格工作流.md"
+        "runtime/workbench/docs/26_代码动画技法与风格工作流.md",
+        "runtime/workbench/docs/28_初版质量与高效返修流程.md"
       ],
       "quality_gate_refs": [
         "agent/quality_gates/visual-review.md"
@@ -387,7 +394,8 @@
         "agent/knowledge/domain_boundary.md",
         "docs/production-sop.md",
         "docs/workspace-adapter.md",
-        "runtime/workbench/docs/26_代码动画技法与风格工作流.md"
+        "runtime/workbench/docs/26_代码动画技法与风格工作流.md",
+        "runtime/workbench/docs/29_医学视频资产库与初稿前置质量SOP.md"
       ],
       "quality_gate_refs": [
         "agent/quality_gates/asset-curation.md"

@@ -318,6 +318,16 @@ class ProjectTests(unittest.TestCase):
         score = pp.read(p / "score.json")
         self.assertEqual([q["text"] for q in score["cues"]], ["第一句。", "第二句。"])
         self.assertEqual(score["shots"][0]["events"], {"contact": 2})
+        # Real production retries used the same padded voice interval repeatedly.
+        # The second call used to move subtitles again despite unchanged media.
+        pp.retime(args)
+        self.assertEqual(pp.read(p / "score.json")["cues"], score["cues"])
+        # A voice edit still requires remapping, so idempotence cannot hide edits.
+        (p / "voice.wav").write_bytes(b"different-voice")
+        pp.save(p / "audio/narration_beats.json", {"duration": 14, "beats": [
+            {"id": "B01", "text": "第一句。第二句。", "start": 1, "end": 13}]})
+        pp.retime(args)
+        self.assertNotEqual(pp.read(p / "score.json")["cues"], score["cues"])
 
     def test_revision_edit_does_not_mutate_source(self):
         src = self.root / "v1"; src.mkdir()

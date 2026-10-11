@@ -86,3 +86,9 @@ H3按[调研策略](../../../runtime/workbench/docs/12_H3调研与制作策略.m
 全季恢复或交付时，先从 `workbench.yaml`、系列登记、每集 `project.json` 与 `out/current.json` 重建当前版本，再检查内部交付 manifest 与 publish 视频；不要从旧 checkpoint、目录排序或修改时间猜版本。逐集技术预检通过后再汇总全季审计。用户每集目录直接保留唯一最新版文件，Score、旁白和QA留过程目录；旧交付归档到工作台 `archive/deliveries/<series>/<episode>/<revision>/`；文档应按实际目录记录归档路径。发现版本漂移、旧文档或审计缺口时，保留可消费媒体并记录质量债务，修复 owner 后继续，不把 Progress First 改成脚本硬阻断。方法见[全季交付回读与经验沉淀](../../../runtime/workbench/docs/25_全季交付回读与经验沉淀.md)。
 
 提高初版下限靠患者任务、联合导演稿、语境注音、首句/术语小样与代表镜头。返修用 paper_project revise 复制独立文件，不硬链接可编辑工程；只重做受影响依赖，一次正式编码与打包。 方法见[初版质量与高效返修](../../../runtime/workbench/docs/28_初版质量与高效返修流程.md)。
+
+批量编排默认先做代表镜头与完整代表集，消费[初稿复核记录](../../../runtime/workbench/templates/series/08_first_draft_review.md) 的实际范围与欠项；其他集研究、故事和独立素材继续，不把表单变启动门。复用已成立技法/声线而非同一整篇镜头。源码更新后统一 paper_project build/preview/render，批次逐集回读真实帧、MP4与当前指针，保留成功产物和诊断，不凭退出码推进完成状态。新工作区自带初稿记录；既有工作区增量补缺不覆盖已有记录。
+
+## 初稿质量与资产复用
+
+批量系列制作在导演稿前先查询外挂医学视频资产库，先完成代表镜头和完整代表集 animatic，再扩展同类镜头；按内容 bounds 和认知比例重新布局，不复制整套构图。资产库仅提供稳定下限，缺库、缺样例或质量债不阻断不依赖该缺口的 Stage。

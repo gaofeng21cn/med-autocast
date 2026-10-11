@@ -1,0 +1,47 @@
+# 医学视频资产库与初稿前置质量 SOP
+
+## 目标
+
+把系列制作中反复出现的素材、动作、配乐和初稿问题沉淀为可检索的通用能力，提高第一版的视觉、声音和交付下限；库只负责发现、保管和复用，不替代导演、配音审听或医学终审。
+
+## 目录职责
+
+| 位置 | 职责 | 是否面向用户发布 |
+| --- | --- | --- |
+| `assets/paper-theatre/`、`assets/keyframes/` | 当前工作台的本地缓存、兼容入口和看图索引 | 否 |
+| `/path/to/mac-media-assets/` | 跨工作区统一资产库，保存载荷、manifest、来源、版本和 Review 边界 | 否 |
+| `productions/`、`work/`、`deliveries/` | 单集工程、Stage 交接、审看和过程回执 | 否 |
+| `publish/<series>/` | 每集唯一最新版视频、字幕、封面和发布文案 | 是 |
+
+外挂库是独立 repo，MAC 通过 `workbench.yaml.asset_library` 读取路径和工具；不把真实医学素材复制进 Skill 源码，也不把品牌、人物和声线写死进通用资产库。
+
+## 新系列与新集顺序
+
+1. 读取作者/医生与声线基线，再明确患者任务、事实边界和系列故事线。
+2. 查询资产库并实际看图，登记候选的用途、content bounds、透明度、连接点、来源/许可、复用范围和质量债。
+3. 先写视觉处理稿和每镜事件链，再做一张代表风格帧、一段连续动作和一集完整 animatic；代表镜头解决技法，代表集解决叙事、节奏和声音。
+4. 按认知比例和画面重量安排纸件，不按图片外框统一缩放。环境是纸景，透明主体承担事件，固定件、接触阴影和前景遮挡承担纸剧场的物理关系。
+5. 旁白稿保存正文、`tts_text`、语境多音字/术语读音、数字单位和停顿。先试听首句和高风险术语完整声段，再批量制作；有授权声线优先本地 IndexTTS，Edge TTS 只作备用。
+6. 在真实纸景上排字幕，做去文字审片；隐藏文字后主要对象、关系变化和结果仍应成立。删除只服务文字的大色块、色带和线段。
+7. 用同一套 `paper_project build -> preview -> render` 生成预览和正式视频，检查精确零秒、切入、接触、停留、切出、字幕、BGM 和拟音；变更后重新生成受影响证据。
+8. 交付后把有复用价值的纸件、组件、动作源码、BGM 原声/分轨/工程和失败原因同步到外挂库，保留旧 revision 与 SHA-256。
+
+## 初稿 Review 记录
+
+每集记录以下证据，但不把表单变成阻断门：资产实际查看范围；代表镜头/代表集 animatic；首句和高风险术语声段；去文字审片；字幕真实背景帧；音频无 BGM 与最终混音；机器文件与哈希校验。缺项保留候选和质量债，继续不依赖该缺口的 Stage；被拒绝医学素材和错读音频不得进入有效渲染。
+
+## 资产状态与边界
+
+`reference_only` 只能参考构图；`review_candidate` 可进入标注的候选镜头；`approved_direct_use` 只表示原件在登记范围内可直接取用。三者都不自动代表连续动作、完整听感、医学批准或公开发布。静态关键帧永远不冒充透明运动素材，BGM 分轨永远不冒充已混旁白成片。
+
+## 常用命令
+
+```sh
+python3 /path/to/mac-media-assets/tools/query_assets.py --query 纸景
+python3 /path/to/mac-media-assets/tools/sync_from_workbench.py \
+  --workspace /path/to/workbench \
+  --root /path/to/mac-media-assets
+python3 /path/to/mac-media-assets/tools/verify_catalog.py
+```
+
+校验只证明登记、文件存在和 SHA-256 一致；资产库不可用时继续 Progress First，记录诊断和质量债，不静默声称资产或成片通过。

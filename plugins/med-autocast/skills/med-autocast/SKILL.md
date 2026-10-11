@@ -79,3 +79,15 @@ Stage 返回尽量引用真实产物与版本/来源信息，给出质量债务�
 中文旁白先由内容/导演按语境确定多音字与术语读音，再由后端原生发音控制执行。IndexTTS 2.5 的 `tts_text` 与正文分离，注音变化纳入缓存；已明确拒用的旧 take 不得复用。首句与高风险词所在整段、场景接缝及最终混音分别听辨；普通 ASR 同字转写、响度和注音输入成功不等于发音通过。听辨缺项保留候选与质量债，不伪造审核。见 `runtime/workbench/docs/27_中文配音发音控制与听辨SOP.md`。
 
 提高初版质量优先在 story-directing 交接按语境注音的配音稿（正文与 tts_text 分离），用首句/术语整段和代表镜头小样尽早发现问题。后端按真实模型词表转换 model_text；返修用 paper_project revise 保存独立文件，retime 保留语义断句。audit_pronunciation 已登记为随包工具，按系列当前项目逐词定位覆盖，不能批准发音。具体方法见 `runtime/workbench/docs/28_初版质量与高效返修流程.md`。
+
+初稿质量的默认做法见 `runtime/workbench/docs/28_初版质量与高效返修流程.md`：患者任务与可见事件先行，先验证代表镜头及完整代表集，再扩展同类制作；复用技法而非统一构图。实际检查单件 alpha、多底色边缘、内容比例和按语境注音的首句/术语整段小样。源码或素材改变后统一 paper_project build/preview/render 并回读真实帧及当前母版，成功退出可能仅保存诊断。初始化/增量升级会补 `work/first-draft-review.md`，已有记录不覆盖；它是工作记录而非状态权威或启动门。经验回到最早 Stage 提示、专业 Skill 与复用库，病例、品牌和声线参数留目标工作区。尚未完成的连续动态、实际听感和医学复核不因批量编码升级。
+
+## 跨工作区医学视频资产库
+
+工作台配置存在 `asset_library` 时，先用外挂仓库的只读查询发现纸片、环境板、动作组件和 BGM 分轨，再回到当前工作区登记实际复用版本。MAC 可直接调用：
+
+```sh
+python3 runtime/native_helpers/med_autocast.py assets --workspace <workspace> --library external --query 纸景
+```
+
+外挂库缺失、同步失败或记录不完整时保留诊断和质量债，继续本地候选、故事、动画和声音工作；资产库只提供稳定起点，不替代当前镜头的比例、动作、连续动态、听感或医学 Review。

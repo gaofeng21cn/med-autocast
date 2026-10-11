@@ -65,6 +65,8 @@ Install through OPL:
 opl packages install med-autocast --json
 ```
 
+The standard install automatically installs the public `mac-media-assets` library. MAC discovers and uses its media without a separate user installation or manual invocation.
+
 Start a new task after installation and give Med Auto Cast a production folder, topic, audience, and approximate length. Following the [setup guide](docs/installation.md), the agent can initialize an empty workbench, install local JavaScript production dependencies, and check the browser, Chinese fonts, and the selected voice environment. A video model, remote GPU, and NAS are not required for the default route. A new author can start without an on-screen presenter or avatar; their identity and voice choice still need to be established before production. Use the [project setup guide](docs/workspace-adapter.md) to continue an existing production project.
 
 Source changes and the in-repository plugin carrier reach ordinary installed users only after a subsequent OCI package release and installation. See [current capabilities and validation](docs/status.md) for the exact qualification boundary.

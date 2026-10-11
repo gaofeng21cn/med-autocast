@@ -4,7 +4,7 @@
   "package_id": "med-autocast",
   "display_name": "Med Auto Cast",
   "publisher": "one-person-lab",
-  "version": "0.2.19",
+  "version": "0.2.20",
   "source": "first_party_repo_local",
   "carrier_source_role": "codex_plugin_default_carrier_not_package_truth",
   "codex_surface": {
@@ -22,6 +22,9 @@
       "marketplace_source": "gaofeng21cn/med-autocast",
       "publication_ref": "ghcr.io/gaofeng21cn/one-person-lab-packages/med-autocast:latest-stable"
     },
+    "required_capability_package_ids": [
+      "mac-media-assets"
+    ],
     "plugin_source_path": "."
   },
   "dependency_profiles": [],
@@ -29,8 +32,8 @@
     {
       "module_id": "media-assets",
       "package_id": "mac-media-assets",
-      "required": false,
-      "dependency_kind": "optional_enhancement",
+      "required": true,
+      "dependency_kind": "required_runtime_dependency",
       "capability_abi": "mac-media-assets.v1",
       "required_export_ids": [
         "mac-media-assets"
@@ -78,5 +81,11 @@
         }
       }
     ]
-  }
+  },
+  "requires": [
+    {
+      "package_id": "mac-media-assets",
+      "presence": "required"
+    }
+  ]
 }

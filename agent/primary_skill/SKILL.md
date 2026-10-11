@@ -84,7 +84,7 @@ Stage 返回尽量引用真实产物与版本/来源信息，给出质量债务�
 
 ## 跨工作区医学视频资产库
 
-安装工作台时 `setup_workbench.sh` 默认调用 `media_asset_library ensure` 自动获取或复用独立 `mac-media-assets`；已有内容不覆盖，私有访问或离线失败只生成诊断。仅安装插件载体不执行工作台安装，首次准备工作台应使用随包 setup。路径发现与真实取用见 `docs/media-assets-integration.md`。制作时先用外挂仓库的只读查询发现纸片、环境板、动作组件和 BGM 分轨，再回到当前工作区登记实际复用版本。MAC 可直接调用：
+标准 `opl packages install med-autocast --json` 通过 Framework required 依赖自动安装公开的 `mac-media-assets`，用户只需一次安装。首次准备工作台时 `setup_workbench.sh` 调用 `media_asset_library ensure` 优先发现已安装库，已有内容不覆盖，离线或没有合适素材时继续其他工作与新创。插件安装与工作台运行环境准备分开，首次工作台仍使用随包 setup。路径发现与真实取用见 `docs/media-assets-integration.md`。制作时先用外挂仓库的只读查询发现纸片、环境板、动作组件和 BGM 分轨，再回到当前工作区登记实际复用版本。MAC 可直接调用：
 
 ```sh
 python3 runtime/native_helpers/med_autocast.py assets --workspace <workspace> --library external --query 纸景

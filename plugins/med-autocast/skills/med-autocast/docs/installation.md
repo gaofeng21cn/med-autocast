@@ -7,7 +7,7 @@ opl packages install med-autocast --json
 opl packages status --package-id med-autocast --json
 ```
 
-OPL 通过 `ghcr.io/gaofeng21cn/one-person-lab-packages/med-autocast:latest-stable` 解析当前版本，校验发布内容，并交给原生插件管理器安装。插件选择器为 med-autocast@med-autocast。安装后在新任务中使用 Med Auto Cast。
+OPL 通过 `ghcr.io/gaofeng21cn/one-person-lab-packages/med-autocast:latest-stable` 解析当前版本，校验发布内容，并交给原生插件管理器安装。安装时会先自动安装公开的 `mac-media-assets` 依赖，再安装 MAC；用户只执行一次安装命令。资产库的媒体与查询入口由 MAC 自动发现。插件选择器为 med-autocast@med-autocast。安装后在新任务中使用 Med Auto Cast。
 
 软件包发布以 OCI 为准，GitHub Release 页面不是安装前提。源码仓库和版本标签用于开发与追溯；常规安装不需要手动下载 ZIP、添加 Git 市场或执行本仓打包脚本。
 
@@ -65,4 +65,4 @@ node scripts/smoke_local_animation.mjs
 维护者可用已初始化的隔离工作区运行真实渲染回归：设置 `MED_AUTOCAST_TEST_WORKSPACE=<工作区绝对路径>`，再用该工作区 `.venv/bin/python -B -m unittest discover -s tests -v`。测试使用临时非医学素材和静音音轨，验证共享 HTML 定帧、编码、缺资源拦截及旧 render/mux 接口，不下载模型、不播放声音、不改真实作品。未设置该变量时会明确跳过此项，不能计作真实渲染验收。
 
 
-独立资产库在标准工作台 setup 中自动获取或复用；已有本地库不覆盖，离线/私有权限失败保留诊断并继续新创。导演先 query 并看原件，制作 use 复制精确版本后重新审查当前镜头；不设复用率。实际命令及载体安装边界见 [独立库接入](media-assets-integration.md)。
+独立资产库随标准 MAC 软件包安装自动安装；工作台 setup 优先发现已安装库，已有本地库不覆盖，离线或缺少合适素材时保留诊断并继续新创。导演先 query 并看原件，制作 use 复制精确版本后重新审查当前镜头；不设复用率。实际命令及载体安装边界见 [独立库接入](media-assets-integration.md)。

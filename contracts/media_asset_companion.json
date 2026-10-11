@@ -3,12 +3,14 @@
   "package_id": "mac-media-assets",
   "repository": "https://github.com/gaofeng21cn/mac-media-assets.git",
   "installation": {
-    "entrypoint": "runtime/workbench/scripts/setup_workbench.sh",
+    "entrypoint": "opl packages install med-autocast --json",
+    "default": "automatic_required_dependency",
+    "package_installation": "framework_required_dependency_closure",
+    "workbench_entrypoint": "runtime/workbench/scripts/setup_workbench.sh",
     "tool": "media_asset_library ensure",
-    "default": "automatic",
     "existing_library": "reuse_without_fetch_or_overwrite",
-    "access_failure": "diagnostic_then_continue",
-    "plugin_install_only": "carrier_installation_does_not_run_workspace_setup"
+    "access_failure": "diagnostic_then_continue_creative_work",
+    "plugin_install_only": "use_framework_package_install_for_automatic_dependency_install"
   },
   "creation_policy": {
     "discover_before_directing": true,

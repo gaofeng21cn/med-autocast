@@ -64,6 +64,9 @@ def locate(workspace, explicit=None):
                   Path.home() / 'Library/Application Support/OPL/state')).expanduser()
     # Framework installs headless capabilities in its internal native carrier.
     # Inspect both supported native cache homes; no download or state mutation.
+    # Native local-source installs resolve the marketplace checkout directly.
+    # An older Framework projection may remain beside it after an update.
+    candidates.append(state / 'internal-package-carrier/.tmp/marketplaces/mac-media-assets')
     candidates.append(state / 'codex-plugin-marketplaces/mac-media-assets/plugins/mac-media-assets')
     for cache in [state / 'internal-package-carrier/plugins/cache/mac-media-assets',
                   codex / 'plugins/cache/mac-media-assets']:

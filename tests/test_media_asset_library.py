@@ -103,6 +103,19 @@ class MediaCompanionTests(unittest.TestCase):
             found, _ = companion.locate(self.workspace)
             self.assertEqual(found, current.resolve())
 
+    def test_native_local_source_update_wins_over_stale_managed_projection(self):
+        state = self.base / 'opl-state'
+        old = state / 'codex-plugin-marketplaces/mac-media-assets/plugins/mac-media-assets'
+        current = state / 'internal-package-carrier/.tmp/marketplaces/mac-media-assets'
+        for folder in [old, current]:
+            shutil.copytree(self.repo, folder, ignore=shutil.ignore_patterns('.git'))
+        (old / 'catalog/assets.jsonl').write_text('')
+        (self.workspace / 'workbench.yaml').write_text('asset_library:\n  root: ../mac-media-assets\n')
+        with patch.dict('os.environ', {'OPL_STATE_DIR': str(state)}):
+            found, _ = companion.locate(self.workspace)
+            self.assertEqual(found, current.resolve())
+            self.assertEqual(companion.query(self.workspace)['count'], 1)
+
     def test_real_native_entry_selects_bundled_tool(self):
         completed = subprocess.run([sys.executable, str(ROOT/'runtime/native_helpers/workbench_tool.py'),
                                     '--workspace',str(self.workspace),'--name','media_asset_library','--','status'],

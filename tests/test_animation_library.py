@@ -111,6 +111,52 @@ class LibraryTests(unittest.TestCase):
         self.assertEqual(result["status"], "not_imported")
         self.assertFalse((self.project / "assets/library").exists())
 
+    def test_layered_bundle_imports_each_part_and_is_idempotent(self):
+        cap = self.workspace / "cap.png"
+        cap.write_bytes(b"independent cap")
+        archived = library.archive(self.root, {
+            "id": "bottle", "kind": "image", "entry": "files/body.png",
+            "asset_bundle": [
+                {"asset_id": "body", "path": "files/body.png", "medical": True},
+                {"asset_id": "cap", "path": "files/cap.png", "registration": {"pivot": {"x": .5, "y": .9}}},
+            ],
+            "assembly": {"parts": ["body", "cap"]},
+        }, [{"source": self.project / "paper.png", "path": "files/body.png"},
+            {"source": cap, "path": "files/cap.png"}])
+        result = library.reuse(self.workspace, self.root, self.project, archived["id"], asset_id="drug")
+        rows = library.read(self.project / "asset_manifest.json")["assets"]
+        parts = {row["asset_id"]: row for row in rows if row["asset_id"].startswith("drug__")}
+        self.assertEqual(set(parts), {"drug__body", "drug__cap"})
+        self.assertEqual((self.project / parts["drug__cap"]["path"]).read_bytes(), b"independent cap")
+        self.assertEqual(parts["drug__cap"]["registration"]["pivot"], {"x": .5, "y": .9})
+        self.assertEqual(parts["drug__body"]["medical_review"]["status"], "pending")
+        self.assertEqual(len(result["imported_assets"]), 2)
+        library.reuse(self.workspace, self.root, self.project, archived["id"], asset_id="drug")
+        self.assertEqual(len(library.read(self.project / "asset_manifest.json")["assets"]), len(rows))
+        self.assertEqual(len(library.read(self.root / "uses.json")["uses"]), 1)
+
+    def test_incomplete_bundle_preserves_manifest_and_existing_files(self):
+        archived = library.archive(self.root, {
+            "id": "incomplete", "kind": "image", "entry": "files/body.png",
+            "asset_bundle": [{"asset_id": "body", "path": "files/body.png"},
+                             {"asset_id": "cap", "path": "files/missing.png"}],
+        }, [{"source": self.project / "paper.png", "path": "files/body.png"}])
+        before = (self.project / "asset_manifest.json").read_bytes()
+        with self.assertRaisesRegex(ValueError, "独立文件"):
+            library.reuse(self.workspace, self.root, self.project, archived["id"])
+        self.assertEqual((self.project / "asset_manifest.json").read_bytes(), before)
+        self.assertFalse((self.project / "assets/library").exists())
+
+    def test_withdrawn_exact_revision_is_not_reused(self):
+        result, _ = self.ingest()
+        identifier = f"paper:{result[0]['id']}@{result[0]['revision']}"
+        library.write(self.root / "curation.json", {"assets": {identifier: {"status": "needs_rebuild", "reason": "baked halo"}}})
+        before = (self.project / "asset_manifest.json").read_bytes()
+        reused = library.reuse(self.workspace, self.root, self.project, result[0]["id"], result[0]["revision"])
+        self.assertEqual(reused["status"], "not_imported")
+        self.assertEqual(reused["quality_debt"], ["baked halo"])
+        self.assertEqual((self.project / "asset_manifest.json").read_bytes(), before)
+
 
 if __name__ == "__main__":
     unittest.main()

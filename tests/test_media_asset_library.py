@@ -120,6 +120,17 @@ class MediaCompanionTests(unittest.TestCase):
             companion.use(self.workspace,'productions/s/e',self.row['id'])
         self.assertEqual(local.read(self.project/'asset_manifest.json')['assets'],[])
 
+    def test_old_companion_cannot_recommend_or_import_withdrawn_material(self):
+        companion.ensure(self.workspace, repository=str(self.repo))
+        row = {**self.row, 'curation': {'status': 'needs_rebuild', 'reason': 'split parts first'}}
+        (self.target/'catalog/assets.jsonl').write_text(json.dumps(row)+'\n')
+        self.assertEqual(companion.query(self.workspace)['count'], 0)
+        self.assertEqual(companion.query(self.workspace, include_reference=True)['count'], 1)
+        result = companion.use(self.workspace, 'productions/s/e', row['id'])
+        self.assertEqual(result['status'], 'not_imported')
+        self.assertFalse(result['blocks_production'])
+        self.assertEqual(local.read(self.project/'asset_manifest.json')['assets'], [])
+
 
 if __name__ == '__main__':
     unittest.main()

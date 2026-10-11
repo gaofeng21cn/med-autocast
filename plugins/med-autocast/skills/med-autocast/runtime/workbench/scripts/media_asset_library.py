@@ -131,7 +131,8 @@ def author_id(workspace, series=None):
         return None
 
 
-def query(workspace, *, explicit=None, text=None, kind=None, scope=None, series=None, include_author_assets=False):
+def query(workspace, *, explicit=None, text=None, kind=None, scope=None, series=None, include_author_assets=False,
+          include_reference=False):
     status = report(workspace, explicit)
     result = {**status, 'schema': 'med_autocast_asset_query/v1', 'library': 'external', 'count': 0, 'assets': []}
     if status['status'] != 'available':
@@ -144,6 +145,8 @@ def query(workspace, *, explicit=None, text=None, kind=None, scope=None, series=
             command.extend([flag, value])
     if include_author_assets:
         command.append('--include-author-assets')
+    if include_reference:
+        command.append('--include-reference')
     try:
         completed = subprocess.run(command, capture_output=True, text=True, timeout=30)
         if completed.returncode:
@@ -155,6 +158,9 @@ def query(workspace, *, explicit=None, text=None, kind=None, scope=None, series=
         selected_author = author_id(workspace, series)
         rows = [row for row in rows if include_author_assets or (row.get('reuse_scope') or {}).get('kind') != 'author'
                 or row['reuse_scope'].get('id') == selected_author]
+        if not include_reference and kind != 'reference_frame':
+            rows = [row for row in rows if row.get('review_boundary', {}).get('admission') != 'reference_only'
+                    and row.get('curation', {}).get('status') not in {'needs_rebuild', 'superseded'}]
         for row in rows:
             row['resolved_payloads'] = [{'role': item.get('role'), 'path': str(confined(root, item['path'])),
                                         'exists': confined(root, item['path']).is_file()} for item in row.get('payload', [])]
@@ -180,11 +186,16 @@ def use(workspace, project, identifier, explicit=None, asset_id=None):
         return {**result, 'quality_debt': ['资产库不可用，可继续本地素材或新创']}
     root = Path(status['repo'])
     rows = [json.loads(line) for line in (root / 'catalog/assets.jsonl').read_text().splitlines() if line.strip()]
+    reference_catalog = root / 'catalog/reference-assets.jsonl'
+    if reference_catalog.is_file():
+        rows.extend(json.loads(line) for line in reference_catalog.read_text().splitlines() if line.strip())
     row = next((item for item in rows if item['id'] == identifier), None)
     if not row:
         return {**result, 'quality_debt': ['未找到所选精确资产 ID，可重新检索或新创']}
     if row.get('kind') == 'reference_frame' or row.get('review_boundary', {}).get('admission') == 'reference_only':
         return {**result, 'quality_debt': ['静态参考只能参考构图，不能作为可运动纸件导入'], 'asset': row}
+    if row.get('curation', {}).get('status') in {'needs_rebuild', 'superseded'}:
+        return {**result, 'quality_debt': [row['curation'].get('reason', '该版本退出推荐，请使用替代部件或新创')], 'asset': row}
     record_ref = row.get('portable_record')
     if not record_ref:
         return {**result, 'quality_debt': ['该版本缺少独立原记录，请更新库或先作为参考查看']}
@@ -231,6 +242,7 @@ def main():
     for name in ['query', 'kind', 'scope', 'series', 'id', 'project', 'asset-id']:
         parser.add_argument('--' + name)
     parser.add_argument('--include-author-assets', action='store_true')
+    parser.add_argument('--include-reference', action='store_true')
     args = parser.parse_args()
     workspace = args.workspace.resolve()
     try:
@@ -238,7 +250,8 @@ def main():
             result = ensure(workspace, args.root, offline=args.offline)
         elif args.action == 'query':
             result = query(workspace, explicit=args.root, text=args.query, kind=args.kind,
-                           scope=args.scope, series=args.series, include_author_assets=args.include_author_assets)
+                           scope=args.scope, series=args.series, include_author_assets=args.include_author_assets,
+                           include_reference=args.include_reference)
         elif args.action == 'use':
             if not args.id or not args.project:
                 parser.error('use 需要 --id 精确版本ID和 --project 工作区内单集路径')

@@ -207,6 +207,8 @@ def register_records(root, path):
 
 def managed_records(root):
     catalog = root / "catalog.json"
+    curation_path = root / "curation.json"
+    curation = read(curation_path).get("assets", {}) if curation_path.exists() else {}
     latest, debts = {}, []
     if catalog.exists():
         for row in read(catalog).get("items", []):
@@ -215,7 +217,8 @@ def managed_records(root):
                 record = read(record_path)
                 if record["id"] != row["id"] or record["revision"] != row["revision"]:
                     raise ValueError("目录与包身份不一致")
-                latest[record["id"]] = {**record, "record": row["record"], "managed": True,
+                assessment = curation.get(f"paper:{record['id']}@{record['revision']}", {})
+                latest[record["id"]] = {**record, "curation": assessment, "record": row["record"], "managed": True,
                     "resolved_path": str(within(record_path.parent, record.get("entry", record["files"][0]["path"]))) }
             except (OSError, json.JSONDecodeError, KeyError, IndexError, ValueError) as error:
                 debts.append({"record": row["record"], "detail": str(error)})
@@ -264,6 +267,10 @@ def reuse(workspace, root, project, identifier, revision=None, asset_id=None):
         record = {**read(record_path), "record": str(record_path.relative_to(root))}
     if not record:
         return {"status": "not_imported", "quality_debt": ["找不到持久素材条目"]}
+    curation_path = root / "curation.json"
+    assessment = read(curation_path).get("assets", {}).get(f"paper:{record['id']}@{record['revision']}", {}) if curation_path.exists() else {}
+    if assessment.get("status") in {"needs_rebuild", "superseded"} or record.get("status") == "reference_only":
+        return {"status": "not_imported", "quality_debt": [assessment.get("reason", "该原件仅作参考，请选替代部件或新创")]}
     scope = record.get("reuse_scope", {})
     project = within(workspace, project)
     config = read(project / "project.json")
@@ -277,12 +284,24 @@ def reuse(workspace, root, project, identifier, revision=None, asset_id=None):
     relative = Path(base) / identifier / record["revision"]
     destination = within(project, relative)
     asset = copy.deepcopy(record.get("asset"))
+    bundle = copy.deepcopy(record.get("asset_bundle") or [])
+    assets = bundle or ([asset] if asset else [])
     manifest_path = project / config.get("assets", "asset_manifest.json")
-    manifest = read(manifest_path) if asset else None
-    new_id = token(asset_id or identifier) if asset else None
-    existing = next((row for row in manifest["assets"] if row["asset_id"] == new_id), None) if asset else None
-    if existing and existing.get("library_ref") != record["record"]:
-        raise ValueError("目标素材 ID 已存在，保留原素材；请使用新 ID")
+    manifest = read(manifest_path) if assets else None
+    new_id = token(asset_id or identifier) if assets else None
+    planned = []
+    payload_paths = {item["path"] for item in record["files"]}
+    for part in assets:
+        part_id = token(new_id + "__" + token(part["asset_id"])) if bundle else new_id
+        part_path = part["path"] if bundle else record["entry"]
+        if part_path not in payload_paths:
+            raise ValueError("分层素材缺少已保管的独立文件")
+        if any(item["asset_id"] == part_id for item in planned):
+            raise ValueError("分层素材 ID 重复")
+        existing = next((row for row in manifest["assets"] if row["asset_id"] == part_id), None)
+        if existing and (existing.get("library_ref") != record["record"] or existing.get("path") != str(relative / part_path)):
+            raise ValueError("目标素材 ID 已存在，保留原素材；请使用新 ID")
+        planned.append({"asset_id": part_id, "path": part_path, "asset": part, "existing": existing})
     for item in record["files"]:
         original = within(source, item["path"])
         target = within(destination, item["path"])
@@ -298,16 +317,21 @@ def reuse(workspace, root, project, identifier, revision=None, asset_id=None):
         if digest(target) != item["sha256"]:
             raise ValueError("复用复制字节不一致")
     write(destination / "library-record.json", {key: value for key, value in record.items() if key != "resolved_path"})
-    if asset and not existing:
-        asset = map_references(asset, lambda ref: str(relative / ref) if (source / ref).is_file() else ref)
-        asset.update({"asset_id": new_id, "path": str(relative / record["entry"]),
+    changed = False
+    for part in planned:
+        if part["existing"]:
+            continue
+        asset = map_references(part["asset"], lambda ref: str(relative / ref) if (source / ref).is_file() else ref)
+        asset.update({"asset_id": part["asset_id"], "path": str(relative / part["path"]),
                       "source_type": "reviewed_library", "library_ref": record["record"],
-                      "original_source_type": record["asset"].get("source_type"),
+                      "original_source_type": part["asset"].get("source_type"),
                       "source_review": copy.deepcopy(asset.get("visual_review", {})),
                       "status": "pending_review", "visual_review": {"status": "pending"}})
         if asset.get("medical"):
             asset["medical_review"] = {"status": "pending"}
         manifest["assets"].append(asset)
+        changed = True
+    if changed:
         write(manifest_path, manifest)
     usage_path = root / "uses.json"
     usage = read(usage_path) if usage_path.exists() else {"schema": "animation_element_uses/v1", "uses": []}
@@ -320,6 +344,8 @@ def reuse(workspace, root, project, identifier, revision=None, asset_id=None):
     return {"status": "copied_and_verified", "id": identifier, "revision": record["revision"],
             "directory": str(destination), "entry": str(destination / record.get("entry", record["files"][0]["path"])),
             "asset_id": new_id, "review": "evaluate_in_current_shot",
+            "imported_assets": [{"asset_id": part["asset_id"], "path": str(relative / part["path"])} for part in planned],
+            "assembly": record.get("assembly"),
             "quality_debt": record.get("quality_debt", []),
             "dependencies": record.get("dependencies", [])}
 
@@ -390,7 +416,9 @@ def run(args):
     kind, scope = getattr(args, "kind", None), getattr(args, "scope", None)
     matches = [item for item in all_entries if (not query or query in json.dumps(item, ensure_ascii=False).lower())
                and (not kind or item.get("kind") == kind)
-               and (not scope or item.get("reuse_scope", {}).get("kind") == scope)]
+               and (not scope or item.get("reuse_scope", {}).get("kind") == scope)
+               and item.get("curation", {}).get("status") not in {"needs_rebuild", "superseded"}
+               and item.get("status") != "reference_only"]
     action_debts = [debt for action in actions for debt in action.get("quality_debt", [])]
     return {"status": "completed_with_quality_debt" if debts or managed_debts or live_debts or action_debts else "completed",
             "count": len(matches), "managed_count": len(managed), "assets": matches, "actions": actions,

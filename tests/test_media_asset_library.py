@@ -136,6 +136,39 @@ class MediaCompanionTests(unittest.TestCase):
         self.assertEqual(report['installation'], 'preserved_existing')
         self.assertEqual((self.target/'keep').read_text(), 'keep')
 
+    def test_collection_import_preserves_success_when_another_part_is_missing(self):
+        companion.ensure(self.workspace, repository=str(self.repo))
+        config={'assemblies':[{'id':'example','parts':[
+            {'asset_id':self.row['id'],'source_id':'paper'},
+            {'asset_id':'paper:missing@none','source_id':'missing'}]}]}
+        (self.target/'collections/assemblies.json').write_text(json.dumps(config))
+        result=companion.use_collection(self.workspace,'productions/s/e','example')
+        self.assertEqual(result['status'],'copied_with_debt')
+        self.assertFalse(result['blocks_production'])
+        self.assertEqual(result['imports'][0]['status'],'copied_and_verified')
+        self.assertTrue(Path(result['receipt']).is_file())
+        self.assertEqual(len(local.read(self.project/'asset_manifest.json')['assets']),1)
+
+    def test_empty_collection_provider_does_not_block_production(self):
+        result=companion.use_collection(self.workspace,'productions/s/e','missing')
+        self.assertEqual(result['status'],'not_imported')
+        self.assertFalse(result['blocks_production'])
+
+    def test_standalone_environment_original_enters_render_manifest(self):
+        metadata={'id':'plain-door','kind':'environment','entry':'files/paper.png',
+                  'reuse_scope':{'kind':'general'},'content_bounds':[1,2,3,4],
+                  'medical_review':'not_applicable'}
+        archived=local.archive(self.repo,metadata,[{'source':str(self.base/'original.png'),
+                                                   'path':'files/paper.png'}])
+        result=local.reuse(self.workspace.resolve(),self.repo.resolve(),'productions/s/e','plain-door',archived['revision'])
+        self.assertEqual(len(result['imported_assets']),1)
+        asset=local.read(self.project/'asset_manifest.json')['assets'][0]
+        self.assertEqual(asset['content_bounds'],[1,2,3,4])
+        self.assertEqual(asset['visual_review']['status'],'pending')
+        original=local.read(self.repo/archived['record'])
+        self.assertNotIn('asset',original)
+        self.assertEqual(original['revision'],archived['revision'])
+
     def test_author_scope_filtered_and_not_importable_for_other_author(self):
         companion.ensure(self.workspace, repository=str(self.repo))
         row = dict(self.row, reuse_scope={'kind':'author','id':'another_author'})

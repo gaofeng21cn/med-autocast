@@ -123,12 +123,12 @@ def query_animation_assets(root: Path, query=None, kind=None, scope=None) -> dic
             'read_only': True, 'note': '持久素材与工程发现结果分开标记；复用仍需按新镜头审看'}
 
 
-def query_external_assets(root: Path, query=None, kind=None, scope=None, series=None) -> dict:
+def query_external_assets(root: Path, query=None, kind=None, scope=None, series=None, **facets) -> dict:
     """Discover the installed companion without downloading during a read-only query."""
     bundle = Path(__file__).resolve().parents[1] / 'workbench/scripts'
     sys.path.insert(0, str(bundle))
     from media_asset_library import query as external_query
-    return external_query(root, text=query, kind=kind, scope=scope, series=series)
+    return external_query(root, text=query, kind=kind, scope=scope, series=series, **facets)
 
 
 def interval(value) -> tuple[float,float]:
@@ -226,6 +226,9 @@ def main():
             p.add_argument('--category');p.add_argument('--series')
             p.add_argument('--library', choices=['keyframes', 'animation', 'external'], default='keyframes')
             p.add_argument('--query');p.add_argument('--kind');p.add_argument('--scope')
+            for flag in ('motion-action','story-role','medium','collection','maturity'):
+                p.add_argument('--'+flag)
+            p.add_argument('--limit',type=int)
         if name=='preflight':
             p.add_argument('--delivery',required=True);p.add_argument('--current',required=True);p.add_argument('--source-review',required=True)
         if name=='preflight-workbench':
@@ -240,7 +243,9 @@ def main():
         if a.command=='inspect':result=inspect_workspace(root)
         elif a.command=='assets':
             result = (query_animation_assets(root, a.query, a.kind, a.scope) if a.library == 'animation'
-                      else query_external_assets(root, a.query, a.kind, a.scope, a.series) if a.library == 'external'
+                      else query_external_assets(root, a.query, a.kind, a.scope, a.series,
+                           category=a.category, action=a.motion_action, story_role=a.story_role,
+                           medium=a.medium, collection=a.collection, maturity=a.maturity, limit=a.limit) if a.library == 'external'
                       else query_assets(root, a.category, a.series))
         elif a.command=='preflight':result=preflight(root,a.delivery,a.current,a.source_review)
         else:

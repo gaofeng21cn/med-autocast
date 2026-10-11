@@ -142,7 +142,8 @@ def author_id(workspace, series=None):
 
 
 def query(workspace, *, explicit=None, text=None, kind=None, scope=None, series=None, include_author_assets=False,
-          include_reference=False):
+          include_reference=False, category=None, action=None, story_role=None, medium=None, collection=None,
+          maturity=None, limit=None):
     status = report(workspace, explicit)
     result = {**status, 'schema': 'med_autocast_asset_query/v1', 'library': 'external', 'count': 0, 'assets': []}
     if status['status'] != 'available':
@@ -150,9 +151,11 @@ def query(workspace, *, explicit=None, text=None, kind=None, scope=None, series=
     root = Path(status['repo'])
     command = [sys.executable, '-B', str(root / 'tools/query_assets.py'), '--json']
     for flag, value in [('--query', text), ('--kind', kind), ('--scope', scope), ('--series', series),
-                        ('--author-id', author_id(workspace, series))]:
+                        ('--author-id', author_id(workspace, series)), ('--category', category),
+                        ('--action', action), ('--story-role', story_role), ('--medium', medium),
+                        ('--collection', collection), ('--maturity', maturity), ('--limit', limit)]:
         if value:
-            command.extend([flag, value])
+            command.extend([flag, str(value)])
     if include_author_assets:
         command.append('--include-author-assets')
     if include_reference:
@@ -177,6 +180,54 @@ def query(workspace, *, explicit=None, text=None, kind=None, scope=None, series=
         result.update(assets=rows, count=len(rows))
     except (OSError, ValueError, KeyError, subprocess.TimeoutExpired) as error:
         result.update(status='diagnostic', diagnostic=type(error).__name__)
+    return result
+
+
+def collections(workspace, explicit=None):
+    status = report(workspace, explicit)
+    result = {**status, 'assemblies': [], 'event_kits': [], 'audio': [], 'blocks_production': False}
+    if status['status'] != 'available':
+        return result
+    root = Path(status['repo'])
+    for path, key, field in [('assemblies.json', 'assemblies', 'assemblies'),
+                             ('event-kits.json', 'event_kits', 'kits'), ('audio.json', 'audio', 'assets')]:
+        source = root / 'collections' / path
+        if source.is_file():
+            try:
+                result[key] = json.loads(source.read_text()).get(field, [])
+            except (OSError, ValueError):
+                result.setdefault('quality_debt', []).append('集合登记不可读：' + path)
+    return result
+
+
+def use_collection(workspace, project, identifier, explicit=None):
+    inventory = collections(workspace, explicit)
+    selected = next((item for item in inventory['assemblies'] + inventory['event_kits']
+                     if item['id'] == identifier), None)
+    result = {'status': 'not_imported', 'collection': identifier, 'imports': [],
+              'quality_debt': [], 'blocks_production': False}
+    if not selected:
+        result['quality_debt'].append('未找到组合，可继续选单件或新创')
+        return result
+    for part in selected.get('parts', []):
+        try:
+            item = use(workspace, project, part['asset_id'], explicit)
+            result['imports'].append(item)
+            if item.get('status') != 'copied_and_verified':
+                result['quality_debt'].extend(item.get('quality_debt', ['部件未导入']))
+        except (OSError, ValueError, KeyError) as error:
+            result['quality_debt'].append({'asset_id': part.get('asset_id'), 'diagnostic': type(error).__name__})
+    copied = [item for item in result['imports'] if item.get('status') == 'copied_and_verified']
+    if copied:
+        directory = confined(workspace, project) / 'library-collections'
+        directory.mkdir(parents=True, exist_ok=True)
+        safe_name = selected['id'].replace('/', '_').replace('\\', '_')
+        receipt = directory / (safe_name + '.json')
+        receipt.write_text(json.dumps({'collection': selected, 'imports': copied,
+                                      'current_shot_review': 'pending', 'locks_story': False},
+                                     ensure_ascii=False, indent=2) + '\n')
+        result.update(status='copied_with_debt' if result['quality_debt'] else 'copied_and_verified',
+                      receipt=str(receipt))
     return result
 
 
@@ -239,18 +290,21 @@ def use(workspace, project, identifier, explicit=None, asset_id=None):
         provenance.write_text(json.dumps({'package_id': 'mac-media-assets', 'asset_id': row['id'],
                                           'revision': row['revision'], 'repository': REPOSITORY,
                                           'original_review_boundary': row.get('review_boundary'),
+                                          'discovery': row.get('discovery'),
                                           'current_shot_review': 'pending'}, ensure_ascii=False, indent=2) + '\n')
     return {**imported, 'external_asset_id': identifier, 'blocks_production': False}
 
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument('action', choices=['status', 'ensure', 'query', 'use'])
+    parser.add_argument('action', choices=['status', 'ensure', 'query', 'use', 'collections', 'use-collection'])
     parser.add_argument('--workspace', type=Path, default=Path(os.environ.get('MED_AUTOCAST_WORKSPACE_ROOT', '.')))
     parser.add_argument('--root', type=Path)
     parser.add_argument('--offline', action='store_true')
-    for name in ['query', 'kind', 'scope', 'series', 'id', 'project', 'asset-id']:
+    for name in ['query', 'kind', 'scope', 'series', 'id', 'project', 'asset-id', 'category', 'motion-action',
+                 'story-role', 'medium', 'collection', 'maturity']:
         parser.add_argument('--' + name)
+    parser.add_argument('--limit', type=int)
     parser.add_argument('--include-author-assets', action='store_true')
     parser.add_argument('--include-reference', action='store_true')
     args = parser.parse_args()
@@ -261,7 +315,13 @@ def main():
         elif args.action == 'query':
             result = query(workspace, explicit=args.root, text=args.query, kind=args.kind,
                            scope=args.scope, series=args.series, include_author_assets=args.include_author_assets,
-                           include_reference=args.include_reference)
+                           include_reference=args.include_reference, category=args.category, action=args.motion_action,
+                           story_role=args.story_role, medium=args.medium, collection=args.collection,
+                           maturity=args.maturity, limit=args.limit)
+        elif args.action == 'collections':
+            result = collections(workspace, args.root)
+        elif args.action == 'use-collection':
+            result = use_collection(workspace, args.project, args.id, args.root)
         elif args.action == 'use':
             if not args.id or not args.project:
                 parser.error('use 需要 --id 精确版本ID和 --project 工作区内单集路径')

@@ -285,6 +285,21 @@ def reuse(workspace, root, project, identifier, revision=None, asset_id=None):
     destination = within(project, relative)
     asset = copy.deepcopy(record.get("asset"))
     bundle = copy.deepcopy(record.get("asset_bundle") or [])
+    # Standalone PNG records are valid originals even without a project-specific
+    # asset wrapper. Derive the target annotation without rewriting their revision.
+    if not asset and not bundle and record.get('kind') in {
+            'image', 'transparent_subject', 'medical_cutout', 'environment', 'environment_plate'} \
+            and Path(record.get('entry', '')).suffix.lower() in IMAGE_SUFFIXES:
+        source_info = record.get('source') or {}
+        asset = {'asset_id': identifier, 'path': record['entry'],
+                 'source_type': source_info.get('kind', 'registered_original'),
+                 'visual_meaning': record.get('title', identifier),
+                 'content_bounds': record.get('content_bounds'),
+                 'content_bounds_format': record.get('content_bounds_format'),
+                 'registration': record.get('registration'),
+                 'medical': record.get('medical_review') not in (None, 'not_applicable'),
+                 'visual_review': {'status': 'source_scope_only',
+                                   'original_review': copy.deepcopy(record.get('review', {}))}}
     assets = bundle or ([asset] if asset else [])
     manifest_path = project / config.get("assets", "asset_manifest.json")
     manifest = read(manifest_path) if assets else None

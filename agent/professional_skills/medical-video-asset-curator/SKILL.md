@@ -39,3 +39,15 @@ description: 保管、检索和策展医学代码动画的可复用纸件、环�
 独立 `mac-media-assets` 是默认发现入口。先用 `media_asset_library query --query <视觉锚点>` 或 native `assets --library external` 检索，再实际查看 `resolved_payloads` 的原图/动作与本库 Skill。按本集故事决定复用、适配、另找合法素材或 ImageGen 新创，不设复用率，不让已有素材决定故事、构图、风格或镜头数。库缺失、无匹配或旧素材不合适时继续新创与其他工作，质量债随交接保留。实际取用用 `media_asset_library use --project <单集路径> --id <精确外库ID>`，沿用工作台版本包与 uses，复制后当前镜头重新审查；作者范围仍按作者档案约束。安装/发现方法见 `docs/media-assets-integration.md`。
 
 公共同步只接收通用或选题范围的无品牌素材。作者专属形象、授权声线、品牌参数、签名音乐及带品牌的样片保管在私有作者工作区；公开前查看全部附带媒体，不以“不默认推荐”代替公开授权。外挂库发现优先使用当前受管理载体，避免回到已淘汰的旧缓存。
+
+## 按故事发现、装配与声音选择
+
+先用 `media_asset_library query --query <中文对象/情绪> --category <分类> --motion-action <动作> --story-role <叙事用途>` 查看候选；分类可用中文名或技术 ID。缺少标签仍看原件，不要求补齐字段才能继续。名称、同义词、动作和用途优先匹配，来源记录只辅助追溯。
+
+`media_asset_library collections` 给出可重组装配、事件组合及独立配乐/拟音描述；`query --collection <ID>` 查组合内原件。装配集合不是固定场景，事件套件不是固定故事：导演可删改成员、调整视角和接触点、改节奏或新创。实际看随库 `tools/preview-engine/index.html` 的动作小样与 `audio.html` 的分轨/变体，网页用库根本地HTTP服务打开。
+
+确定用途后 `use-collection --project <单集路径> --id <组合ID>` 按原精确版本分别导入部件，记录组合来源与本镜头待审范围；个别成员缺失只记录债务，已成功导入的不丢失。用可见内容 bounds、原图坐标接触点和实际装配调整比例，不能把透明外框相同当尺寸相同。
+
+成熟度分别读原件、静态换底、组合试装、连续动作、医学和听感证据；一组小样的通过不批准另一组或整个原件的所有动作。配乐按情绪、速度、分轨密度、尾音和旁白空间选择，拟音只挂实际接触事件。登记的时长和格式不是听感批准。
+
+新素材登记可附 `discovery` 标签：category、aliases、story_roles、actions等；外库同步保留人工策展发现层。几何绑定原件revision，换图不沿用旧bounds。缺少分类不阻断按标题、用途发现和新创。完整方法见随包 docs/32_资产发现与可重组事件SOP.md。

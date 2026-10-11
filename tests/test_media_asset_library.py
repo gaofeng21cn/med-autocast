@@ -1,6 +1,7 @@
 """Exercise the real Git/install/query/copy path, including non-blocking misses."""
 import importlib.util
 import json
+import shutil
 from pathlib import Path
 import subprocess
 import sys
@@ -73,6 +74,20 @@ class MediaCompanionTests(unittest.TestCase):
         self.assertEqual(asset['medical_review']['status'], 'pending')
         self.assertEqual(companion.use(self.workspace,'productions/s/e', self.row['id'])['status'], 'copied_and_verified')
         self.assertEqual(len(local.read(self.workspace/'assets/paper-theatre/uses.json')['uses']), 1)
+
+    def test_framework_headless_install_is_discovered_without_a_second_download(self):
+        state = self.base / 'opl-state'
+        installed = state / 'internal-package-carrier/plugins/cache/mac-media-assets/mac-media-assets/0.1.5'
+        shutil.copytree(self.repo, installed, ignore=shutil.ignore_patterns('.git'))
+        skill = installed / 'skills/mac-media-assets/SKILL.md'
+        skill.parent.mkdir(parents=True)
+        skill.write_text('# Assets')
+        (self.workspace / 'workbench.yaml').write_text('asset_library:\n  root: ../mac-media-assets\n')
+        with patch.dict('os.environ', {'OPL_STATE_DIR': str(state)}):
+            status = companion.ensure(self.workspace, repository='/must-not-download')
+            self.assertEqual(status['installation'], 'reused_existing')
+            self.assertEqual(Path(status['repo']), installed.resolve())
+            self.assertEqual(companion.query(self.workspace)['count'], 1)
 
     def test_real_native_entry_selects_bundled_tool(self):
         completed = subprocess.run([sys.executable, str(ROOT/'runtime/native_helpers/workbench_tool.py'),

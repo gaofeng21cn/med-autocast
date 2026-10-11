@@ -10,7 +10,7 @@
 
 安装依赖保证库自动到位；创作阶段仍 Progress First：离线、没有合适元素或素材欠项时可继续其他工作、找合法来源或 ImageGen 新创，不用素材匹配结果阻断故事与制作。已安装的媒体可离线查询和复制。
 
-`workbench.yaml.asset_library.root` 是已有工作区的路径权威。没有可用默认路径时查找 `MAC_MEDIA_ASSETS_ROOT`、共享 companion 目录和已安装 Skill/插件；`CODEX_HOME`、`OPL_COMPANION_SOURCES_ROOT` 可指定宿主位置。自动创建的相对默认值不覆盖用户配置。`asset_library.enabled: false` 停用发现，`auto_install: false` 停用自动下载；手工已有库仍可只读使用。
+`workbench.yaml.asset_library.root` 是已有工作区的路径权威。没有可用默认路径时查找 `MAC_MEDIA_ASSETS_ROOT`、共享 companion 目录、OPL headless 原生载体及已安装 Skill/插件；`CODEX_HOME`、`OPL_COMPANION_SOURCES_ROOT` 可指定宿主位置。自动创建的相对默认值不覆盖用户配置。`asset_library.enabled: false` 停用发现，`auto_install: false` 停用自动下载；手工已有库仍可只读使用。
 
 ## 制作的真实工具
 

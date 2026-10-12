@@ -26,4 +26,6 @@
 
 分段配音按实测语音边界拼接，不按固定偏移首尾相接。TTS take 常带不等量前导静音，叠加设计停顿后每次切段都会吞掉首字——听感是“少了两个字”，而时长、响度与解码检查全部正常。用 `scan_narration_boundaries.py` 量每段 `head_silence`，用 `audio/narration_beats.json` 的 `splice.takes` 核对实际落点。修复只重新分配停顿以保持成片总时长；缩短音轨会让字幕与镜头失配，比原缺陷更严重。改了旁白依次重跑 retime、build、mix、render。详见 `runtime/workbench/docs/33_旁白拼接边界SOP.md`。
 
+共享镜头工厂必须按主题安装系列视觉语法，让基础构图、景别、进入节奏和推移方向随疾病叙事而不同。推广工具只替换完整 `camera` 属性，备份放在 `work/series-grammar-backups/`，不得把备份留在 `src` 触发构建漂移；先单集 build/preview，再按系列推广。相机只提供下限，导演仍需为拿取、翻面、夹住、推入、折叠、打开和收纳设计纸件因果。详见 `runtime/workbench/docs/34_系列视觉语法与批量升级SOP.md`。
+
 消费导演交来的语境注音与停顿意图，启动推理前将原生注音转换并核对实际模型词表；保存 tts_text/model_text。修订建立独立文件，重配只命中目标段；retime保留字幕语义断句，比例时码仍须复核。 方法见 `runtime/workbench/docs/28_初版质量与高效返修流程.md`。

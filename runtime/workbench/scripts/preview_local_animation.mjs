@@ -42,6 +42,8 @@ try {
   });
   await page.goto(`http://127.0.0.1:${server.address().port}/${entry}`, {waitUntil:'networkidle', timeout:30000});
   await page.addStyleTag({content:'button, [role="button"] { visibility: hidden !important; }'});
+  const entryUrl=`http://127.0.0.1:${server.address().port}/${entry}`;
+  const cleanUrl=`${entryUrl}${entryUrl.includes('?')?'&':'?'}clean=1`;
   const timeline = await page.evaluate(async () => {
     await document.fonts.ready;
     await Promise.all([...document.images].map(image => image.decode()));
@@ -86,6 +88,35 @@ try {
     frames.push({...point, file:filename, ...state, subtitleOverlaps:overlaps,
       layout_findings:observeLayout(layout,width,height)});
   }
+  // Richness debt: the same frame is captured without captions and short labels.
+  // If a clean frame carries almost no subject area, the shot is carrying its
+  // meaning with type or decoration rather than with paper objects and action.
+  // This is evidence for visual-review, never a render gate.
+  const richness=[];
+  for (const frame of frames) {
+    await page.goto(cleanUrl, {waitUntil:'load'});
+    await page.waitForFunction(()=>!!window.__ready,null,{timeout:20000});
+    await page.addStyleTag({content:'button, [role="button"] { visibility: hidden !important; }'});
+    await page.evaluate(time => window.__seek(time), frame.time);
+    const cleanFile=`clean-${frame.file}`;
+    await captureFilm(page,width,height,path.join(output,cleanFile));
+    const cleanState = await page.evaluate(()=>window.__layout||null);
+    const subjects = Array.isArray(cleanState?.subjects) ? cleanState.subjects : [];
+    const canvasArea = width*height;
+    const subjectArea = subjects.reduce((sum,r)=>sum+Math.max(0,r.w)*Math.max(0,r.h),0);
+    const cover = canvasArea ? subjectArea/canvasArea : 0;
+    const largest = subjects.reduce((best,r)=>Math.max(best,Math.max(0,r.w)*Math.max(0,r.h)),0);
+    richness.push({
+      scene:frame.scene, time:frame.time, clean_file:cleanFile,
+      subject_count:subjects.length,
+      subject_coverage:Number(cover.toFixed(4)),
+      largest_subject_ratio:canvasArea?Number((largest/canvasArea).toFixed(4)):0,
+      subject_names:subjects.map(s=>s.name||'subject'),
+    });
+  }
+  await page.goto(entryUrl,{waitUntil:'load'});
+  await page.waitForFunction(()=>!!window.__ready,null,{timeout:20000});
+  await page.addStyleTag({content:'button, [role="button"] { visibility: hidden !important; }'});
   const motionStrips=[];
   for (let index=0;index<cuts.length-1;index++) {
     const start=cuts[index],end=cuts[index+1],span=end-start,files=[];
@@ -137,6 +168,13 @@ try {
   const report = {status:errors.length ? 'failed' : 'previewed', project, output, duration:timeline.duration, range:[rangeStart,rangeEnd], scenes:cuts.length-1, frames, motionStrips, eventFrames, errors, renderer_runtime:timeline.renderer_runtime, contact_sheet:path.join(output,'contact.jpg'), release_eligible:false};
   report.text_observations=observeCues({cues:timeline.cues});
   report.quality_debt=frames.flatMap(f=>f.layout_findings.map(d=>({...d,time:f.time,scene:f.scene,owner_stage:'visual-review'})));
+  report.richness=richness;
+  report.richness_debt=richness.filter(r=>r.subject_count===0||r.subject_coverage<0.06).map(r=>({
+    detail:r.subject_count===0?'去文字画面没有登记主体，表达可能只靠文字或装饰':'去文字画面主体占比偏低',
+    scene:r.scene, time:r.time, owner_stage:'visual-review', evidence_ref:r.clean_file,
+    subject_count:r.subject_count, subject_coverage:r.subject_coverage,
+    action:'回到导演重做观看事件；模块不提供构图处方',
+  }));
   report.semantic_quality_approved=false;
   report.random_access_checks=randomAccessChecks;
   await fs.writeFile(path.join(output,'preview.json'), JSON.stringify(report,null,2));

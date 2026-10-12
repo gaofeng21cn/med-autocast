@@ -1,0 +1,23 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <title>纸剧场动作库样例</title>
+    <style>
+      body { margin: 0; background: #efe9dc; font-family: system-ui, sans-serif; }
+      canvas { display: block; width: 100vw; height: 56.25vw; max-height: 100vh; }
+      nav { display: flex; gap: 10px; align-items: center; padding: 10px 14px; background: #22302e; color: #f4eddc; }
+      select, a, button, input { font: inherit; }
+    </style>
+  </head>
+  <body>
+    <main>
+      <canvas id="film" width="1280" height="720"></canvas>
+      <nav id="controls">
+        <button id="play" type="button">播放</button>
+        <input id="seek" type="range" min="0" max="1" step="0.0001" value="0" aria-label="播放进度" />
+      </nav>
+    </main>
+    <script src="./dist/film.js"></script>
+  </body>
+</html>

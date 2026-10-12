@@ -94,6 +94,7 @@ export class Stage {
     g.save();
     try {
       g.translate(this.width / 2, this.height * 0.42);
+      if (c.rotation) g.rotate(c.rotation);
       g.scale(c.zoom, c.zoom);
       g.translate(-c.x, -c.y);
       draw();

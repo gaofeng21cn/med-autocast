@@ -1,0 +1,95 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "paper_theatre_episode_direction/v1",
+  "title": "单集视觉导演稿",
+  "description": "记录本集独有的观看事件链。它是导演交接物，不是动画 DSL，也不作为阻断门；实现可以偏离，但必须记录原因。",
+  "type": "object",
+  "required": ["schema", "episode", "space", "shots"],
+  "properties": {
+    "schema": { "const": "paper_theatre_episode_direction/v1" },
+    "episode": {
+      "type": "object",
+      "required": ["series_id", "episode_id", "viewer_task"],
+      "properties": {
+        "series_id": { "type": "string" },
+        "episode_id": { "type": "string" },
+        "viewer_task": { "type": "string", "description": "观众看完本集应该能做出的判断或行动" },
+        "misconception": { "type": "string" },
+        "style_frame_ref": { "type": "string", "description": "真实风格帧或短动作样例路径" },
+        "signature_shot": { "type": "string", "description": "本集最能代表视觉语言的一镜" }
+      }
+    },
+    "space": {
+      "type": "object",
+      "description": "本集独有的纸面空间，不是通用 env 名称。",
+      "required": ["where", "layers"],
+      "properties": {
+        "where": { "type": "string" },
+        "why_this_space": { "type": "string" },
+        "layers": {
+          "type": "array",
+          "description": "按环境、主体、前景列出；每层写明它承担什么职责。",
+          "items": {
+            "type": "object",
+            "required": ["role", "identity"],
+            "properties": {
+              "role": { "enum": ["environment", "subject", "foreground"] },
+              "identity": { "type": "string", "description": "这层是什么物件，不是颜色或形状描述" },
+              "job": { "type": "string", "description": "它在本集承担什么动作或关系" },
+              "asset_ref": { "type": "string" },
+              "layering": { "enum": ["static_backdrop", "action_capable"] }
+            }
+          }
+        }
+      }
+    },
+    "proportion_contract": {
+      "type": "array",
+      "description": "本集共现物件的认知比例规划。按内容主次与画面重量，不按 PNG 外框，不要求实物等比例。",
+      "items": {
+        "type": "object",
+        "required": ["pair", "primary"],
+        "properties": {
+          "pair": { "type": "array", "items": { "type": "string" } },
+          "primary": { "type": "string", "description": "承担解释主视觉重量的一方" },
+          "reason": { "type": "string" },
+          "allowed_range": { "type": "string", "description": "导演可接受的相对尺度描述，例如“脑结构约为试管视觉宽度的 1.6–2.2 倍”" }
+        }
+      }
+    },
+    "shots": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["id", "narration_range", "watch_task", "object_relation", "action_chain", "shot_size"],
+        "properties": {
+          "id": { "type": "string" },
+          "narration_range": { "type": "string" },
+          "watch_task": { "type": "string", "description": "观众在这一镜应该看见什么" },
+          "object_relation": { "type": "string", "description": "哪些物件共处，原来的关系是什么" },
+          "action_chain": {
+            "type": "array",
+            "description": "本镜独有的事件序列。至少包含准备、变化、结果停留；不得复制整套模板。",
+            "items": {
+              "type": "object",
+              "required": ["phase", "description"],
+              "properties": {
+                "phase": { "enum": ["prepare", "change", "reaction", "result", "carry_out"] },
+                "description": { "type": "string" },
+                "action_ref": { "type": "string", "description": "引用的动作库或本集自定义实现" },
+                "sound_event": { "type": "string" }
+              }
+            }
+          },
+          "shot_size": { "enum": ["establishing", "wide", "medium", "close", "macro", "foreground_occlusion", "over_the_shoulder"] },
+          "camera_intent": { "type": "string" },
+          "carry_in": { "type": "string", "description": "上一镜的哪个物件被带入本镜" },
+          "carry_out": { "type": "string" },
+          "sound_role": { "type": "string" },
+          "risk": { "type": "string" },
+          "implementation_note": { "type": "string", "description": "实现与导演稿的偏离及原因；没有偏离则留空" }
+        }
+      }
+    }
+  }
+}

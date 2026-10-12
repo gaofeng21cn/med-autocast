@@ -6,7 +6,7 @@ export type Pose = Point & {
   rotation?: number;
   opacity?: number;
 };
-export type Camera = Point & { zoom: number };
+export type Camera = Point & { zoom: number; rotation?: number };
 export type Asset = {
   asset_id: string;
   path: string;

@@ -28,4 +28,6 @@
 
 共享镜头工厂必须按主题安装系列视觉语法，让基础构图、景别、进入节奏和推移方向随疾病叙事而不同。推广工具只替换完整 `camera` 属性，备份放在 `work/series-grammar-backups/`，不得把备份留在 `src` 触发构建漂移；先单集 build/preview，再按系列推广。相机只提供下限，导演仍需为拿取、翻面、夹住、推入、折叠、打开和收纳设计纸件因果。详见 `runtime/workbench/docs/34_系列视觉语法与批量升级SOP.md`。
 
+每个新单集必须先跑 `evaluate_episodes.py` 取得逐集诊断，再动手改写。评分低于 55 的集判为需重写，55–75 需升级，不允许凭观感批量重渲染代替逐集评估。镜头时序骨架统一用 `kit/patterns.ts` 的 `arc()`（进入→操作→反应→落定）、`unfoldRevealCompareStow()`、`walkArriveHandoff()`、`layerReveal()`；模式只管时序与姿态，画面由导演提供。逐集结论写入 `work/episode-optimization-report-<date>.md`，未完成的集必须显式标为待重写，不得计入已优化。
+
 消费导演交来的语境注音与停顿意图，启动推理前将原生注音转换并核对实际模型词表；保存 tts_text/model_text。修订建立独立文件，重配只命中目标段；retime保留字幕语义断句，比例时码仍须复核。 方法见 `runtime/workbench/docs/28_初版质量与高效返修流程.md`。

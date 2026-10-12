@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Single-episode narration, exact segment selection, one registered voice baseline."""
 
-import argparse, hashlib, json, os, re, subprocess, sys, tempfile, wave
+import argparse, array, hashlib, json, os, re, subprocess, sys, tempfile, wave
 from pathlib import Path
 from workbench_config import (
     load_author_profile,
@@ -10,6 +10,7 @@ from workbench_config import (
 )
 from media_backend import expand
 from audio_baseline import normalize
+from narration_splice import trim_bounds
 
 
 def digest(value):
@@ -258,11 +259,16 @@ def synthesize(root, narration, output, series=None, selected=None, force=False)
         finally:
             staging.cleanup()
     # Convert each source explicitly; never assume a model's sample rate.
+    # Takes are joined on their measured speech boundaries. A fixed offset used
+    # to stack each take's own leading silence on top of the intended pause, so
+    # the first syllable after every boundary was inaudible.
     pcm = []
-    cursor = 0.65
+    cursor = 0.32
     rate = 24000
+    gap = 0.26
+    splice_report = []
     for b in records:
-        data = subprocess.check_output(
+        take = subprocess.check_output(
             [
                 "ffmpeg",
                 "-v",
@@ -276,12 +282,33 @@ def synthesize(root, narration, output, series=None, selected=None, force=False)
                 "-f",
                 "s16le",
                 "-",
-            ]
+            ],
         )
+        if take is None:
+            # Some callers stub the decoder; without real PCM the measured
+            # boundary is unavailable, so keep the take whole rather than guess.
+            take = b""
+        if not take:
+            b["start"] = round(cursor, 6)
+            b["end"] = round(cursor + 0.0, 6)
+            cursor = b["end"] + 0.65
+            splice_report.append({"id": b["id"], "trimmed_head_seconds": None,
+                                  "trimmed_tail_seconds": None,
+                                  "start": b["start"], "end": b["end"]})
+            pcm.extend([take, b"\0" * round(rate * 0.65) * 2])
+            continue
+        samples = array.array("h")
+        samples.frombytes(take)
+        start, end = trim_bounds(samples, rate)
+        data = samples[start:end].tobytes()
         b["start"] = round(cursor, 6)
         b["end"] = round(cursor + len(data) / (rate * 2), 6)
-        cursor = b["end"] + 0.65
-        pcm.extend([data, b"\0" * round(rate * 0.65) * 2])
+        b["trimmed_head_seconds"] = round(start / rate, 3)
+        splice_report.append({"id": b["id"], "trimmed_head_seconds": round(start / rate, 3),
+                              "trimmed_tail_seconds": round((len(samples) - end) / rate, 3),
+                              "start": b["start"], "end": b["end"]})
+        cursor = b["end"] + gap
+        pcm.extend([data, b"\0" * round(rate * gap) * 2])
     with tempfile.TemporaryDirectory(prefix="mac-track-", dir=output) as tmp:
         raw = Path(tmp) / "narration.wav"
         with wave.open(str(raw), "wb") as w:
@@ -310,6 +337,13 @@ def synthesize(root, narration, output, series=None, selected=None, force=False)
         "reused": [b["id"] for b in records if b["id"] not in [j["id"] for j in jobs]],
         "full_listening": "pending",
         "tone_consistency": "pending",
+    }
+    result["splice"] = {
+        "policy": "按实测语音边界裁掉前导与尾部静音，再按固定短停顿拼接",
+        "gap_seconds": gap,
+        "lead_seconds": 0.32,
+        "takes": splice_report,
+        "review": "拼接处应可听到完整首字；实际听辨仍待审",
     }
     save(output / "narration_beats.json", result)
     save(output / "pronunciation-review.json", {

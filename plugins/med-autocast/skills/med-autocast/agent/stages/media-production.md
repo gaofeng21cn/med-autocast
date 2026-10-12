@@ -24,4 +24,6 @@
 
 中文旁白按完整语境确定多音字和医学术语读音。配音输入可用后端原生注音，字幕保留正文；先听首句与高风险词所在整段，局部重配同步时码并复核最终混音。普通中文 ASR 同字转写、注音输入成功与响度结果不能证明实际读音。当前 `audio/pronunciation-review.json` 是听辨索引，未覆盖听辨保持待审；已明确拒用的旧音不得复用。详见 `runtime/workbench/docs/27_中文配音发音控制与听辨SOP.md`。
 
+分段配音按实测语音边界拼接，不按固定偏移首尾相接。TTS take 常带不等量前导静音，叠加设计停顿后每次切段都会吞掉首字——听感是“少了两个字”，而时长、响度与解码检查全部正常。用 `scan_narration_boundaries.py` 量每段 `head_silence`，用 `audio/narration_beats.json` 的 `splice.takes` 核对实际落点。修复只重新分配停顿以保持成片总时长；缩短音轨会让字幕与镜头失配，比原缺陷更严重。改了旁白依次重跑 retime、build、mix、render。详见 `runtime/workbench/docs/33_旁白拼接边界SOP.md`。
+
 消费导演交来的语境注音与停顿意图，启动推理前将原生注音转换并核对实际模型词表；保存 tts_text/model_text。修订建立独立文件，重配只命中目标段；retime保留字幕语义断句，比例时码仍须复核。 方法见 `runtime/workbench/docs/28_初版质量与高效返修流程.md`。

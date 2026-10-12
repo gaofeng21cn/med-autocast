@@ -2,6 +2,7 @@ import { Stage } from "./stage";
 import { brandMark, caption } from "./overlays";
 import { clamp } from "./motion";
 import type { Asset, Brand, Score, Shot, ShotContext } from "./types";
+import { foreground, paperWorld } from "./staging";
 export function mount(config: {
   assets: Asset[];
   score: Score;
@@ -74,6 +75,20 @@ export function mount(config: {
       zoom: 1,
     };
     s.camera(camera, () => shot.render(ctx));
+    // The foreground plane lives outside the shot camera so it can run at a
+    // different rate. Without it a collage reads as one flat slide.
+    const depth = shot.depth;
+    if (depth !== "flat" && depth !== 0) {
+      const amount = depth === "theatre" || depth === undefined ? 1 : Number(depth);
+      foreground(s, current, camera, {
+        amount,
+        side: (shot.id.charCodeAt(shot.id.length - 1) % 2) as 0 | 1,
+        seed: shot.id.length * 7 + 3,
+      });
+    }
+    if (depth !== "flat" && depth !== 0) {
+      paperWorld(s, current, depth === "theatre" || depth === undefined ? 1 : Number(depth));
+    }
     s.tracking = false;
     if (config.brand) brandMark(s, config.brand);
     const subtitle = !clean ? caption(s, score, current) : undefined;

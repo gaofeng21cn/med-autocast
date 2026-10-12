@@ -57,6 +57,11 @@ export type Shot = {
   id: string;
   render: (ctx: ShotContext) => void;
   camera?: (ctx: ShotContext) => Camera;
+  /**
+   * Foreground depth. `theatre` sweeps a torn paper leaf in front of the
+   * subject; `flat` keeps the legacy single-plane framing; a number scales it.
+   */
+  depth?: "theatre" | "flat" | number;
 };
 export type Brand = {
   text: string;

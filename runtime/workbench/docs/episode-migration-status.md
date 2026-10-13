@@ -1,6 +1,6 @@
 # 逐集独立导演迁移状态
 
-更新：2026-10-14 · **89/89 集全部完成逐集独立导演**
+更新：2026-10-14 · **89/89 集全部完成逐集独立导演，并全部渲染发布**
 
 架构规则：每集独立 `episodeshots.ts` 与只含本集镜头的 `scene_directions.json`；跨集只共享
 kit 原语与纸件资产。**共用工厂是缺陷，不是可选项。** 判定由
@@ -19,10 +19,16 @@ kit 原语与纸件资产。**共用工厂是缺陷，不是可选项。** 判�
 | weight_management_paper_theatre | 8 | 8 | 8 |
 | graves_paper_theatre | 7 | 7 | 7 |
 | hashimoto_paper_theatre | 6 | 6 | 6 |
-| breast_nodules_paper_theatre | 6 | 6 | 进行中 |
-| pcos_paper_theatre | 7 | 7 | 进行中 |
-| ckd_paper_theatre | 7 | 7 | 进行中 |
-| **合计** | **89** | **89** | — |
+| breast_nodules_paper_theatre | 6 | 6 | 6 |
+| pcos_paper_theatre | 7 | 7 | 7 |
+| ckd_paper_theatre | 7 | 7 | 7 |
+| **合计** | **89** | **89** | **89** |
+
+`publish/` 下11 个系列目录合计 89 集，均为本轮之后的成片。
+
+目视复核中修掉的两处构图问题（已重渲染发布）：乳腺 03 第一镜三张检查纸压住解剖图与彼此
+的标签，改为排在解剖图下方；甲亢 06 第二镜三张评估纸飞行途中叠成空白卡，改为错落
+起点与落位。
 
 ## 迁移过程中修复并沉淀的真实缺陷
 

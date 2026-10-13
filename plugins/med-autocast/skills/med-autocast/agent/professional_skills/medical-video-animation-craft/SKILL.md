@@ -13,6 +13,8 @@ description: 把医学视频导演稿落实为可控的本地代码动画，选�
 
 构图由实际物件内容、认知主次与空间关系控制。PNG 透明外框和 bounds 帮助排除留白，不能自动决定物件大小。图层遮挡由容器/舞台局部层控制，接触点由素材登记或审定路径给出；医学生物结构不可由通用植物样例或自动生成路径代替。
 
+纸片上的文字坐标必须从纸卡 box 推导，不手填与标签长度相关的偏移。`Stage.text()` 默认居中，硬编码 x 会让短标签偏左、长标签溢出纸卡（全季曾有 289 条条带题字 100% 偏离中心、最严重溢出 228px）。用 `kit/labels.ts` 的 `cardTitle(s, w, h, text, {size, color, y})`：宽短条带题字双向居中，小便签与横线卡保留导演给的 y，标签再长也由 measureText 自动缩字号兜底。悬挂题注（照片下缘说明）与指向性标注是例外，逐集确认。发布前跑 `scripts/audit_label_alignment.py`，期望 `overflow_any_edge=0`、条带题条 `off_center_x≈0`。详见 [纸片文字对齐SOP](../../../runtime/workbench/docs/37_纸片文字对齐SOP.md)。
+
 画面与声音共用 `score.json`：重要接触、揭示和落点用命名事件驱动。声音调色板供导演选材，注册声音资产优先于程序合成音；合成音只是可运行的试作下限。允许静默与有目的的 J/L cut，不要求所有动作响。旁白沿用授权本地声线，动画工具不改 VoxCPM2/Edge 策略。
 
 通过 [工作台入口](../../../runtime/workbench/docs/20_纸剧场单集工具与局部返修.md) 的 `animation_lab list` 查风格；`animation_lab create --project <新目录> --complete` 生成独立原创样片、源码、无旁白音效轨、帧、strip 和 MP4。用于学习与验证，不能覆盖真实单集或作者配置。实际单集沿用 `paper_project` 做局部预览/正式渲染，随机 seek、预览和编码必须同源。

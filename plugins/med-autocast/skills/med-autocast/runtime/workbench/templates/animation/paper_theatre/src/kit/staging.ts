@@ -155,3 +155,97 @@ export function foreground(
   }
 }
 
+
+/**
+ * Backdrop as a pasted paper sheet.
+ *
+ * A collage fails the moment the backdrop is a photograph or a smooth digital
+ * illustration: the frame then reads as a photo with paper stuck on it. No
+ * amount of subject craft repairs that, and replacing every stock image is not
+ * a sustainable fix either. So the medium is enforced here, at draw time: the
+ * plate is pulled toward paper stock, given fibre and blotch, and its border
+ * is torn with a soft shadow so it reads as a sheet that was laid down rather
+ * than a window onto somewhere else.
+ *
+ * Drawn before the subject, so cut-paper subjects stay crisp on top.
+ * strength dials the treatment back for a deliberately photographic moment;
+ * 0 disables it.
+ */
+export function paperPlate(
+  stage: Stage,
+  image: HTMLImageElement,
+  opts: { strength?: number; seed?: number; torn?: boolean } = {},
+) {
+  const strength = opts.strength ?? 1;
+  const seed = opts.seed ?? 17;
+  const w = stage.width,
+    h = stage.height;
+  const g = stage.g;
+  if (strength <= 0.001) {
+    g.drawImage(image, 0, 0, w, h);
+    return;
+  }
+  g.save();
+  try {
+    // 1. the sheet itself: pulled toward paper stock, gently flattened.
+    g.filter =
+      `saturate(${(0.74 - 0.1 * strength).toFixed(3)}) ` +
+      `contrast(${(0.95 - 0.06 * strength).toFixed(3)}) ` +
+      `brightness(${(1.02 + 0.03 * strength).toFixed(3)}) ` +
+      `sepia(${(0.1 * strength).toFixed(3)})`;
+    g.drawImage(image, 0, 0, w, h);
+    g.filter = 'none';
+
+    // 2. fibre and blotch, so large flats are never dead.
+    g.globalCompositeOperation = 'multiply';
+    g.globalAlpha = 0.1 * strength;
+    const drift = Math.sin(seed) * 4;
+    for (let i = 0; i < 260; i++) {
+      const x = (((i * 97.13 + drift) % w) + w) % w;
+      const y = (((i * 53.71 + drift * 2) % h) + h) % h;
+      const len = 14 + ((i * 31) % 40);
+      g.strokeStyle = i % 3 ? '#8b7c5c' : '#fff6e2';
+      g.lineWidth = 1;
+      g.beginPath();
+      g.moveTo(x, y);
+      g.lineTo(x + len, y + ((i % 5) - 2) * 2.4);
+      g.stroke();
+    }
+    g.globalCompositeOperation = 'source-over';
+    g.globalAlpha = 1;
+  } finally {
+    g.restore();
+  }
+
+  if (opts.torn === false) return;
+
+  // 3. torn border: the plate stops being a viewport and becomes a sheet with
+  //    an edge, which is what tells the eye it belongs in the collage.
+  const bite = 14;
+  g.save();
+  try {
+    g.globalAlpha = 0.3 * strength;
+    g.strokeStyle = '#4a3f2c';
+    g.lineWidth = 3;
+    g.beginPath();
+    let x = 0;
+    g.moveTo(0, 0);
+    while (x < w) {
+      x = Math.min(w, x + 60 + ((x * 13) % 47));
+      g.lineTo(x, ((x * 7) % bite) - bite / 2);
+    }
+    g.lineTo(w, h);
+    x = w;
+    while (x > 0) {
+      x = Math.max(0, x - 60 - ((x * 17) % 47));
+      g.lineTo(x, h + (((x * 11) % bite) - bite / 2));
+    }
+    g.stroke();
+    g.globalAlpha = 0.12 * strength;
+    g.strokeStyle = '#fff8e8';
+    g.lineWidth = 1.4;
+    g.stroke();
+  } finally {
+    g.restore();
+  }
+}

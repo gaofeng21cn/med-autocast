@@ -21,6 +21,10 @@ ACTIONS = [
     "dropSheet", "unfoldMap", "handmadePiece",
 ]
 PROPS = ["paperFolder", "pocket", "hinge", "clipFastener"]
+PATTERNS = [
+    "arc", "unfoldRevealCompareStow", "walkArriveHandoff", "layerReveal",
+    "contactShadow",
+]
 
 
 def source_of(project: Path) -> tuple[str, list[str]]:
@@ -45,8 +49,12 @@ def diagnose(project: Path) -> dict:
     n = max(1, len(shots))
 
     action_hits = {a: len(re.findall(r"\b%s\s*\(" % a, text)) for a in ACTIONS}
+    pattern_hits = {p: len(re.findall(r"\b%s\s*\(" % p, text)) for p in PATTERNS}
     prop_hits = {p: len(re.findall(r"\b%s\s*\(" % p, text)) for p in PROPS}
-    action_calls = sum(action_hits.values())
+    # A choreography pattern is as much an action as a raw paper action: it is
+    # the arc that makes contact, reaction and settle visible. Counting only
+    # actions.ts would under-report every episode written against patterns.ts.
+    action_calls = sum(action_hits.values()) + sum(pattern_hits.values())
     prop_calls = sum(prop_hits.values())
 
     # Camera: does the frame actually travel, or sit at one anchor?
@@ -102,6 +110,7 @@ def diagnose(project: Path) -> dict:
         "prop_calls": prop_calls,
         "action_density": round(density, 2),
         "actions_used": [a for a, c in action_hits.items() if c],
+        "patterns_used": [p for p, c in pattern_hits.items() if c],
         "cameras": len(cams),
         "cameras_dynamic": dynamic_cams,
         "labels": labels,

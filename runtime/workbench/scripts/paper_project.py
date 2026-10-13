@@ -413,7 +413,7 @@ def assert_built(p):
 
 
 def assert_narration(p, c):
-    from render_narration import narration_signature, audio_rejected, indextts_text, tts_text, ANNOTATION
+    from render_narration import narration_signature, audio_rejected, prepare_model_text, pronunciation_controls, tts_text
     receipt = p / "audio/narration_beats.json"
     if receipt.exists():
         beats = read(receipt)["beats"]
@@ -423,13 +423,17 @@ def assert_narration(p, c):
             raise ValueError("旁白正文或发音控制已变化，请重新配音改动声段")
         for beat in beats:
             baseline = read(receipt).get("baseline", {})
-            vocab = Path(baseline.get("model_root", ".")) / "pinyin.vocab"
             spoken = tts_text(beat)
-            if baseline.get("definition") == "indextts_2_5" and ANNOTATION.search(spoken):
-                if not vocab.is_file():
-                    raise ValueError("无法核对当前 IndexTTS 注音词表")
-                if beat.get("model_text", spoken) != indextts_text(spoken, set(vocab.read_text().splitlines())):
-                    raise ValueError(f"声段 {beat['id']} 原生注音未按当前词表转换，请重配该声段")
+            # Historical receipts retain their original model input without a
+            # dependency on retired weights or environments. New generation is
+            # always selected from the current registered backend.
+            expected = (prepare_model_text(spoken, baseline.get("definition"))
+                        if baseline.get("definition") in ("voxcpm_2", "edge_tts")
+                        else beat.get("model_text", spoken))
+            if beat.get("model_text", spoken) != expected:
+                raise ValueError(f"声段 {beat['id']} 的实际模型文本与当前发音控制不一致，请重配该声段")
+            if pronunciation_controls(spoken) and beat.get("control_status") not in ("manual_review_required", None):
+                raise ValueError(f"声段 {beat['id']} 的发音控制状态异常，请保留人工听辨门")
             take = Path(beat["audio"]).with_suffix(".json")
             if take.is_file() and audio_rejected(read(take)):
                 raise ValueError(f"声段 {beat['id']} 已被明确拒用，请重新配音该声段")

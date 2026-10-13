@@ -155,29 +155,34 @@ def check_backend(name: str, spec: dict[str, Any], kind: str) -> dict[str, Any]:
         "runtime_profile": spec.get("runtime_profile"),
         "checks": [],
     }
-    if spec.get("kind") in {"comfyui", "indextts"}:
+    if spec.get("kind") in {"comfyui", "voxcpm"}:
         root = Path(spec["root"])
         result["root"] = str(root)
         result["root_exists"] = root.exists()
         result["runtime"] = python_probe(root / ".venv" / "bin" / "python")
-    if spec.get("kind") == "indextts":
+    if spec.get("kind") == "voxcpm":
         model_root = Path(spec["model_root"])
         result["model_root"] = str(model_root)
         result["model_exists"] = model_root.exists()
-        result["python"] = shutil.which("python3")
+        result["model_files"] = {
+            name: (model_root / name).is_file()
+            for name in ("config.json", "model.safetensors", "audiovae.pth")
+        }
+        result["python"] = str(spec.get("python") or (Path(spec["root"]) / ".venv/bin/python"))
+        probe = Path(result["python"])
+        result["voxcpm_package"] = "ready" if probe.is_file() else "missing"
+        if probe.is_file():
+            try:
+                completed = subprocess.run([str(probe), "-c", "import voxcpm; print('ready')"], check=True, capture_output=True, text=True, timeout=10)
+                result["voxcpm_package"] = completed.stdout.strip() or "ready"
+            except Exception as exc:  # noqa: BLE001 - doctor remains diagnostic
+                result["voxcpm_package"] = {"state": "error", "error": f"{type(exc).__name__}: {exc}"}
     if spec.get("kind") == "comfyui":
         result["endpoint"] = spec.get("endpoint")
         result["endpoint_status"] = endpoint_status(spec.get("endpoint", ""))
     if spec.get("kind") == "comfyui_remote":
         result["endpoint"] = spec.get("endpoint")
         result["endpoint_status"] = endpoint_status(spec.get("endpoint", ""))
-    if spec.get("kind") == "indextts_remote" and spec.get("endpoint"):
-        result["endpoint"] = spec["endpoint"]
-        result["endpoint_status"] = endpoint_status(spec["endpoint"])
-    if spec.get("kind") == "indextts_remote" and spec.get("transport") == "ssh":
-        result["ssh_status"] = ssh_path_status(
-            spec.get("host", ""), spec.get("model_root", "")
-        )
     if spec.get("kind") == "http_api":
         endpoint = spec.get("endpoint", "")
         api_key_configured = bool(os.getenv(spec.get("api_key_env", "")))

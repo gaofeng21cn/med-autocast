@@ -2,7 +2,7 @@
 
 制作工作区持有 workbench.yaml、作者/后端档案、系列、媒体、制作单和审核记录；Med Auto Cast 随包提供完整专业方法、模板及通用工作台工具。先按系列解析作者覆盖，再继承活动作者；设备、模型、字体和凭据来源由工作区配置决定。
 
-主入口中的路径相对已加载的 Skill 根。以下以该根为当前目录，`/absolute/workspace` 替换为制作工作区；Python 选用该工作区核心环境，IndexTTS、Whisper 和视频模型使用各自登记环境。
+主入口中的路径相对已加载的 Skill 根。以下以该根为当前目录，`/absolute/workspace` 替换为制作工作区；Python 选用该工作区核心环境，VoxCPM2、Whisper 和视频模型使用各自登记环境。
 
 ```sh
 python3 runtime/native_helpers/med_autocast.py inspect --workspace /absolute/workspace
@@ -27,7 +27,7 @@ OPL 阶段输出以可引用产物为中心：返回真实 `artifact_refs` 与�
 | 配置、作者、目录、字体 | workbench_config | validate；show 可能含本机信息，不回显敏感配置 |
 | 后端选择、诊断 | media_backend | resolve；确需服务诊断才 doctor，不生成媒体 |
 | 作者声音选择 | configure_voice | 用户明确选择 reference 或 edge，保留参考音频、重置声音待审 |
-| 本机环境诊断 | environment_check | 区分核心依赖、JS 渲染、IndexTTS、Edge fallback 和 Whisper；只读 |
+| 本机环境诊断 | environment_check | 区分核心依赖、JS 渲染、VoxCPM2、Edge fallback 和 Whisper；只读 |
 | 配音、ASR、字幕与节拍 | render_series_tts、transcribe_series_whisper、build_episode_timelines | 审定旁白为权威；ASR 不改医学文字；依赖独立模型环境 |
 | H3 提交、批量调用、输出下载 | queue_h3_shots、render_series_h3、fetch_h3_receipt | 官方提示直通、原任务恢复、回执绑定；不重复提交 |
 | 合成和系列构建 | build_episode_video、build_series_videos | 前者是通用合成器；后者仅用于匹配的根制作单/final 合同，支持 --episode |
@@ -69,7 +69,7 @@ python3 runtime/workbench/scripts/init_workbench.py \
 
 或用该工作区的 `scripts/setup_workbench.sh`；升级只补齐缺失目录和入口标记。`med_autocast.py inspect` 与 `environment_check.py` 会回报 `workspace_layout` 的 `ready/partial` 状态，`partial` 是可修复诊断，不是 Stage 硬门，也不覆盖旧生产路径。
 
-核心依赖 PyYAML、Pillow、FFmpeg/ffprobe、ImageMagick 与配置字体；Python 3.11 以上。GPU、IndexTTS、Whisper、MLX/CUDA 的环境与模型保持独立。随包部署脚本只在明确安装/迁移任务中运行，不因一次检查自动安装模型或重启服务。
+核心依赖 PyYAML、Pillow、FFmpeg/ffprobe、ImageMagick 与配置字体；Python 3.11 以上。GPU、VoxCPM2、Whisper、MLX/CUDA 的环境与模型保持独立。随包部署脚本只在明确安装/迁移任务中运行，不因一次检查自动安装模型或重启服务。
 # JS 动画与旁白基线入口
 
 JS 与纸剧场统一使用随包渲染器；预览和正式编码不再因 --preview 而选择不同实现。单集默认使用 paper_project 串联实际工具，Edge 仅是联网保底。

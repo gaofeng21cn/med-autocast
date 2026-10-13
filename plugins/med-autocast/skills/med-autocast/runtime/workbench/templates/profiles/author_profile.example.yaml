@@ -22,9 +22,10 @@ persona:
   medical_claim_owner: reviewed_narration_and_subtitles
 voice:
   mode: auto  # 推荐 reference；用户明确跳过专用声线时设置 edge，保留原 reference_audio
-  preferred_backend_definition: indextts_2_5
+  preferred_backend_definition: voxcpm_2
   reference_audio: assets/authors/example_author/voice_reference.wav
-  direction: 自然、清晰、可信
+  delivery_style: structured_explanation
+  direction: Professional medical education narration, warm and composed, measured steady pace, precise articulation, clear sentence boundaries, deliberate pauses, subtle emphasis on key facts and logical distinctions, restrained pitch variation.
   language: zh
 visual_identity:
   enabled: true

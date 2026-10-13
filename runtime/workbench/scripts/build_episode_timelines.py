@@ -2,6 +2,7 @@
 """Build reviewed subtitles and beat-aligned production plans for the series."""
 
 import argparse
+from copy import deepcopy
 import difflib
 import json
 import re
@@ -214,8 +215,14 @@ def build_cues(manifest: dict, alignment: dict | None = None) -> list[dict]:
         char_times = None
         match_ratio = None
         if beat["id"] in alignment_beats:
+            local_alignment = deepcopy(alignment_beats[beat["id"]])
+            trim = float(beat.get("trimmed_head_seconds", 0.0))
+            for segment in local_alignment.get("segments", []):
+                for timed in [segment, *segment.get("words", [])]:
+                    timed["start"] = max(0.0, float(timed["start"]) - trim)
+                    timed["end"] = max(timed["start"], float(timed["end"]) - trim)
             char_times, match_ratio = align_approved_characters(
-                beat["text"], alignment_beats[beat["id"]], beat_duration
+                beat["text"], local_alignment, beat_duration
             )
         cursor_chars = 0
         for unit, unit_length in zip(units, unit_lengths):
@@ -306,8 +313,8 @@ def build_plan(
     audio_source = manifest.get("audio_source")
     if not audio_source:
         if author.get("voice", {}).get("mode") == "edge" or audio_backend == "edge_tts_local":
-            raise ValueError("Edge 时间轴需显式提供 manifest.audio_source 或 --audio-source，不能复用 IndexTTS 文件名")
-        audio_source = "audio/local_voice/index-tts25-narration.wav"
+            raise ValueError("Edge 时间轴需显式提供 manifest.audio_source 或 --audio-source，不能猜测其他后端的文件名")
+        audio_source = "audio/local_voice/narration-normalized.wav"
     visual_format = author["visual_format"]
     style_id = visual_format.get("style_id") or "paper_collage"
     renderer_id = visual_format.get("renderer") or ("canvas2d" if javascript_primary else "backend_default")

@@ -69,9 +69,9 @@ def series_paths(series_id: str, root: Path = ROOT) -> dict[str, Path]:
     }
 
 
-def production_root_for(series_id: str | None, explicit: Path | None) -> Path:
+def production_root_for(series_id: str | None, explicit: Path | None, root: Path = ROOT) -> Path:
     if series_id:
-        registered = series_paths(series_id)["production_root"]
+        registered = series_paths(series_id, root=root)["production_root"]
         if explicit and explicit.resolve() != registered.resolve():
             raise ValueError("--production-root conflicts with the selected series")
         return registered
@@ -190,7 +190,7 @@ def select_audio_backend(author: dict, backends: dict, explicit: str | None = No
         if not selected:
             raise ValueError("请登记唯一 Edge TTS 后端，或在部署默认值中指定它")
     elif voice.get("reference_audio"):
-        definition = voice.get("preferred_backend_definition") or "indextts_2_5"
+        definition = voice.get("preferred_backend_definition") or "voxcpm_2"
         matches = [key for key, spec in choices.items() if spec.get("definition") == definition]
         selected = voice.get("backend") or (default if default in matches else matches[0] if len(matches) == 1 else None)
         if not selected:

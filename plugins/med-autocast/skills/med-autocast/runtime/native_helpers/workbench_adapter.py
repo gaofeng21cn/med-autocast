@@ -68,7 +68,7 @@ TOOLS = {
 }
 
 
-CANONICAL_TOOLS = {"media_asset_library", "publish_catalog", "animation_lab", "paper_project", "render_narration", "render_javascript_animation", "audit_pronunciation", "build_no_music_mix"}
+CANONICAL_TOOLS = {"media_asset_library", "publish_catalog", "animation_lab", "paper_project", "render_narration", "render_series_tts", "configure_voice", "environment_check", "render_javascript_animation", "audit_pronunciation", "build_no_music_mix"}
 
 
 def resolve_tool(root: Path, name: str, bundled=False) -> tuple[Path, Path]:
@@ -81,12 +81,8 @@ def resolve_tool(root: Path, name: str, bundled=False) -> tuple[Path, Path]:
         else local
     )
     core = root / ".venv" / ("Scripts/python.exe" if os.name == "nt" else "bin/python")
-    # Legacy IndexTTS callers may deliberately select the independent model interpreter.
-    python = (
-        Path(sys.executable)
-        if name == "render_series_tts" or not core.is_file()
-        else core
-    )
+    # Model workers select their registered isolated interpreter themselves.
+    python = core if core.is_file() else Path(sys.executable)
     return script, python
 
 

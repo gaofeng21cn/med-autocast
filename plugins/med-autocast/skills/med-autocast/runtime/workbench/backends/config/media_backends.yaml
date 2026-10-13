@@ -69,13 +69,16 @@ definitions:
         network_required: true
         reference_voice: false
       implementation_docs: docs/12_JS动画默认技术路线.md
-    indextts_2_5:
-      label: IndexTTS 2.5
-      provider: index-tts
-      kind: indextts
-      models: [IndexTTS-2.5]
+    voxcpm_2:
+      label: VoxCPM2
+      provider: openbmb
+      kind: voxcpm
+      protocol: voxcpm_python_api
+      models: [VoxCPM2]
       capabilities:
         reference_voice: true
         chinese: true
-        pronunciation_control: native_annotations
-      implementation_docs: backends/indextts/README.md
+        style_instruction: true
+        sample_rate_hz: 48000
+        pronunciation_control: native_pinyin_braces_from_editorial_annotations_with_required_listening
+      implementation_docs: backends/voxcpm/README.md

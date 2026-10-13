@@ -1,4 +1,5 @@
 import type { Pose } from "./types";
+import { Stage } from "./stage";
 import { phase } from "./motion";
 
 /**
@@ -226,4 +227,68 @@ export function contactShadow(
   } finally {
     g.restore();
   }
+}
+
+/**
+ * Place props one after another instead of laying them all out at once.
+ *
+ * A large share of scenes are "these three objects belong in this room". Drawn
+ * that way they read as a still life no matter how long the shot runs. This
+ * helper gives the scene a spine: each item flies in, lands, and leaves a
+ * contact shadow, so the room assembles itself while the narration talks.
+ * The director still owns the artwork and the order.
+ */
+export function place(
+  stage: Stage,
+  t: number,
+  index: number,
+  opts: {
+    at: number;
+    from?: { x: number; y: number };
+    to: { x: number; y: number };
+    turn?: number;
+    shadow?: number;
+    scale?: number;
+    delay?: number;
+    span?: number;
+  },
+  draw: () => void,
+) {
+  const from = opts.from ?? { x: opts.to.x + 420, y: opts.to.y - 150 };
+  const delay = opts.delay ?? 0;
+  const start = opts.at + delay;
+  const span = opts.span ?? 0.9;
+  const u = phase(t, start, start + span);
+  const turn = opts.turn ?? 0.07;
+  const smooth = u * u * (3 - 2 * u);
+  stage.group(
+    {
+      x: from.x + (opts.to.x - from.x) * smooth,
+      y: from.y + (opts.to.y - from.y) * smooth - Math.sin(smooth * Math.PI) * 16,
+      rotation: turn * (1 - smooth),
+      scale: (opts.scale ?? 0.9) + (1 - (opts.scale ?? 0.9)) * smooth,
+    },
+    draw,
+  );
+  if (u > 0.001) contactShadow(stage, opts.to.x, opts.to.y + (opts.shadow ?? 0), Math.min(1, u * 1.4), index);
+}
+
+/**
+ * Swap one object for another on the same spot — the most reusable "change"
+ * gesture in a paper collage. Outgoing and incoming overlap so the exchange
+ * never reads as a cut.
+ */
+export function swapInPlace(
+  stage: Stage,
+  t: number,
+  opts: { at: number; span?: number; distance?: number },
+  outgoing: () => void,
+  incoming: () => void,
+) {
+  const span = opts.span ?? 1.5;
+  const distance = opts.distance ?? 300;
+  const out = phase(t, opts.at, opts.at + span * 0.7);
+  const inn = phase(t, opts.at + span * 0.35, opts.at + span);
+  if (out < 1) stage.group({ x: distance * out, y: distance * 0.18 * out, rotation: 0.22 * out, opacity: 1 - out }, outgoing);
+  if (inn > 0) stage.group({ x: -distance * (1 - inn), y: -distance * 0.18 * (1 - inn), rotation: -0.18 * (1 - inn) }, incoming);
 }

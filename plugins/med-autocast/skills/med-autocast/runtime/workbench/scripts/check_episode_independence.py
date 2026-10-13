@@ -21,9 +21,12 @@ import yaml
 # Files that legitimately hold series-wide vocabulary rather than staging.
 # Anything outside this set may not be byte-identical across episodes.
 ALLOWED_SHARED = {
+    # Vocabulary: how a paper organ, page, folder or room is drawn. How an
+    # episode *stages* them is never in these files.
     "series_grammar.ts",
     "paper_objects.ts",
     "six_objects.ts",
+    "episode-kit.ts",
     "meal_objects.ts",
     "main.ts",
 }

@@ -120,7 +120,7 @@ def alignment_metrics(manifest: dict, alignment: dict) -> dict:
 
 
 def episode_inputs(episode_dir: Path, plan: dict) -> dict:
-    audio_root = (episode_dir / plan.get("audio", {}).get("source", "audio/local_voice/index-tts25-narration.wav")).parent
+    audio_root = (episode_dir / plan.get("audio", {}).get("source", "audio/local_voice/narration-normalized.wav")).parent
     if (audio_root / "narration_beats.json").is_file():
         return {
             "srt": episode_dir / plan.get("subtitles", {}).get("source", str((audio_root / "narration.srt").relative_to(episode_dir))),

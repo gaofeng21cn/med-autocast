@@ -40,7 +40,7 @@ def main() -> None:
         if not plan.is_file():
             continue
         plan_data = yaml.safe_load(plan.read_text(encoding="utf-8"))
-        audio = episode_dir / plan_data.get("audio", {}).get("source", "audio/local_voice/index-tts25-narration.wav")
+        audio = episode_dir / plan_data.get("audio", {}).get("source", "audio/local_voice/narration-normalized.wav")
         srt = episode_dir / plan_data.get("subtitles", {}).get("source", "audio/local_voice/narration.srt")
         candidates = episode_dir / "candidates"
         if not all(path.exists() for path in (plan, audio, srt, candidates)):

@@ -207,8 +207,7 @@ class ProjectTests(unittest.TestCase):
         runtime = root / "tts"
         model = root / "models"
         model.mkdir()
-        (model / "config.yaml").write_text("config")
-        (model / "pinyin.vocab").write_text("YI2\nXVE4\nHAI2\n")
+        (model / "config.json").write_text("config")
         reference = root / "reference.wav"
         reference.write_bytes(b"voice")
         python = runtime / ".venv/bin/python"
@@ -216,7 +215,7 @@ class ProjectTests(unittest.TestCase):
         python.symlink_to(sys.executable)
         author = {"voice": {"reference_audio": str(reference)}}
         spec = {
-            "definition": "indextts_2_5",
+            "definition": "voxcpm_2",
             "root": str(runtime),
             "model_root": str(model),
             "python": str(python),
@@ -249,13 +248,22 @@ class ProjectTests(unittest.TestCase):
                 return_value=(root / "backend.yaml", {"audio": {"voice": spec}}),
             ),
             patch.object(rn, "select_audio_backend", return_value="voice"),
-            patch.object(rn.subprocess, "check_output", return_value=b"\0" * 48000),
+            patch.object(rn.subprocess, "check_output", return_value=b"\x10\x10" * 24000),
             patch.object(rn, "normalize", side_effect=normalization),
         ):
             with patch.object(rn.subprocess, "run", side_effect=successful):
                 first = rn.synthesize(root, narration, output)
             take = output / "segments" / target[0]
             receipt = take.with_suffix(".json").read_bytes()
+            import wave
+            with wave.open(first["audio"], "rb") as wav:
+                self.assertAlmostEqual(first["duration"], wav.getnframes()/wav.getframerate(), places=6)
+                pcm = wav.readframes(wav.getnframes())
+            self.assertEqual(first["beats"][0]["start"], .32)
+            self.assertEqual(pcm[:round(24000*.32)*2], b"\0"*round(24000*.32)*2)
+            self.assertNotEqual(pcm[round(24000*.32)*2:round(24000*.32)*2+2], b"\0\0")
+            self.assertAlmostEqual(first["duration"], first["beats"][-1]["end"]+.7, places=6)
+            self.assertEqual(first["full_listening"], "pending")
             with patch.object(
                 rn.subprocess, "run", side_effect=RuntimeError("worker failed")
             ):
@@ -298,11 +306,19 @@ class ProjectTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "与正文不同"):
             rn.tts_text({"id": "B01", "text": "还清楚", "tts_text": "<仍|HAI2>清楚"})
 
-    def test_native_vocabulary_resolves_blood_and_rejects_unknown_token(self):
-        self.assertEqual(rn.indextts_text("抽<血|XUE4>", {"XVE4"}), "抽<血|XVE4>")
-        self.assertEqual(rn.indextts_text("<还|HAI2>清楚", {"HAI2"}), "<还|HAI2>清楚")
-        with self.assertRaisesRegex(ValueError, "不支持注音"):
-            rn.indextts_text("<血|XYZ4>", {"XVE4"})
+    def test_native_pronunciation_controls_and_malformed_input(self):
+        self.assertEqual(rn.voxcpm_text("抽<血|XVE4>"), "抽{xue4}")
+        self.assertEqual(rn.voxcpm_text("<重影|CHONG2 YING3>"), "{chong2}{ying3}")
+        self.assertEqual(rn.voxcpm_text("<分泌|FEN1 MI4>、<钼靶|MU4 BA3>、<视网膜|SHI4 WANG3 MO2>"),
+                         "{fen1}{mi4}、{mu4}{ba3}、{shi4}{wang3}{mo2}")
+        self.assertEqual(rn.voxcpm_text("<hello|HH AH0 L OW1>"), "{HH AH0 L OW1}")
+        self.assertEqual(rn.voxcpm_text("<5mg|WU3 HAO2 KE4>"), "{wu3}{hao2}{ke4}")
+        self.assertEqual(rn.tts_text({"id": "B01", "text": "剂量5mg。", "tts_text": "剂量<5mg|WU3 HAO2 KE4>。"}),
+                         "剂量<5mg|WU3 HAO2 KE4>。")
+        for bad in ("<血|XYZ4>", "<还|>", "<还|HAI2", "<hello|BAD>"):
+            with self.subTest(bad=bad), self.assertRaises(ValueError): rn.voxcpm_text(bad)
+        with self.assertRaisesRegex(ValueError, "不支持"):
+            rn.prepare_model_text("<还|HAI2>", "edge_tts")
 
     def test_retime_preserves_editorial_caption_breaks(self):
         p = self.root
@@ -363,7 +379,7 @@ class ProjectTests(unittest.TestCase):
         voice = self.root / "voice.wav"
         voice.write_bytes(b"voice")
         pp.save(self.root / "receipt.json", {"audio": str(voice), "beats": [{
-            "id": "B01", "text": "第一句。后一条说明。", "audio": str(voice), "start": .65, "end": 10.65}]})
+            "id": "B01", "text": "第一句。后一条说明。", "audio": str(voice), "start": .65, "end": 10.65, "trimmed_head_seconds": .4}]})
         model = SimpleNamespace(transcribe=lambda *args, **kwargs: {
             "text": "后一条说明", "segments": [{"start": 4.2, "end": 9.8, "words": []}]})
         fake = SimpleNamespace(load_model=lambda *args, **kwargs: model)
@@ -371,6 +387,8 @@ class ProjectTests(unittest.TestCase):
             "--output", str(self.root / "alignment"), "--model", "local"]
         with patch.dict(sys.modules, {"whisper": fake}), patch.object(sys, "argv", argv):
             align_narration.main()
+        segment = pp.read(self.root / "alignment/alignment.json")["beats"][0]["segments"][0]
+        self.assertAlmostEqual(segment["start"], 4.2 + .65 - .4)
         cue = pp.read(self.root / "alignment/cues.proposed.json")["cues"][0]
         self.assertEqual((cue["start"], cue["end"], cue["text"]), (.65, 10.65, "第一句。后一条说明。"))
 

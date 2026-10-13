@@ -19,7 +19,7 @@ import { cutout, grain, tornEllipse } from './materials';
  * This is scenery, not staging. It decides the room; the episode still decides
  * what enters it, from which side, in what order, and what it means.
  */
-export type RoomKind = 'consult' | 'kitchen' | 'bedroom' | 'lab' | 'ward';
+export type RoomKind = 'consult' | 'kitchen' | 'bedroom' | 'lab' | 'ward' | 'home';
 
 interface RoomSpec {
   wall: string;
@@ -36,6 +36,16 @@ interface RoomSpec {
 }
 
 const SPECS: Record<RoomKind, RoomSpec> = {
+  home: {
+    wall: '#e6dcc8',
+    sheet: '#f0e7d3',
+    band: '#c6b391',
+    bandEdge: '#a8977a',
+    bandTop: 468,
+    window: { x: 138, y: 172, w: 200, h: 150, pane: '#cbd6d1', curtain: true },
+    shelf: { x: 1010, y: 176, w: 176, props: 'cards' },
+    chart: { x: 686, y: 200, w: 168, h: 122 },
+  },
   consult: {
     wall: '#e7ddca',
     sheet: '#f0e8d6',

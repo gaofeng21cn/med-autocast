@@ -61,3 +61,9 @@
 - `docs/35_纸剧场纵深与媒介统一SOP.md`：景深、媒介统一层、环境板要求
 - `docs/36_逐集评估与独立改写SOP.md`：逐集评估口径
 - `scripts/check_episode_independence.py`：架构门
+
+## 迁移脚本
+
+migrate_episode_director.py 是每集迁移的机械部分：安装当前 kit（纸景房间、纸片餐具、纸片记录纸、纸化背景处理）、把 main.ts 指向本集 episodeshots.ts、按本集故事与代码实际使用的房间生成本集 scene_directions.json、删除无人引用的旧系列工厂文件，并构建验证。脚本不写镜头内容：导演稿由人或模型逐集创作，脚本只保证接线正确、旧工厂不会残留。
+
+已迁移系列的共同做法见 work/episode-migration-status.md。

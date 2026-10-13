@@ -15,8 +15,8 @@ def configure(root: Path, mode: str, series: str | None = None) -> dict:
     voice = author.setdefault('voice', {})
     if mode == 'reference' and not voice.get('reference_audio'):
         raise ValueError('先登记授权 voice.reference_audio；也可选择 edge 跳过专用声线')
-    if mode == 'reference' and voice.get('preferred_backend_definition') in (None, 'edge_tts'):
-        voice['preferred_backend_definition'] = 'indextts_2_5'
+    if mode == 'reference' and voice.get('preferred_backend_definition') in (None, 'edge_tts', 'indextts_2_5'):
+        voice['preferred_backend_definition'] = 'voxcpm_2'
     voice['mode'] = mode
     selected = select_audio_backend(author, backends)
     if mode == 'reference':

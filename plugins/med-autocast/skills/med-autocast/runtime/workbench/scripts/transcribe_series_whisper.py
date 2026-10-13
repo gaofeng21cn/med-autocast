@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Transcribe final IndexTTS beat audio with Whisper word timestamps."""
+"""Transcribe final registered narration beat audio with Whisper word timestamps."""
 
 import argparse
 import json

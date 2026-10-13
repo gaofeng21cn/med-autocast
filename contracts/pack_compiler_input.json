@@ -76,7 +76,6 @@
     "runtime/workbench/backends/h3/setup_h3.sh",
     "runtime/workbench/backends/h3/setup_mac_local.sh",
     "runtime/workbench/backends/h3/setup_mac_mlx_36gb.sh",
-    "runtime/workbench/backends/indextts/setup_mac.sh",
     "runtime/workbench/docs/01_医学科普内容生产.md",
     "runtime/workbench/docs/02_视频呈现与制作.md",
     "runtime/workbench/docs/03_品牌人物呈现策略.md",

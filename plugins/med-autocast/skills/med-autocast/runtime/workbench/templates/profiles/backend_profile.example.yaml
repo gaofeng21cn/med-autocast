@@ -27,14 +27,19 @@ audio:
     device: cpu
     voice: zh-CN-XiaoyiNeural
     capability: configured_requires_network_verification
-  indextts_local_mac:
-    definition: indextts_2_5
-    label: 用户独立配置的本机 IndexTTS
-    kind: indextts
+  voxcpm_local_mac:
+    definition: voxcpm_2
+    label: 用户独立配置的本机 VoxCPM2
+    kind: voxcpm
     device: mps
-    root: ${INDEXTTS_ROOT:-$HOME/ai/index-tts-mac}
-    python: ${INDEXTTS_PYTHON:-$HOME/ai/index-tts-mac/.venv/bin/python}
-    model_root: ${INDEXTTS_MODEL_ROOT:-$HOME/ai/index-tts-mac/checkpoints}
+    root: ${VOXCPM_ROOT:-$HOME/ai/voxcpm-test}
+    python: ${VOXCPM_PYTHON:-$HOME/ai/voxcpm-test/.venv/bin/python}
+    model_root: ${VOXCPM_MODEL_ROOT:-$HOME/ai/voxcpm-test/models/VoxCPM2}
+    runtime_profile:
+      normalize: false
+      inference_timesteps: 10
+      mps_low_watermark_ratio: 0.3
+      mps_high_watermark_ratio: 0.5
     capability: candidate
 policy:
   default_video: js_animation_local

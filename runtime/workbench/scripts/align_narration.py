@@ -27,12 +27,13 @@ def main():
             fp16=a.device.startswith("cuda"),
         )
         segments = r.get("segments", [])
+        offset = beat["start"] - beat.get("trimmed_head_seconds", 0.0)
         for s in segments:
-            s["start"] += beat["start"]
-            s["end"] += beat["start"]
+            s["start"] += offset
+            s["end"] += offset
             for w in s.get("words", []):
-                w["start"] += beat["start"]
-                w["end"] += beat["start"]
+                w["start"] += offset
+                w["end"] += offset
         result.append(
             {
                 "id": beat["id"],

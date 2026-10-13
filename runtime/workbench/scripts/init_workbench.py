@@ -82,7 +82,8 @@ voice:
   mode: edge
   preferred_backend_definition: edge_tts
   reference_audio: null
-  direction: 自然、平静、清晰；全篇固定语速、音高和距离感
+  delivery_style: structured_explanation
+  direction: Professional medical education narration, warm and composed, measured steady pace, precise articulation, clear sentence boundaries, deliberate pauses, subtle emphasis on key facts and logical distinctions, restrained pitch variation.
 visual_identity:
   enabled: false
   character_reference: null
@@ -115,7 +116,7 @@ audio_mix:
     asset_library = _ensure_asset_library_config(target)
     (target / 'README.md').write_text('''# 医学动画工作台
 
-先运行 `bash scripts/setup_workbench.sh --check`。告诉 Med Auto Cast 主题、受众和时长即可开始；首步先建立作者/医生形象、品牌识别和声音基线，再进入纸剧场分镜与素材准备。默认本机 JS 手绘拼贴；有授权参考声线时使用本机 IndexTTS，Edge TTS 只在没有专用声线或用户明确跳过时保底。
+先运行 `bash scripts/setup_workbench.sh --check`。告诉 Med Auto Cast 主题、受众和时长即可开始；首步先建立作者/医生形象、品牌识别和声音基线，再进入纸剧场分镜与素材准备。默认本机 JS 手绘拼贴；有授权参考声线时使用本机 VoxCPM2，Edge TTS 只在没有专用声线或用户明确跳过时保底。
 
 - content：医学事实、患者问题地图、系列和单集故事包。
 - profiles：作者/医生、品牌、声线和部署档案。

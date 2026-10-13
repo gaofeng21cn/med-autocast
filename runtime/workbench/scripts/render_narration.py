@@ -25,13 +25,45 @@ def save(path, data):
 
 
 ANNOTATION = re.compile(r"<([^<>|]+)\|([^<>|]+)>")
+VOXCPM_PINYIN = re.compile(r"^[a-zA-ZüÜvV]+[1-5]$")
+# Standard Mandarin syllables, independent of the retired model's vocabulary.
+PINYIN_SYLLABLES = set("""
+a ai an ang ao ba bai ban bang bao bei ben beng bi bian biao bie bin bing bo bu
+ca cai can cang cao ce cen ceng cha chai chan chang chao che chen cheng chi chong chou chu chua chuai chuan chuang chui chun chuo ci cong cou cu cuan cui cun cuo
+da dai dan dang dao de dei den deng di dia dian diao die ding diu dong dou du duan dui dun duo
+e ei en eng er fa fan fang fei fen feng fo fou fu
+ga gai gan gang gao ge gei gen geng gong gou gu gua guai guan guang gui gun guo
+ha hai han hang hao he hei hen heng hm hng hong hou hu hua huai huan huang hui hun huo
+ji jia jian jiang jiao jie jin jing jiong jiu ju juan jue jun
+ka kai kan kang kao ke kei ken keng kong kou ku kua kuai kuan kuang kui kun kuo
+la lai lan lang lao le lei leng li lia lian liang liao lie lin ling liu lo long lou lu luan lun luo lv lve
+m ma mai man mang mao me mei men meng mi mian miao mie min ming miu mo mou mu
+n na nai nan nang nao ne nei nen neng ng ni nian niang niao nie nin ning niu nong nou nu nuan nuo nv nve
+o ou pa pai pan pang pao pei pen peng pi pian piao pie pin ping po pou pu
+qi qia qian qiang qiao qie qin qing qiong qiu qu quan que qun
+ran rang rao re ren reng ri rong rou ru ruan rui run ruo
+sa sai san sang sao se sen seng sha shai shan shang shao she shei shen sheng shi shou shu shua shuai shuan shuang shui shun shuo si song sou su suan sui sun suo
+ta tai tan tang tao te teng ti tian tiao tie ting tong tou tu tuan tui tun tuo
+wa wai wan wang wei wen weng wo wu xi xia xian xiang xiao xie xin xing xiong xiu xu xuan xue xun
+ya yan yang yao ye yi yin ying yo yong you yu yuan yue yun za zai zan zang zao ze zei zen zeng zha zhai zhan zhang zhao zhe zhei zhen zheng zhi zhong zhou zhu zhua zhuai zhuan zhuang zhui zhun zhuo zi zong zou zu zuan zui zun zuo
+""".split())
+CMU_VOWELS = set("AA AE AH AO AW AY EH ER EY IH IY OW OY UH UW".split())
+CMU_CONSONANTS = set("B CH D DH F G HH JH K L M N NG P R S SH T TH V W Y Z ZH".split())
+
+
+def validate_annotations(value):
+    # Empty or unfinished editorial controls must never become literal speech.
+    remainder = ANNOTATION.sub("", value)
+    if re.search(r"<[^<>]*\||\|[^<>]*>", remainder):
+        raise ValueError("配音注音标记缺失文字、读音或闭合符号")
 
 
 def tts_text(beat):
-    """Keep editorial text separate from native IndexTTS pronunciation input."""
+    """Keep editorial text separate from backend-specific pronunciation input."""
     value = beat.get("tts_text", beat["text"])
     if not isinstance(value, str) or not value.strip():
         raise ValueError(f"声段 {beat['id']} 的配音专用文本为空")
+    validate_annotations(value)
     if ANNOTATION.sub(lambda m: m[1], value) != beat["text"]:
         raise ValueError(f"声段 {beat['id']} 的注音还原后与正文不同；请保留同一正文")
     return value
@@ -51,24 +83,98 @@ def audio_rejected(meta):
     return False
 
 
-def indextts_text(value, vocabulary):
-    """Resolve jqx-u spelling against the actual model vocabulary, not a guess."""
+def pronunciation_controls(value):
+    """Return explicit pronunciation intent without allowing a backend to read markup."""
+    return [
+        {"text": match.group(1), "pronunciation": match.group(2)}
+        for match in ANNOTATION.finditer(value)
+    ]
+
+
+def _voxcpm_pinyin_token(token, word):
+    """Normalize one annotated syllable to VoxCPM's native brace syntax.
+
+    VoxCPM's public demo documents lowercase numbered pinyin inside braces,
+    for example ``{ni3}{hao3}``.  IndexTTS's ``V`` spelling for ``j/q/x``
+    is accepted in old receipts, but VoxCPM should receive standard ``u``
+    there (``xue4``), while ``v`` remains the ASCII spelling of ``ü`` in
+    ``lü4``/``nü3``.
+    """
+    value = token.strip().replace("Ü", "ü").replace("V", "v")
+    if not VOXCPM_PINYIN.fullmatch(value):
+        raise ValueError(
+            f"VoxCPM 原生拼音控制格式无效 {token!r}（{word}）；"
+            "请使用带 1-5 声调的拼音，例如 HAI2"
+        )
+    value = value.lower().replace("ü", "v")
+    if value.startswith(("j", "q", "x")):
+        value = value.replace("v", "u")
+    if value[:-1] not in PINYIN_SYLLABLES:
+        raise ValueError(f"VoxCPM 原生拼音音节无效 {token!r}（{word}）")
+    return value
+
+
+def voxcpm_text(value):
+    """Convert editorial ``<词|拼音>`` annotations to native VoxCPM input.
+
+    The Chinese word is intentionally replaced by one brace-wrapped syllable
+    per requested phone.  This is the syntax used by the upstream VoxCPM
+    demo; the editorial annotation and the generated model input are kept
+    separate in the receipt so subtitles remain the approved Chinese text.
+    """
     def replace(match):
         word, phones = match.groups()
-        if not re.search(r"[\u4e00-\u9fff]", word):
-            return match[0]
-        tokens = phones.upper().split()
-        actual = []
+        tokens = phones.split()
+        if not tokens:
+            raise ValueError(f"VoxCPM 原生拼音控制缺少读音（{word}）")
+        # Numbers and units may also carry an explicit Mandarin reading, while
+        # the editorial text retains the original digits (e.g. <5mg|WU3 HAO2 KE4>).
+        numbered = all(VOXCPM_PINYIN.fullmatch(token) for token in tokens)
+        if re.search(r"[\u3400-\u9fff]", word) or numbered and all(
+            re.sub(r"^([jqx])v", r"\1u", token.lower().replace("ü", "v"))[:-1] in PINYIN_SYLLABLES
+            for token in tokens
+        ):
+            return "".join(f"{{{_voxcpm_pinyin_token(token, word)}}}" for token in tokens)
+        tokens = [token.upper() for token in tokens]
         for token in tokens:
-            canonical = re.sub(r"^([JQX])[UÜ]", r"\1V", token)
-            if canonical not in vocabulary:
-                raise ValueError(f"IndexTTS 当前词表不支持注音 {token}（{word}）；请修正本段发音输入")
-            actual.append(canonical)
-        return "<" + word + "|" + " ".join(actual) + ">"
+            if token not in CMU_CONSONANTS and not (
+                token[-1:] in ("0", "1", "2") and token[:-1] in CMU_VOWELS
+            ):
+                raise ValueError(f"VoxCPM 英文 CMU 音素无效 {token!r}（{word}）")
+        return "{" + " ".join(tokens) + "}"
+
+    validate_annotations(value)
     return ANNOTATION.sub(replace, value)
 
 
-def synthesize(root, narration, output, series=None, selected=None, force=False):
+def prepare_model_text(value, definition, model_root=None):
+    """Resolve model input while keeping the original annotated text in the receipt.
+
+    VoxCPM2's upstream demo documents native phoneme input as numbered pinyin
+    inside braces (``{ni3}{hao3}``).  Editorial annotations stay in ``tts_text``;
+    only the backend-specific ``model_text`` is converted to that syntax.
+    """
+    if definition == "voxcpm_2":
+        return voxcpm_text(value)
+    validate_annotations(value)
+    if ANNOTATION.search(value):
+        raise ValueError("当前后端不支持此原生发音控制；请使用 VoxCPM2，不会静默去掉注音")
+    return value
+
+
+def synthesize(
+    root,
+    narration,
+    output,
+    series=None,
+    selected=None,
+    force=False,
+    direction_override=None,
+    reference_override=None,
+    language_override=None,
+    author_profile_override=None,
+    gap_seconds=0.26,
+):
     root = Path(root).resolve()
     output = Path(output).resolve()
     output.mkdir(parents=True, exist_ok=True)
@@ -82,7 +188,11 @@ def synthesize(root, narration, output, series=None, selected=None, force=False)
         raise ValueError("旁白声段缺失、重复或为空")
     if selected and set(selected) - set(ids):
         raise ValueError("指定声段不存在")
-    profile, author = load_author_profile(root=root, series_id=series)
+    profile, author = load_author_profile(
+        root=root,
+        series_id=series,
+        profile_path=author_profile_override,
+    )
     _, backends = load_backend_profile(root=root)
     backend = select_audio_backend(author, backends)
     spec = expand(backends["audio"][backend])
@@ -94,31 +204,35 @@ def synthesize(root, narration, output, series=None, selected=None, force=False)
     settings = {
         "backend": backend,
         "definition": spec["definition"],
-        "direction": voice.get("direction", "平静、自然、清晰"),
-        "language": voice.get("language", "zh"),
+        "direction": direction_override or voice.get("direction", "平静、自然、清晰"),
+        "language": language_override or voice.get("language", "zh"),
         "seed": 1601,
-        "emotion_alpha": 0.6,
-        "duration_factor": 1.05,
     }
-    if spec["definition"] == "indextts_2_5":
-        model = Path(locate(spec["model_root"]))
+    if spec["definition"] == "voxcpm_2":
         runtime = Path(locate(spec["root"]))
-        source = runtime / "src" if (runtime / "src/indextts").exists() else runtime
+        model = Path(locate(spec["model_root"]))
         settings.update(
-            reference=locate(voice["reference_audio"]),
+            reference=locate(reference_override or voice["reference_audio"]),
             model_root=str(model),
-            runtime_root=str(source),
+            runtime_root=str(runtime),
             device=spec.get("device", "mps" if sys.platform == "darwin" else "cpu"),
+            runtime_profile=spec.get("runtime_profile", {}),
+            pronunciation_control="voxcpm_native_pinyin_braces_with_required_listening",
         )
-        settings["reference_sha256"] = hashlib.sha256(
-            Path(settings["reference"]).read_bytes()
-        ).hexdigest()
-        settings["model_config_sha256"] = hashlib.sha256(
-            (model / "config.yaml").read_bytes()
-        ).hexdigest()
-        python = os.path.abspath(
-            os.path.expanduser(spec.get("python", str(runtime / ".venv/bin/python")))
-        )
+        settings["reference_sha256"] = hashlib.sha256(Path(settings["reference"]).read_bytes()).hexdigest()
+        settings["model_config_sha256"] = hashlib.sha256((model / "config.json").read_bytes()).hexdigest()
+        settings["worker_sha256"] = hashlib.sha256(Path(__file__).with_name("voxcpm_worker.py").read_bytes()).hexdigest()
+        settings["model_files"] = {
+            name: {"size": (model / name).stat().st_size, "mtime_ns": (model / name).stat().st_mtime_ns}
+            for name in ("model.safetensors", "audiovae.pth") if (model / name).is_file()
+        }
+        settings["runtime_metadata"] = {
+            str(p.relative_to(runtime)): hashlib.sha256(p.read_bytes()).hexdigest()
+            for p in sorted(runtime.glob(".venv/lib/python*/site-packages/voxcpm-*.dist-info/METADATA"))
+        }
+        if settings["runtime_profile"].get("normalize", False):
+            raise ValueError("VoxCPM2 使用审定配音输入，必须 normalize=false，避免破坏原生音素")
+        python = os.path.abspath(os.path.expanduser(spec.get("python", str(runtime / ".venv/bin/python"))))
     elif spec["definition"] == "edge_tts":
         settings.update(
             voice=spec.get("voice", "zh-CN-XiaoyiNeural"),
@@ -127,26 +241,20 @@ def synthesize(root, narration, output, series=None, selected=None, force=False)
         )
         python = sys.executable
     else:
-        raise ValueError(
-            "当前统一旁白入口仅支持已登记的 IndexTTS 或 Edge；不会静默回退"
-        )
+        raise ValueError("当前统一旁白入口仅支持已登记的 VoxCPM2 或 Edge；不会静默回退")
     jobs = []
     records = []
     for b in rows:
         spoken = tts_text(b)
-        if spoken != b["text"] and spec["definition"] != "indextts_2_5":
-            raise ValueError("当前后端不支持 IndexTTS 原生注音；请适配该后端的发音控制，不会朗读标记或静默换声线")
-        actual = spoken
-        if ANNOTATION.search(spoken) and spec["definition"] == "indextts_2_5":
-            vocab = model / "pinyin.vocab"
-            if not vocab.is_file():
-                raise ValueError("缺少 IndexTTS 拼音词表，无法核对原生注音；未启动模型推理")
-            actual = indextts_text(spoken, set(vocab.read_text().splitlines()))
+        actual = prepare_model_text(spoken, spec["definition"], locals().get("model"))
+        controls = pronunciation_controls(spoken)
         cache_input = {"text": b["text"], "settings": settings}
         if spoken != b["text"]:
             cache_input["tts_text"] = spoken
         if actual != spoken:
             cache_input["model_text"] = actual
+        if controls:
+            cache_input["pronunciation_controls"] = controls
         key = digest(cache_input)
         target = output / "segments" / f"{key}.wav"
         receipt = target.with_suffix(".json")
@@ -166,7 +274,14 @@ def synthesize(root, narration, output, series=None, selected=None, force=False)
         if not valid or (force and (not selected or b["id"] in selected)):
             target.parent.mkdir(exist_ok=True)
             jobs.append({**b, "model_text": actual, "output": str(target), "key": key})
-        records.append({**b, "model_text": actual, "audio": str(target), "cache_key": key})
+        records.append({
+            **b,
+            "model_text": actual,
+            "audio": str(target),
+            "cache_key": key,
+            "pronunciation_controls": controls,
+            "control_status": "manual_review_required" if controls else "none",
+        })
     if jobs:
         # Synthesize into a private staging directory; failed retries preserve successful takes.
         staging = tempfile.TemporaryDirectory(prefix="mac-takes-", dir=output)
@@ -174,17 +289,12 @@ def synthesize(root, narration, output, series=None, selected=None, force=False)
             originals = {b["key"]: Path(b["output"]) for b in jobs}
             for b in jobs:
                 b["output"] = str(Path(staging.name) / (b["key"] + ".wav"))
-            if spec["definition"] == "indextts_2_5":
+            if spec["definition"] == "voxcpm_2":
                 with tempfile.TemporaryDirectory(prefix="mac-narration-") as tmp:
                     job = Path(tmp) / "job.json"
                     save(job, {**settings, "beats": jobs})
                     subprocess.run(
-                        [
-                            python,
-                            str(Path(__file__).with_name("narration_worker.py")),
-                            "--job",
-                            str(job),
-                        ],
+                        [python, str(Path(__file__).with_name("voxcpm_worker.py")), "--job", str(job)],
                         cwd=settings["runtime_root"],
                         check=True,
                     )
@@ -251,7 +361,17 @@ def synthesize(root, narration, output, series=None, selected=None, force=False)
                         "text": b["text"],
                         "tts_text": tts_text(b),
                         "model_text": b["model_text"],
-                        "pronunciation_review": {"status": "pending"},
+                        "pronunciation_review": {
+                            "status": "pending",
+                            "required": bool(pronunciation_controls(tts_text(b))),
+                            "controls": pronunciation_controls(tts_text(b)),
+                            "method": "manual_full_listening",
+                        },
+                        "pronunciation_controls": pronunciation_controls(tts_text(b)),
+                        "control_status": (
+                            "manual_review_required" if pronunciation_controls(tts_text(b))
+                            else "none"
+                        ),
                         "baseline": settings,
                         "full_listening": "pending",
                     },
@@ -263,11 +383,13 @@ def synthesize(root, narration, output, series=None, selected=None, force=False)
     # to stack each take's own leading silence on top of the intended pause, so
     # the first syllable after every boundary was inaudible.
     pcm = []
-    cursor = 0.32
     rate = 24000
-    gap = 0.26
+    if not 0 <= gap_seconds <= 3:
+        raise ValueError("声段停顿须在 0 到 3 秒之间")
+    lead_frames, gap_frames, tail_frames = [round(rate * seconds) for seconds in (0.32, gap_seconds, 0.7)]
+    cursor_frames = lead_frames
     splice_report = []
-    for b in records:
+    for index, b in enumerate(records):
         take = subprocess.check_output(
             [
                 "ffmpeg",
@@ -284,31 +406,23 @@ def synthesize(root, narration, output, series=None, selected=None, force=False)
                 "-",
             ],
         )
-        if take is None:
-            # Some callers stub the decoder; without real PCM the measured
-            # boundary is unavailable, so keep the take whole rather than guess.
-            take = b""
         if not take:
-            b["start"] = round(cursor, 6)
-            b["end"] = round(cursor + 0.0, 6)
-            cursor = b["end"] + 0.65
-            splice_report.append({"id": b["id"], "trimmed_head_seconds": None,
-                                  "trimmed_tail_seconds": None,
-                                  "start": b["start"], "end": b["end"]})
-            pcm.extend([take, b"\0" * round(rate * 0.65) * 2])
-            continue
+            raise ValueError(f"声段 {b['id']} 解码为空，未替换当前整轨")
         samples = array.array("h")
         samples.frombytes(take)
         start, end = trim_bounds(samples, rate)
         data = samples[start:end].tobytes()
-        b["start"] = round(cursor, 6)
-        b["end"] = round(cursor + len(data) / (rate * 2), 6)
+        b["start"] = round(cursor_frames / rate, 6)
+        cursor_frames += len(data) // 2
+        b["end"] = round(cursor_frames / rate, 6)
         b["trimmed_head_seconds"] = round(start / rate, 3)
         splice_report.append({"id": b["id"], "trimmed_head_seconds": round(start / rate, 3),
                               "trimmed_tail_seconds": round((len(samples) - end) / rate, 3),
                               "start": b["start"], "end": b["end"]})
-        cursor = b["end"] + gap
-        pcm.extend([data, b"\0" * round(rate * gap) * 2])
+        pcm.append(data)
+        if index < len(records) - 1:
+            cursor_frames += gap_frames
+            pcm.append(b"\0" * gap_frames * 2)
     with tempfile.TemporaryDirectory(prefix="mac-track-", dir=output) as tmp:
         raw = Path(tmp) / "narration.wav"
         with wave.open(str(raw), "wb") as w:
@@ -316,12 +430,16 @@ def synthesize(root, narration, output, series=None, selected=None, force=False)
             w.setsampwidth(2)
             w.setframerate(rate)
             w.writeframes(
-                b"\0" * round(rate * 0.65) * 2
+                b"\0" * lead_frames * 2
                 + b"".join(pcm)
-                + b"\0" * round(rate * 0.7) * 2
+                + b"\0" * tail_frames * 2
             )
         normalized = Path(tmp) / "narration-normalized.wav"
         normalize(raw, normalized)
+        with wave.open(str(normalized), "rb") as w:
+            actual_duration = w.getnframes() / w.getframerate()
+        if abs(actual_duration - (cursor_frames + tail_frames) / rate) > 1 / rate:
+            raise ValueError("归一化改变音轨时长，未替换当前整轨")
         raw.replace(output / "narration.wav")
         normalized.replace(output / "narration-normalized.wav")
     normalized = output / "narration-normalized.wav"
@@ -330,7 +448,7 @@ def synthesize(root, narration, output, series=None, selected=None, force=False)
         "author_profile": str(profile),
         "backend": backend,
         "baseline": settings,
-        "duration": round(cursor + 0.7, 6),
+        "duration": round(actual_duration, 6),
         "audio": str(normalized),
         "beats": records,
         "generated": [b["id"] for b in jobs],
@@ -340,8 +458,9 @@ def synthesize(root, narration, output, series=None, selected=None, force=False)
     }
     result["splice"] = {
         "policy": "按实测语音边界裁掉前导与尾部静音，再按固定短停顿拼接",
-        "gap_seconds": gap,
-        "lead_seconds": 0.32,
+        "gap_seconds": gap_frames / rate,
+        "lead_seconds": lead_frames / rate,
+        "tail_seconds": tail_frames / rate,
         "takes": splice_report,
         "review": "拼接处应可听到完整首字；实际听辨仍待审",
     }
@@ -359,9 +478,8 @@ def synthesize(root, narration, output, series=None, selected=None, force=False)
             "audio": b["audio"],
             "sha256": hashlib.sha256(Path(b["audio"]).read_bytes()).hexdigest(),
             "start": b["start"], "end": b["end"],
-            "requested_pronunciations": [
-                {"text": m[1], "pronunciation": m[2]} for m in ANNOTATION.finditer(tts_text(b))
-            ],
+            "requested_pronunciations": pronunciation_controls(tts_text(b)),
+            "control_status": "manual_review_required" if pronunciation_controls(tts_text(b)) else "none",
             "review": json.loads(Path(b["audio"]).with_suffix(".json").read_text()).get(
                 "pronunciation_review", {"status": "pending"}
             ),

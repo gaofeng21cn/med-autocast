@@ -10,19 +10,19 @@ metadata:
 以显式 `workspace_root` 定位制作数据，按目标系列解析作者覆盖和后端档案。OPL 持有阶段运行；本 Skill 保留原工作台专业职责。下文 `scripts/`、`backends/`、`content/`、`productions/`、`work/`、`publish/` 均相对制作工作区，方法链接相对本 Skill。工具通过 [工作台工具接入](../../../docs/workspace-adapter.md) 定位：优先使用现有工作区入口，缺少通用工具时使用随包工具；不得默默替换工作区的专用修订入口。案例中的疾病、尺寸和作者选择只适用于对应案例。
 
 
-这个 Skill 负责从工作台已经登记的本地、局域网和云端后端中选择合适路径，提交生成任务，并把结果验收到可交给剪辑和视觉 QA 的程度。生产前先读取作者/医生基线，确认参考音频和表达方向。新视频默认走本地 JavaScript/SVG/Canvas 动画与手绘拼贴：先查已审关键帧与插图库，缺口再用 ImageGen 或授权网上素材补齐；有授权参考声线时按作者档案调用本机 IndexTTS 或等效后端，未设定声线或用户明确跳过时才使用 Edge TTS `zh-CN-XiaoyiNeural`。按[十阶段SOP](../../../runtime/workbench/docs/04_医学科普视频系列SOP.md#0-十阶段流程与交接)，S06仅按需确认能力和具体替代，S07接收已审故事包/生成计划并产出实际媒体与回执；选题、故事设计或文档更新不触发模型调用。MiniMax H3 等视频模型保留为显式备选。
+这个 Skill 负责从工作台已经登记的本地、局域网和云端后端中选择合适路径，提交生成任务，并把结果验收到可交给剪辑和视觉 QA 的程度。生产前先读取作者/医生基线，确认参考音频和表达方向。新视频默认走本地 JavaScript/SVG/Canvas 动画与手绘拼贴：先查已审关键帧与插图库，缺口再用 ImageGen 或授权网上素材补齐；有授权参考声线时按作者档案调用本机 VoxCPM2，未设定声线或用户明确跳过时才使用 Edge TTS `zh-CN-XiaoyiNeural`。按[十阶段SOP](../../../runtime/workbench/docs/04_医学科普视频系列SOP.md#0-十阶段流程与交接)，S06仅按需确认能力和具体替代，S07接收已审故事包/生成计划并产出实际媒体与回执；选题、故事设计或文档更新不触发模型调用。MiniMax H3 等视频模型保留为显式备选。
 
 始终先读 `workbench.yaml` 的 `active_profiles.media_backends`、`backends/config/media_backends.yaml` 和 `docs/05_多后端本地与远程运行.md`。能力目录定义可移植协议，部署档案定义当前机器可用的实例与默认选择，两者不可互相取代。实际生产再读 `docs/06_媒体后端运行SOP.md`；使用云供应商时读 `docs/08_云视频API接入.md`；只有诊断当前机器或复核性能时才读 `docs/local/`。
 
 ## 首次环境准备
 
-使用[安装说明](../../../docs/installation.md)中的随包 setup_workbench 与 environment_check 帮助新用户准备环境。新建空目录自动生成有效档案和安装独立依赖；已有工作区先只读检查，再按授权增量修复。先确认 Python/Node/FFmpeg/中文字体与真实浏览器启动，使用 smoke_local_animation 验证短编码链路；这些证据不批准素材、医生基线或医学内容。IndexTTS/Whisper/视频模型单独准备，缺少可选项不把核心安装判失败。Edge 合成必须联网，不能称为离线 TTS。
+使用[安装说明](../../../docs/installation.md)中的随包 setup_workbench 与 environment_check 帮助新用户准备环境。新建空目录自动生成有效档案和安装独立依赖；已有工作区先只读检查，再按授权增量修复。先确认 Python/Node/FFmpeg/中文字体与真实浏览器启动，使用 smoke_local_animation 验证短编码链路；这些证据不批准素材、医生基线或医学内容。VoxCPM2/Whisper/视频模型单独准备，缺少可选项不把核心安装判失败。Edge 合成必须联网，不能称为离线 TTS。
 
 ## 选择方法
 
 用户明确跳过专用声线时，用 `configure_voice --mode edge` 保留参考音频并记录选择；服务故障不构成静默换声线授权。
 
-新 JS 动画先按[素材准入与配音基线](../../../runtime/workbench/docs/13_素材准入与配音基线.md)完成作者/医生基线、准备和查看素材，再执行 `check_animation_assets` 与 `render_javascript_animation`。ImageGen 由当前会话对应 Skill 内置工具生成并登记。IndexTTS 使用同一参考音频、模型和情绪参数贯穿全篇，禁止逐场切换情绪指令；Edge 可在无声线或用户明确跳过时作为整篇旁白。`audio_baseline` 只检测响度，语气和完整听感须另审。
+新 JS 动画先按[素材准入与配音基线](../../../runtime/workbench/docs/13_素材准入与配音基线.md)完成作者/医生基线、准备和查看素材，再执行 `check_animation_assets` 与 `render_javascript_animation`。ImageGen 由当前会话对应 Skill 内置工具生成并登记。VoxCPM2 使用同一参考音频、模型和条理讲解指令贯穿全篇，禁止逐场切换情绪指令；Edge 可在无声线或用户明确跳过时作为整篇旁白。`audio_baseline` 只检测响度，语气和完整听感须另审。
 
 1. 先解析用户显式指定的后端；没有指定时使用登记表当前默认值。不要在 Skill 中硬编码默认后端、端口或路径，也不要因某个服务暂时不可达而静默切换。
 2. 根据任务所需的文生、图生、首尾帧、参考图/视频/音频、分辨率、时长、音轨、隐私、成本和时延选择后端。后端不支持的字段必须显式拒绝或降级说明，不能悄悄忽略。
@@ -67,11 +67,13 @@ metadata:
 配音默认使用 paper_project narrate；--beat 精确返修，固定参考声音与表达方向，独立环境自动解析。align 通过显式模型环境输出 ASR 差异及时间提案，不替换审定正文。不得因模型异常静默换声线。 具体命令见[单集工具与局部返修](../../../runtime/workbench/docs/20_纸剧场单集工具与局部返修.md)。
 
 
-中文发音先按完整语境确定，IndexTTS 2.5 的 `tts_text` 可用 `<还|HAI2>` 控制配音，`text` 保持审定正文；不跨后端直接发送该标签。改发音控制即重新合成目标段，明确拒用的旧音不得作为缓存复用。先审听首句/高风险术语所在整段，再听最终混音，未听保持 pending。 方法见[中文配音发音控制与听辨](../../../runtime/workbench/docs/27_中文配音发音控制与听辨SOP.md)。
+中文发音先按完整语境确定，VoxCPM2 的 `tts_text` 可用 `<还|HAI2>` 控制配音，`text` 保持审定正文；不跨后端直接发送该标签。改发音控制即重新合成目标段，明确拒用的旧音不得作为缓存复用。先审听首句/高风险术语所在整段，再听最终混音，未听保持 pending。 方法见[中文配音发音控制与听辨](../../../runtime/workbench/docs/27_中文配音发音控制与听辨SOP.md)。
 
 
 全季可运行 `scripts/audit_pronunciation.py` 生成高风险语境索引；它是 Review 定位材料，不是自动错读判定或阻断门。
 
-优先消费上游已标注读音的配音稿，按当前模型真实词表生成 model_text 并保留请求输入；IndexTTS 的 jqx-u/ü 转换不能忽略。只重配受影响声段，拒用音不复用，未变轨继续使用。 方法见[初版质量与高效返修](../../../runtime/workbench/docs/28_初版质量与高效返修流程.md)。
+优先消费上游已标注读音的配音稿，将编辑注音转为原生拼音/CMU 音素 model_text 并保留请求输入；旧 jqx-v 拼写转换为标准 u，normalize=false。只重配受影响声段，拒用音不复用，未变轨继续使用。 方法见[初版质量与高效返修](../../../runtime/workbench/docs/28_初版质量与高效返修流程.md)。
 
 批量合成前先用当前真实模型前端/词表执行首句及高风险词所在整段小样，保存 tts_text、model_text 和声线/情绪参数；同字异读按语境处理。实际听辨欠项保持 pending，不能拿注音标签或ASR同字批准发音。专用声线故障不静默改 Edge。明确拒用 take 不复用；只重配受影响段并检查接缝。方法与实际回读见[初版质量流程](../../../runtime/workbench/docs/28_初版质量与高效返修流程.md)。
+
+新旁白用随包统一入口，默认条理讲解；`<还|HAI2>` → `{hai2}`，英文 `<hello|HH AH0 L OW1>` → `{HH AH0 L OW1}`。同批参考音频只编码一次，保持 normalize=false；医学词、数字单位和缩写先按上下文定好读法，禁止全局按字替换。未听的原段与混音保持 pending。

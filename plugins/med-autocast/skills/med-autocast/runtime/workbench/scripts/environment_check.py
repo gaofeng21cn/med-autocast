@@ -74,20 +74,37 @@ def narration_dependencies(workspace: Path, packages: dict) -> dict:
             return {**result, 'state': 'dependencies_present' if packages['edge_tts']['state'] == 'ready' else 'missing',
                     'network_required': True, 'fix': packages['edge_tts']['fix'],
                     'next': '用固定参数合成短旁白，核对完整音轨与语气；包已安装不代表在线服务可用'}
-        if spec.get('kind') == 'indextts':
+        if spec.get('kind') == 'voxcpm':
             def locate(value):
                 p = Path(value)
                 return p if p.is_absolute() else workspace / p
-            root = locate(spec['root'])
-            python = locate(spec.get('python') or str(root / '.venv/bin/python'))
+            runtime = locate(spec['root'])
+            python = locate(spec.get('python') or str(runtime / '.venv/bin/python'))
             model = locate(spec['model_root'])
             reference = locate(expand(author.get('voice', {}).get('reference_audio') or ''))
-            paths = {'runtime_root': root.is_dir(), 'python': python.is_file() and os.access(python, os.X_OK),
-                     'model_config': (model / 'config.yaml').is_file(), 'reference_audio': reference.is_file()}
-            return {**result, 'state': 'paths_present' if all(paths.values()) else 'missing',
-                    'paths': paths, 'network_required': False,
-                    'fix': '按 backends/indextts/README.md 准备独立运行时、完整权重和授权参考音频',
-                    'next': '路径齐备后运行短旁白；权重完整性、设备兼容性与离线能力以真实推理为准'}
+            paths = {
+                'runtime_root': runtime.is_dir(),
+                'python': python.is_file() and os.access(python, os.X_OK),
+                'model_config': (model / 'config.json').is_file(),
+                'model_weights': (model / 'model.safetensors').is_file(),
+                'audio_vae': (model / 'audiovae.pth').is_file(),
+                'reference_audio': reference.is_file(),
+            }
+            package = 'missing'
+            version = None
+            if paths['python']:
+                try:
+                    probe = subprocess.run([str(python), '-c', 'import importlib.metadata; print(importlib.metadata.version("voxcpm"))'], capture_output=True, text=True, timeout=10, check=True)
+                    version = probe.stdout.strip()
+                    package = 'ready'
+                except (OSError, subprocess.SubprocessError):
+                    package = 'missing'
+            ready = all(paths.values()) and package == 'ready'
+            return {**result, 'state': 'paths_present' if ready else 'missing',
+                    'paths': paths, 'package': package, 'package_version': version,
+                    'network_required': False,
+                    'fix': '按 backends/voxcpm/README.md 准备 VoxCPM2 独立运行时、完整权重和授权参考音频',
+                    'next': '路径齐备后运行真实短旁白；模型加载、MPS 稳定性和发音听辨以实际合成与人工审听为准'}
         return {**result, 'state': 'not_probed', 'next': '按登记的后端运行短旁白验收'}
     except Exception as exc:
         return {'state': 'needs_setup', 'synthesis_verified': False, 'error': str(exc),
@@ -117,8 +134,18 @@ def check(workspace: Path) -> dict:
         except (KeyError, ValueError):
             node.update(state='error', fix='无法识别 Node.js 版本')
     packages = {}
+    workspace_python = workspace / '.venv/bin/python'
     for name in ('yaml', 'PIL', 'edge_tts'):
-        packages[name] = {'state': 'ready' if importlib.util.find_spec(name) else 'missing', 'fix': setup}
+        present = bool(importlib.util.find_spec(name))
+        source = 'system' if present else None
+        if not present and workspace_python.is_file():
+            try:
+                probe = subprocess.run([str(workspace_python), '-c', f'import {name}'], capture_output=True, timeout=10)
+                present = probe.returncode == 0
+                source = 'workspace_venv' if present else None
+            except (OSError, subprocess.SubprocessError):
+                present = False
+        packages[name] = {'state': 'ready' if present else 'missing', 'source': source, 'fix': setup}
     for name in ('yaml', 'PIL'):
         required[name] = packages[name]
     try:
@@ -146,7 +173,7 @@ def check(workspace: Path) -> dict:
             'selected_narration': narration,
             'optional_media': {
                 'edge_tts_fallback': {**packages['edge_tts'], 'network_required': True, 'synthesis_verified': False},
-                'index_tts_local': {'state': 'not_probed', 'fix': '有授权声线时按 backends/indextts/README.md 独立安装并做短音频验收'},
+                'retired_index_tts': {'state': 'retired', 'fix': '仅可在历史交付和历史回执中追溯；新旁白统一使用 VoxCPM2'},
                 'whisper_alignment': {'state': 'not_probed', 'fix': '按需安装 requirements-alignment.txt 和模型'},
                 'imagegen': {'state': 'session_dependent', 'fix': '使用会话 ImageGen Skill；或使用已审/授权网络素材'},
                 'video_models': {'state': 'optional', 'fix': '仅显式选择 H3/Seedance 时配置'}},

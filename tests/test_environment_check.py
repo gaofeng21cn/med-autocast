@@ -79,7 +79,7 @@ class EnvironmentTests(unittest.TestCase):
             report = envcheck.check(self.root)
             self.assertEqual(report['status'], 'ready')
             self.assertFalse(report['production_ready'])
-            self.assertEqual(report['optional_media']['index_tts_local']['state'], 'not_probed')
+            self.assertEqual(report['optional_media']['retired_index_tts']['state'], 'retired')
         actual = importlib.util.find_spec
         with patch('environment_check.command', side_effect=cmd), patch('environment_check.node_playwright', return_value={'state':'ready'}), patch('workbench_config.resolve_font', return_value=self.root/'font'), patch('environment_check.importlib.util.find_spec', side_effect=lambda n: None if n=='PIL' else actual(n)):
             self.assertEqual(envcheck.check(self.root)['status'], 'needs_setup')
@@ -107,17 +107,17 @@ class EnvironmentTests(unittest.TestCase):
         initialize(self.root)
         path = self.root/'profiles/authors/example_author.yaml'
         author = yaml.safe_load(path.read_text())
-        author['voice'].update(reference_audio='reference.wav', mode='reference', preferred_backend_definition='indextts_2_5')
+        author['voice'].update(reference_audio='reference.wav', mode='reference', preferred_backend_definition='voxcpm_2')
         path.write_text(yaml.safe_dump(author))
-        with patch.dict(os.environ, INDEXTTS_ROOT=str(self.root/'absent-runtime'), INDEXTTS_PYTHON=str(self.root/'absent-python'), INDEXTTS_MODEL_ROOT=str(self.root/'absent-model')):
+        with patch.dict(os.environ, VOXCPM_ROOT=str(self.root/'absent-runtime'), VOXCPM_PYTHON=str(self.root/'absent-python'), VOXCPM_MODEL_ROOT=str(self.root/'absent-model')):
             report = envcheck.narration_dependencies(self.root, {'edge_tts':{'state':'ready'}})
-        self.assertEqual(report['definition'], 'indextts_2_5')
+        self.assertEqual(report['definition'], 'voxcpm_2')
         self.assertEqual(report['state'], 'missing')
         self.assertFalse(report['synthesis_verified'])
 
     def test_reference_voice_never_silently_falls_back(self):
-        backends={'audio':{'edge':{'definition':'edge_tts'}, 'local':{'definition':'indextts_2_5'}}, 'policy':{'default_audio':'edge'}}
-        author={'voice':{'reference_audio':'ref.wav','preferred_backend_definition':'indextts_2_5'}}
+        backends={'audio':{'edge':{'definition':'edge_tts'}, 'local':{'definition':'voxcpm_2'}}, 'policy':{'default_audio':'edge'}}
+        author={'voice':{'reference_audio':'ref.wav','preferred_backend_definition':'voxcpm_2'}}
         self.assertEqual(select_audio_backend(author, backends), 'local')
         self.assertEqual(select_audio_backend({'voice':{}}, backends), 'edge')
         with self.assertRaisesRegex(ValueError, 'Edge'):
@@ -132,7 +132,7 @@ class EnvironmentTests(unittest.TestCase):
         initialize(self.root)
         path = self.root/'profiles/authors/example_author.yaml'
         author = yaml.safe_load(path.read_text())
-        author['voice'].update(reference_audio='saved-reference.wav', mode='reference', preferred_backend_definition='indextts_2_5')
+        author['voice'].update(reference_audio='saved-reference.wav', mode='reference', preferred_backend_definition='voxcpm_2')
         author['baseline']['review']['voice'] = 'passed'
         path.write_text(yaml.safe_dump(author))
         report = configure(self.root, 'edge')

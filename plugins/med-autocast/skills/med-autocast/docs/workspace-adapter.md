@@ -87,7 +87,7 @@ JS 与纸剧场统一使用随包渲染器；预览和正式编码不再因 --pr
 
 ## 面向用户的单一最新版交付
 
-`publish/<series>/` 是唯一面向用户的交付目录：首页/观看页和各集成片。每集直接放 `video.mp4`、`封面.jpg`（可用时）、字幕、两平台 TXT 和简明交付说明；不放 `current/`、日期/版本子目录、旧版、源码、旁白 WAV、Score、预览或 QA。用户无需在版本间挑选。交付位置不改变原有动态、听感、医学或上传状态。
+`publish/<系列展示名>/` 是唯一面向用户的交付目录：首页/观看页和各集成片。每集直接放 `video.mp4`、`封面.jpg`（可用时）、字幕、两平台 TXT 和简明交付说明；不放 `current/`、日期/版本子目录、旧版、源码、旁白 WAV、Score、预览或 QA。用户无需在版本间挑选。交付位置不改变原有动态、听感、医学或上传状态。
 
 过程按 OPL 已声明的 Stage 拆分输入、输出与 owner。自然语言交接引用实际内容、工程和审查材料，保存在 `deliveries/<series>/stages/<stage_id>/`；推荐位置用于找材料，不是阻断字段门。精确交付 manifest 位于 `deliveries/<series>/<episode>/manifest.json`，用户最新版指针仍由 `deliveries/<series>/<episode>.json` 记录。旧包完整移到 `archive/deliveries/<series>/<episode>/<revision>/`，再安装新包并回读；不在 publish 留旧入口或归档链接。
 
@@ -110,3 +110,5 @@ python3 runtime/native_helpers/med_autocast.py assets \
 
 
 独立资产库在标准工作台 setup 中自动获取或复用；已有本地库不覆盖，离线/私有权限失败保留诊断并继续新创。导演先 query 并看原件，制作 use 复制精确版本后重新审查当前镜头；不设复用率。实际命令及载体安装边界见 [独立库接入](media-assets-integration.md)。
+
+用户入口按主题和集名组织：publish/观看与发布.html 覆盖全部当前系列；展示名映射见 workbench.yaml.series.<series_id>.delivery，内部 series_id/episode_id 保持不变。publish_catalog 更新观看页与全季 TXT 文案合集，--check 只读检查实际链接；--migrate 配合显式选集进行可恢复迁移。单集更换从 delivery_layout.locations 定位，不重建英文目录，不重编码未变媒体，不改变审核和上传状态。标准方法见 runtime/workbench/docs/30_用户交付目录与导航SOP.md。

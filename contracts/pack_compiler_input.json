@@ -146,7 +146,9 @@
     "runtime/workbench/templates/series/production_plan.example.yaml",
     "runtime/workbench/templates/series/visual_delivery_manifest.example.json",
     "runtime/workbench/templates/workbench.example.yaml",
-    "runtime/workbench/scripts/media_asset_library.py"
+    "runtime/workbench/scripts/media_asset_library.py",
+    "runtime/workbench/scripts/publish_catalog.py",
+    "runtime/workbench/docs/30_用户交付目录与导航SOP.md"
   ],
   "source_refs": {
     "stage_graph_source_ref": "agent/stages/manifest.json",

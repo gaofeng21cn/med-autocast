@@ -4,6 +4,7 @@ active_profiles:
   author: profiles/authors/example_author.yaml
   media_backends: profiles/backends/example_deployment.yaml
 authorities:
+  user_delivery_navigation: docs/30_用户交付目录与导航SOP.md
   workflow: docs/04_医学科普视频系列SOP.md
   first_draft_quality: docs/28_初版质量与高效返修流程.md
   pronunciation: docs/27_中文配音发音控制与听辨SOP.md
@@ -18,4 +19,9 @@ asset_library:
   sync_tool: ../mac-media-assets/tools/sync_from_workbench.py
   verify_tool: ../mac-media-assets/tools/verify_catalog.py
   note: 外部资产库不可用时继续本地工作台流程并记录质量债，不阻断 Progress First
+delivery_policy:
+  naming: localized_titles
+  layout: latest_only
+  index: 观看与发布.html
+  batch_directories: false
 series: {}

@@ -63,13 +63,13 @@ Stage 返回尽量引用真实产物与版本/来源信息，给出质量债务�
 
 逐集 `preflight-workbench` 通过只证明制作单、母版、publish 视频和 manifest 的引用与字节一致。全季审计还应核对字幕安全区、逐镜 `shot_recipe`、语义事件、无 BGM 审听候选、视频解码和 SHA-256；联系表、静帧、ASR、响度和布局只能定位问题，不能替代连续动态、完整听感或医学审查。`release_eligible`、视觉、连续动态、听感、医学和上传状态分开保留。
 
-用户交付目录 `publish/<series>/<episode>/` 直接放唯一最新版视频、封面、字幕和平台文案；不嵌套 `current/`、版本号、时间戳、候选或归档。机器清单、Score、配音及审查材料归 `deliveries/<series>/<episode>/` 或原制作工程；被替换交付归 `archive/deliveries/<series>/<episode>/<revision>/`。交付文档和生成器按实际目录写归档路径，不能把一集路径推广为全季，也不能把历史归档误报为本轮替换。Progress First 下，版本或文档问题先修 owner 并保留可消费产物，记录 `quality_debt` 或诊断后继续；只有当前性、权限、执行器、身份和明确人工决定等硬边界才停止。方法细节见 `runtime/workbench/docs/25_全季交付回读与经验沉淀.md`。
+用户交付目录 `publish/<系列展示名>/<集号_标题>/` 直接放唯一最新版视频、封面、字幕和平台文案；不嵌套 `current/`、版本号、时间戳、候选或归档。机器清单、Score、配音及审查材料归 `deliveries/<series>/<episode>/` 或原制作工程；被替换交付归 `archive/deliveries/<series>/<episode>/<revision>/`。交付文档和生成器按实际目录写归档路径，不能把一集路径推广为全季，也不能把历史归档误报为本轮替换。Progress First 下，版本或文档问题先修 owner 并保留可消费产物，记录 `quality_debt` 或诊断后继续；只有当前性、权限、执行器、身份和明确人工决定等硬边界才停止。方法细节见 `runtime/workbench/docs/25_全季交付回读与经验沉淀.md`。
 
 代码镜头制作与返修交给 `agent/professional_skills/medical-video-animation-craft/SKILL.md`。先读取当前风格的 STYLE.md，把 Treatment 与真实风格帧/短动作接上单集 score；`animation_lab` 提供七种原创媒介动作的可运行样例。实际实现、开放创作出口和质量边界见 `runtime/workbench/docs/26_代码动画技法与风格工作流.md`；样例、可调用工具和注册名不代表医学/艺术质量通过。
 
 ## 面向用户的单一最新版交付
 
-`publish/<series>/` 是唯一面向用户的交付目录：首页/观看页和各集成片。每集直接放 `video.mp4`、`封面.jpg`（可用时）、字幕、两平台 TXT 和简明交付说明；不放 `current/`、日期/版本子目录、旧版、源码、旁白 WAV、Score、预览或 QA。用户无需在版本间挑选。交付位置不改变原有动态、听感、医学或上传状态。
+`publish/<系列展示名>/` 是唯一面向用户的交付目录：首页/观看页和各集成片。每集直接放 `video.mp4`、`封面.jpg`（可用时）、字幕、两平台 TXT 和简明交付说明；不放 `current/`、日期/版本子目录、旧版、源码、旁白 WAV、Score、预览或 QA。用户无需在版本间挑选。交付位置不改变原有动态、听感、医学或上传状态。
 
 过程按 OPL 已声明的 Stage 拆分输入、输出与 owner。自然语言交接引用实际内容、工程和审查材料，保存在 `deliveries/<series>/stages/<stage_id>/`；推荐位置用于找材料，不是阻断字段门。精确交付 manifest 位于 `deliveries/<series>/<episode>/manifest.json`，用户最新版指针仍由 `deliveries/<series>/<episode>.json` 记录。旧包完整移到 `archive/deliveries/<series>/<episode>/<revision>/`，再安装新包并回读；不在 publish 留旧入口或归档链接。
 
@@ -94,3 +94,7 @@ python3 runtime/native_helpers/med_autocast.py assets --workspace <workspace> --
 
 
 独立 `mac-media-assets` 是默认发现入口。先用 `media_asset_library query --query <视觉锚点>` 或 native `assets --library external` 检索，再实际查看 `resolved_payloads` 的原图/动作与本库 Skill。按本集故事决定复用、适配、另找合法素材或 ImageGen 新创，不设复用率，不让已有素材决定故事、构图、风格或镜头数。库缺失、无匹配或旧素材不合适时继续新创与其他工作，质量债随交接保留。实际取用用 `media_asset_library use --project <单集路径> --id <精确外库ID>`，沿用工作台版本包与 uses，复制后当前镜头重新审查；作者范围仍按作者档案约束。安装/发现方法见 `docs/media-assets-integration.md`。
+
+## 按主题和集名找交付
+
+用户从 publish/观看与发布.html 查找所有当前主题，系列与分集使用用户语言展示名；英文技术 ID 继续用于制作与内部交接。名称映射由 workbench.yaml.series.<series_id>.delivery 持有，所有包器共享 delivery_layout.locations。publish_catalog 提供离线观看页、实际 TXT 文案合集、链接回查和显式可恢复迁移；不把制作批次、历史、候选和机器清单留在用户入口。初始化默认此布局，旧工作区不静默搬迁；名称或导航欠项保留候选与质量债。见 runtime/workbench/docs/30_用户交付目录与导航SOP.md。

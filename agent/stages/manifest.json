@@ -333,7 +333,8 @@
       "knowledge_refs": [
         "agent/knowledge/domain_boundary.md",
         "docs/production-sop.md",
-        "docs/workspace-adapter.md"
+        "docs/workspace-adapter.md",
+        "runtime/workbench/docs/30_用户交付目录与导航SOP.md"
       ],
       "quality_gate_refs": [
         "agent/quality_gates/review-handoff.md"

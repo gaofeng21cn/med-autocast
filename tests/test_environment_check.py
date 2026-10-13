@@ -32,6 +32,8 @@ class EnvironmentTests(unittest.TestCase):
         self.assertTrue((self.root / 'package-lock.json').is_file())
         self.assertTrue((self.root / 'workspace.manifest.json').is_file())
         self.assertTrue((self.root / 'WORKSPACE.md').is_file())
+        self.assertTrue((self.root / 'publish/观看与发布.html').is_file())
+        self.assertEqual(json.loads((self.root / 'workspace.manifest.json').read_text())['delivery_policy']['naming'], 'localized_titles')
         self.assertTrue(all((self.root / path).is_dir() for path in DIRECTORIES))
 
     def test_upgrade_only_adds_missing_layout_and_preserves_existing_files(self):

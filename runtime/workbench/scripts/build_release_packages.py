@@ -11,7 +11,7 @@ from pathlib import Path
 import yaml
 
 from delivery_contract import release_eligible
-from delivery_layout import archive_destination
+from delivery_layout import archive_destination, locations
 from workbench_config import ROOT, series_paths
 
 
@@ -24,7 +24,7 @@ def catalog_context(catalog: dict, catalog_path: Path, root: Path = ROOT) -> dic
 
 def source_links(catalog: dict, episode: dict) -> dict[str, str]:
     paths = catalog["_paths"]
-    release = paths["publish_root"] / episode["id"]
+    release = locations(catalog["_workspace"], catalog["series_id"], episode["id"])["user"]
     production = paths["production_root"] / episode["id"]
     content = paths["content_root"] / "episodes" / episode["id"]
     return {key: Path(os.path.relpath(value, release)).as_posix() for key, value in {
@@ -203,7 +203,7 @@ def publish_index(catalog: dict, episodes: list[dict], reports: dict[str, dict])
             status = "视频制作或验收未完成，不可发布"
         rows.append(
             f"| {int(episode['number']):02d} | {episode['title']} | "
-            f"[{episode['id']}]({episode['id']}/) | {duration} | {status} |"
+            f"[{episode['title']}]({locations(catalog['_workspace'], catalog['series_id'], episode['id'])['user'].name}/) | {duration} | {status} |"
         )
     return f"""# {catalog['series_title']}发布工作台
 
@@ -238,8 +238,8 @@ def publish_manifest(catalog: dict, episodes: list[dict], reports: dict[str, dic
             "number": int(episode["number"]),
             "episode_id": episode["id"],
             "title": episode["title"],
-            "release_directory": os.path.relpath(catalog["_paths"]["publish_root"] / episode["id"], catalog["_workspace"] / "deliveries" / catalog["series_id"]),
-            "video": os.path.relpath(catalog["_paths"]["publish_root"] / episode["id"] / "video.mp4", catalog["_workspace"] / "deliveries" / catalog["series_id"]) if ready else None,
+            "release_directory": os.path.relpath(locations(catalog["_workspace"], catalog["series_id"], episode["id"])["user"], catalog["_workspace"] / "deliveries" / catalog["series_id"]),
+            "video": os.path.relpath(locations(catalog["_workspace"], catalog["series_id"], episode["id"])["user"] / "video.mp4", catalog["_workspace"] / "deliveries" / catalog["series_id"]) if ready else None,
             "duration_seconds": qa.get("duration_seconds") if ready else None,
             "sha256": qa.get("sha256") if ready else None,
             "delivery_status": (
@@ -324,7 +324,11 @@ def main() -> None:
         catalog_path = args.catalog if args.catalog.is_absolute() else project_root / args.catalog
     else:
         parser.error("Pass --series or --catalog")
-    catalog = catalog_context(yaml.safe_load(catalog_path.read_text(encoding="utf-8")), catalog_path)
+    catalog_data = yaml.safe_load(catalog_path.read_text(encoding="utf-8"))
+    if not args.check:
+        from publish_catalog import prepare_names
+        prepare_names(project_root, catalog_data['series_id'])
+    catalog = catalog_context(catalog_data, catalog_path)
     if args.series and catalog["series_id"] != args.series:
         raise ValueError("Catalog series_id differs from --series")
     paths = catalog["_paths"]
@@ -352,7 +356,7 @@ def main() -> None:
             if not required.is_file():
                 errors.append(f"missing source: {required}")
 
-        release = paths["publish_root"] / episode_id
+        release = locations(catalog["_workspace"], catalog["series_id"], episode_id)["user"]
         if not args.check and release.is_dir() and final_video.is_file() and (release / "video.mp4").is_file() and sha256(release / "video.mp4") != sha256(final_video):
             previous = archive_destination(catalog['_workspace'], catalog['series_id'], episode_id)
             previous.mkdir(parents=True, exist_ok=True)
@@ -390,12 +394,9 @@ def main() -> None:
         )
 
     publish_root = paths["publish_root"]
-    ensure_file(
-        publish_root / "README.md",
-        publish_index(catalog, episodes, reports),
-        args.check,
-        errors,
-    )
+    localized = (yaml.safe_load((project_root / 'workbench.yaml').read_text()) or {}).get('delivery_policy', {}).get('naming') == 'localized_titles'
+    if not localized:
+        ensure_file(publish_root / "README.md", publish_index(catalog, episodes, reports), args.check, errors)
     ensure_file(
         catalog["_workspace"] / "deliveries" / catalog["series_id"] / "manifest.json",
         publish_manifest(catalog, episodes, reports),
@@ -410,6 +411,15 @@ def main() -> None:
     if errors:
         print(json.dumps({"status": "failed", "errors": errors}, ensure_ascii=False, indent=2))
         raise SystemExit(1)
+    navigation = None
+    if localized:
+        from publish_catalog import refresh, check
+        try:
+            navigation = check(project_root) if args.check else refresh(project_root, catalog['series_id'])
+        except Exception as exc:
+            navigation = {'status': 'diagnostic', 'error': str(exc)}
+        if navigation.get('status') == 'diagnostic':
+            navigation['blocks_stage_progress'] = False
     print(
         json.dumps(
             {
@@ -417,6 +427,7 @@ def main() -> None:
                 "series_id": catalog["series_id"],
                 "episodes": len(episodes),
                 "publish_root": str(publish_root),
+                "navigation": navigation,
             },
             ensure_ascii=False,
             indent=2,

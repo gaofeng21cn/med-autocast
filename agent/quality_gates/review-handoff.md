@@ -9,3 +9,5 @@
 用户能否从系列首页直接找到每集唯一最新版 MP4、封面与平台文案；publish 内是否仍混有 current、版本目录、归档、Score、旁白和 QA；过程 Stage 输入输出是否有明确 owner 与可消费引用。评审发现目录问题时返修交付组织，不重做未改变的成片，也不升级审核状态。
 
 平台稿是否可独立读懂当前问题、解释及行动，是否仅剩两三句摘要；标题、正文、话题和置顶评论是否与本集事实及当前视频一致。稿件过薄交内容策划补写，保留已有媒体和真实待审状态，不按字数或固定章节裁决质量。
+
+用户入口按主题和集名组织：publish/观看与发布.html 覆盖全部当前系列；展示名映射见 workbench.yaml.series.<series_id>.delivery，内部 series_id/episode_id 保持不变。publish_catalog 更新观看页与全季 TXT 文案合集，--check 只读检查实际链接；--migrate 配合显式选集进行可恢复迁移。单集更换从 delivery_layout.locations 定位，不重建英文目录，不重编码未变媒体，不改变审核和上传状态。标准方法见 runtime/workbench/docs/30_用户交付目录与导航SOP.md。

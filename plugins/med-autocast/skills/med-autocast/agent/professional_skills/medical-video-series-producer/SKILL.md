@@ -92,3 +92,9 @@ H3按[调研策略](../../../runtime/workbench/docs/12_H3调研与制作策略.m
 ## 初稿质量与资产复用
 
 批量系列制作在导演稿前先查询外挂医学视频资产库，先完成代表镜头和完整代表集 animatic，再扩展同类镜头；按内容 bounds 和认知比例重新布局，不复制整套构图。资产库仅提供稳定下限，缺库、缺样例或质量债不阻断不依赖该缺口的 Stage。
+
+## 主题与集名交付
+
+用户交付采用系列展示名和“集号_标题”目录，英文 series_id/episode_id 留在内容、制作、Stage 交接和内部 manifest。系列规划时登记 delivery.display_name，首次交付登记 delivery.episode_dirs；已交付名称固定，正文或标题修订不自动改路径。总入口为 publish/观看与发布.html，各系列统一观看页与全季文案合集，不以制作批次、日期或版本组织用户目录。
+
+单集包器共享 delivery_layout.locations，更换后保持同一用户目录并刷新导航。publish_catalog 负责实际导航、只读链接检查和显式可恢复迁移；旧版与批次入口归 archive，指针和审看记录归 deliveries。缺少名字或导航仍保留有效候选与诊断，不升级审核状态，也不重编码未变媒体。方法见[用户交付目录与导航](../../../runtime/workbench/docs/30_用户交付目录与导航SOP.md)。

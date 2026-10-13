@@ -17,6 +17,8 @@ from workbench_adapter import preflight_native
 
 
 def package_review(series, episode, plan, master, review, source_review=None, technical_qa=None):
+    from publish_catalog import prepare_names
+    prepare_names(ROOT, series)
     paths = series_paths(series)
     loc = locations(ROOT, series, episode)
     catalog = load_yaml(paths['release_catalog'])
@@ -88,7 +90,7 @@ def package_review(series, episode, plan, master, review, source_review=None, te
             'manifest': str(loc['record'] / 'manifest.json'), 'previous_delivery': result['previous_delivery'],
             'video_bytes_equal': checked['video_bytes_equal'], 'platform_copy_equal': checked['platform_copy_equal'],
             'review_claims': checked['review_claims'], 'quality_debt': checked['quality_debt'],
-            'publication_authorized': False, 'uploaded': False}
+            'publication_authorized': False, 'uploaded': False, 'navigation': result.get('navigation')}
 
 
 def main():

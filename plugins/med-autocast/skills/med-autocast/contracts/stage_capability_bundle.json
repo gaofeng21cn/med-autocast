@@ -146,7 +146,7 @@
       "output_artifact_advisories": [
         {
           "kind": "review_handoff_package",
-          "recommended_ref": "publish/<series>/<episode>/",
+          "recommended_ref": "publish/<display_name>/<number_title>/",
           "purpose": "面向用户的唯一最新版视频、封面、字幕和平台文案；不含过程版本和审查材料",
           "suggested_contents": ["video.mp4", "封面.jpg（可用时）", "字幕", "小红书文案.txt", "微信视频号文案.txt", "简明交付说明"]
         },
@@ -156,7 +156,8 @@
       "tool_refs": [
         {"tool_id": "package_review", "purpose": "组织当前单集审看包并回读字节", "effect": "write"},
         {"tool_id": "build_release_packages", "purpose": "匹配正式 final 合同的交付包", "effect": "write_when_authorized"},
-        {"tool_id": "med_autocast.py preflight-workbench", "surface": "native_helper", "purpose": "交付前只读预检", "effect": "read_only"}
+        {"tool_id": "med_autocast.py preflight-workbench", "surface": "native_helper", "purpose": "交付前只读预检", "effect": "read_only"},
+        {"tool_id": "publish_catalog", "surface": "workbench_tool", "purpose": "统一主题与集名导航、文案合集、只读链接检查和显式可恢复目录迁移", "effect": "write_when_authorized"}
       ],
       "route_back_targets": ["meta-review", "visual-review"],
       "review_scope": ["currentness", "package_integrity", "copy_fidelity", "handoff_usability"]

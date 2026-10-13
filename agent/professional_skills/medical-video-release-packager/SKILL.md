@@ -63,7 +63,7 @@ python3 scripts/build_release_packages.py --series <series_id> --check
 
 上述命令处理整季，没有 `--episode`。只改一集时按SOP第7.1节选匹配入口；符合上述正式合同才复用示例公开函数，限定目标集及系列索引；未完成篇目导致整季 check 失败，不代表本集失败。正式final的SHA256字段按既有接口合同保留；日常审看包不新增哈希。复制字节、元数据、文案全文、字幕和下游记录按SOP第7.1节回读；只改画面时以新旧成片整段解码音轨比较证明声轨未变，不能只看WAV路径。文案语义按 [内容文档第 7.1 节](../../../runtime/workbench/docs/01_医学科普内容生产.md#71-小红书与微信视频号文案同步)；只改文案不渲染视频。
 
-已通过动画门的每篇必须在登记的 `<publish_root>/<episode_id>/` 包含真实文件：
+已通过动画门的每篇必须在登记的 `<publish_root>/<集号_标题>/` 包含真实文件：
 
 ```text
 video.mp4
@@ -84,8 +84,14 @@ video.mp4
 
 ## 面向用户的单一最新版交付
 
-`publish/<series>/` 是唯一面向用户的交付目录：首页/观看页和各集成片。每集直接放 `video.mp4`、`封面.jpg`（可用时）、字幕、两平台 TXT 和简明交付说明；不放 `current/`、日期/版本子目录、旧版、源码、旁白 WAV、Score、预览或 QA。用户无需在版本间挑选。交付位置不改变原有动态、听感、医学或上传状态。
+`publish/<系列展示名>/` 是唯一面向用户的交付目录：首页/观看页和各集成片。每集直接放 `video.mp4`、`封面.jpg`（可用时）、字幕、两平台 TXT 和简明交付说明；不放 `current/`、日期/版本子目录、旧版、源码、旁白 WAV、Score、预览或 QA。用户无需在版本间挑选。交付位置不改变原有动态、听感、医学或上传状态。
 
 过程按 OPL 已声明的 Stage 拆分输入、输出与 owner。自然语言交接引用实际内容、工程和审查材料，保存在 `deliveries/<series>/stages/<stage_id>/`；推荐位置用于找材料，不是阻断字段门。精确交付 manifest 位于 `deliveries/<series>/<episode>/manifest.json`，用户最新版指针仍由 `deliveries/<series>/<episode>.json` 记录。旧包完整移到 `archive/deliveries/<series>/<episode>/<revision>/`，再安装新包并回读；不在 publish 留旧入口或归档链接。
 
 代码动画用 `paper_project package` 默认替换本集唯一最新版并在交付目录外保留旧包；`--output` 只用于交付目录外的过程导出。旧多版本纸剧场包可运行 `scripts/organize_delivery.py --workspace <工作区> --series <系列>`，只按精确指针整理，不猜最大版本、不重渲染、不升级审核状态。Stage 职责与交付结构见工作台目录规范。
+
+## 主题与集名交付
+
+用户交付采用系列展示名和“集号_标题”目录，英文 series_id/episode_id 留在内容、制作、Stage 交接和内部 manifest。系列规划时登记 delivery.display_name，首次交付登记 delivery.episode_dirs；已交付名称固定，正文或标题修订不自动改路径。总入口为 publish/观看与发布.html，各系列统一观看页与全季文案合集，不以制作批次、日期或版本组织用户目录。
+
+单集包器共享 delivery_layout.locations，更换后保持同一用户目录并刷新导航。publish_catalog 负责实际导航、只读链接检查和显式可恢复迁移；旧版与批次入口归 archive，指针和审看记录归 deliveries。缺少名字或导航仍保留有效候选与诊断，不升级审核状态，也不重编码未变媒体。方法见[用户交付目录与导航](../../../runtime/workbench/docs/30_用户交付目录与导航SOP.md)。

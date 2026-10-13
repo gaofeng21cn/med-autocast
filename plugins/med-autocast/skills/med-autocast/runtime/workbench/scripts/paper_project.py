@@ -1003,6 +1003,8 @@ def package(a):
         if evidence.get("video_sha256") != r["sha256"]:
             raise ValueError("审看记录必须对应当前视频字节")
         review.update(evidence.get("reviews", {}))
+    from publish_catalog import prepare_names
+    prepare_names(a.workspace, c['series_id'])
     loc = locations(a.workspace, c['series_id'], c['episode_id'])
     target = a.output.resolve() if a.output else loc['user']
     # Explicit technical exports remain available outside the user delivery tree.
@@ -1111,7 +1113,8 @@ def package(a):
         pointer = install(a.workspace, c['series_id'], c['episode_id'], user, record)
     return {'status': 'packaged_and_read_back', 'directory': str(target),
             'manifest': pointer['manifest'], 'previous_delivery': pointer['previous_delivery'],
-            'quality_debt': debt, 'release_eligible': False}
+            'quality_debt': debt, 'release_eligible': False,
+            'navigation': pointer.get('navigation')}
 
 
 def main():

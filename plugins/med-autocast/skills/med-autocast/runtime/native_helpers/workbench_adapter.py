@@ -16,6 +16,8 @@ import yaml
 BUNDLE = Path(__file__).resolve().parents[1] / "workbench"
 TOOLS = {
     "media_asset_library": ("read_or_explicit_write", "独立 MAC 资产库自动准备、只读查询和精确版本取用；允许适配和新创"),
+
+    "publish_catalog": ("write", "中文主题与集名交付、总观看入口和文案合集；显式迁移、可恢复归档及只读链接回查"),
     "animation_lab": ("write", "风格圣经查询与原创媒介动作样例的构建、预览、声音和本地导出"),
     "paper_project": (
         "write",
@@ -66,7 +68,7 @@ TOOLS = {
 }
 
 
-CANONICAL_TOOLS = {"media_asset_library", "animation_lab", "paper_project", "render_narration", "render_javascript_animation", "audit_pronunciation", "build_no_music_mix"}
+CANONICAL_TOOLS = {"media_asset_library", "publish_catalog", "animation_lab", "paper_project", "render_narration", "render_javascript_animation", "audit_pronunciation", "build_no_music_mix"}
 
 
 def resolve_tool(root: Path, name: str, bundled=False) -> tuple[Path, Path]:

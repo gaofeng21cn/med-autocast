@@ -26,7 +26,7 @@
 
 分段配音按实测语音边界拼接，不按固定偏移首尾相接。TTS take 常带不等量前导静音，叠加设计停顿后每次切段都会吞掉首字——听感是“少了两个字”，而时长、响度与解码检查全部正常。用 `scan_narration_boundaries.py` 量每段 `head_silence`，用 `audio/narration_beats.json` 的 `splice.takes` 核对实际落点。修复只重新分配停顿以保持成片总时长；缩短音轨会让字幕与镜头失配，比原缺陷更严重。改了旁白依次重跑 retime、build、mix、render。详见 `runtime/workbench/docs/33_旁白拼接边界SOP.md`。
 
-共享镜头工厂必须按主题安装系列视觉语法，让基础构图、景别、进入节奏和推移方向随疾病叙事而不同。推广工具只替换完整 `camera` 属性，备份放在 `work/series-grammar-backups/`，不得把备份留在 `src` 触发构建漂移；先单集 build/preview，再按系列推广。相机只提供下限，导演仍需为拿取、翻面、夹住、推入、折叠、打开和收纳设计纸件因果。详见 `runtime/workbench/docs/34_系列视觉语法与批量升级SOP.md`。
+每一集必须拥有自己的故事、导演稿、分镜和镜头实现；跨集只共享动画原语（kit）和纸件资产，不允许共享导演。系列级镜头工厂（six_shots/hypertension_shots/story_shots 之类）不是可选项，而是架构错误：它让同一系列每集用同样的空间、进入节奏和构图，把整个系列压成一份导演稿。每集新建 `episodeshots.ts` 与只含本集镜头的 `scene_directions.json`，可以 import 词汇层与 kit 原语（arc/place/contactShadow/paperRoom），禁止 import 其他集的镜头文件。改完跑 `scripts/check_episode_independence.py`，导演稿或镜头代码跨集逐字相同即判不合格。背景板在渲染层由 `kit/rooms.ts` 的 `paperRoom()` 画成纸景房间（诊室/厨房/卧室/实验台/病房），不再用实景照片背景；`kit/staging.ts` 的 `paperPlate()` 负责把剩余图片背景拉进纸的媒介。详见 `runtime/workbench/docs/34_逐集独立导演与系列资产分层SOP.md`。
 
 每个新单集必须先跑 `evaluate_episodes.py` 取得逐集诊断，再动手改写。评分低于 55 的集判为需重写，55–75 需升级，不允许凭观感批量重渲染代替逐集评估。镜头时序骨架统一用 `kit/patterns.ts` 的 `arc()`（进入→操作→反应→落定）、`unfoldRevealCompareStow()`、`walkArriveHandoff()`、`layerReveal()`；模式只管时序与姿态，画面由导演提供。逐集结论写入 `work/episode-optimization-report-<date>.md`，未完成的集必须显式标为待重写，不得计入已优化。
 

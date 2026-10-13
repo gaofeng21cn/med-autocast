@@ -124,6 +124,8 @@ audio_mix:
 - publish：面向用户的唯一最新版；直接取视频、封面和平台文案，不放版本子目录。
 - deliveries：内部 Stage 交接与机器清单；archive/deliveries：交付旧版；work/output/tmp：运行态、批量输出和可重建临时文件。
 
+用户交付从 `publish/观看与发布.html` 进入；主题与分集采用展示名称，英文 ID 留在内部登记。`publish_catalog` 维护观看页与文案合集，迁移已有目录须显式执行并保留归档。
+
 新单集顺序是“患者问题地图 -> 系列故事圣经 -> 资产库查询 -> episode_blueprint/beat grid -> 粗动态分镜 -> 透明分层素材准入 -> JS 实现 -> 连续预览 -> QA -> 编码”。角色、语气和医学审核从 pending 开始；不使用技术 smoke 代替质量样片。外部资产库由 `workbench.yaml.asset_library` 指向；库不可用时继续本地缓存或新创候选，不把同步失败当成启动门。
 
 初稿复核入口是 `work/first-draft-review.md` 和 `docs/28_初版质量与高效返修流程.md`。先做代表镜头与完整代表集，检查真实 alpha、认知比例、去文字事件和首句/术语整段声音；源码更新后重新 build/preview，再 render 并回读实际媒体。欠项保留候选和可用成果，不作为表单启动门。
@@ -134,7 +136,10 @@ audio_mix:
         'output/\ntmp/\n',
         encoding='utf-8',
     )
+    from publish_catalog import refresh
+    navigation = refresh(target)
     return {'status': 'initialized', 'workspace': str(target), 'author_baseline': 'pending',
+            'navigation': navigation,
             'layout': layout,
             'first_draft_review': first_draft,
             'asset_library': asset_library,

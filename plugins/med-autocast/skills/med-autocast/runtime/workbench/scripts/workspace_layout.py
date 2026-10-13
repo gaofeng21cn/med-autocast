@@ -55,7 +55,11 @@ def manifest(root: Path) -> dict[str, Any]:
         },
         "delivery_policy": {
             "layout": "latest_only",
-            "user_episode": "publish/<series>/<episode>/",
+            "user_episode": "publish/<display_name>/<number_title>/",
+            "naming": "localized_titles",
+            "index": "publish/观看与发布.html",
+            "names_ref": "workbench.yaml.series.<series_id>.delivery",
+            "batch_directories": False,
             "internal_receipt": "deliveries/<series>/<episode>/manifest.json",
             "stage_handoff": "deliveries/<series>/stages/<stage_id>/",
             "history": "archive/deliveries/<series>/<episode>/<revision>/",
@@ -108,7 +112,7 @@ def _workspace_readme() -> str:
 | `output/` | 可重建的预览、抽帧和联系表 |
 | `tmp/` | 可删除缓存和中间文件 |
 
-用户从 `publish/<series>/README.md` 或观看页进入，每集直接取 `video.mp4`；过程材料和历史版本不混入交付。Stage 输入输出保留精确引用，阶段记录放 `deliveries/<series>/stages/<stage_id>/`。
+用户从 `publish/观看与发布.html` 进入全部主题；各系列采用中文展示名，各集采用集号和标题，名称映射由 `workbench.yaml.series.<series_id>.delivery` 持有。每集直接取 `video.mp4`；过程材料和历史版本不混入交付。Stage 输入输出保留精确引用，阶段记录放 `deliveries/<series>/stages/<stage_id>/`。
 
 新系列使用 `content/<topic>/<series>/` 与 `productions/<series>/<episode>/`。旧作品可以继续使用已登记的扁平路径；升级布局不会搬动、重命名或删除它们。缺少某个目录是可修复的工作区问题，不是制作质量结论。
 """

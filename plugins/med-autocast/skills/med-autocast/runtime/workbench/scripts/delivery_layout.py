@@ -26,7 +26,10 @@ def locations(workspace: Path, series: str, episode: str) -> dict:
     publish = workspace / row.get('publish_root', str(Path(directories.get('publish', 'publish')) / series))
     internal = workspace / directories.get('deliveries', 'deliveries') / series
     archive = workspace / directories.get('archive', 'archive') / 'deliveries' / series / episode
-    return {'user': publish.resolve() / episode, 'record': internal / episode,
+    folder = (row.get('delivery') or {}).get('episode_dirs', {}).get(episode, episode)
+    if not isinstance(folder, str) or not folder or Path(folder).name != folder or folder in ('.', '..'):
+        raise ValueError('无效交付目录名称')
+    return {'user': publish.resolve() / folder, 'record': internal / episode,
             'pointer': internal / (episode + '.json'), 'archive': archive}
 
 
@@ -66,6 +69,14 @@ def install(workspace: Path, series: str, episode: str, user_stage: Path, record
             os.replace(temporary, pointer)
         finally:
             temporary.unlink(missing_ok=True)
+        # Navigation is a projection of selected files. A missing catalog must
+        # not roll back an otherwise complete, usable episode delivery.
+        try:
+            from publish_catalog import refresh
+            payload['navigation'] = refresh(workspace, series)
+        except Exception as exc:
+            payload['navigation'] = {'status': 'diagnostic', 'error': str(exc),
+                                     'blocks_stage_progress': False}
         return payload
     except Exception:
         for destination in reversed(installed):

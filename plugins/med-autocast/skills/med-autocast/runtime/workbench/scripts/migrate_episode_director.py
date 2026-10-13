@@ -19,6 +19,13 @@ import subprocess
 import sys
 from pathlib import Path
 
+# Asset use can be direct (`s.image('id')`) or through the paper vocabulary
+# helper (`img(s, 'id', ...)`). Both resolve at runtime against this episode's
+# manifest, so both are checked here.
+ASSET_USE_RES = [
+    re.compile(r"\.image\('([^']+)'"),
+    re.compile(r"\bimg\(s,\s*'([^']+)'"),
+]
 KIT_FILES = ['rooms.ts', 'tableware.ts', 'staging.ts', 'patterns.ts']
 FACTORY_FILES = ['six_shots.ts', 'hypertension_shots.ts', 'story_shots.ts',
                  'living_shots.ts', 'lipid_shots.ts', 'episode-director.ts']
@@ -54,7 +61,20 @@ def main() -> int:
 
     main_file = src / 'main.ts'
     s = main_file.read_text()
-    s = re.sub(r"import \{[^}]*\} from '\./[a-z_]*(shots|episode-director)';" + chr(10), '', s)
+    # Old factories are named differently across series (six_shots, story_shots,
+    # field-director, lipid_shots...). Any local import that binds `shots` or
+    # `makeShot` and does not come from ./episodeshots is a factory binding, so
+    # drop it by shape instead of by file name.
+    def _drop_factory_import(match):
+        names, module = match.group(1), match.group(2)
+        if module == './episodeshots':
+            return match.group(0)
+        if re.search(r'\b(shots|makeShot|makeShots)\b', names):
+            return ''
+        return match.group(0)
+
+    s = re.sub(r"import \{([^}]*)\} from '(\./[A-Za-z0-9_./-]+)';" + chr(10),
+               _drop_factory_import, s)
     if "./episodeshots" not in s:
         s = s.replace("import {mount}", "// This episode owns its staging; the series factory is gone." + chr(10) + "import {shots} from './episodeshots';" + chr(10) + "import {mount}", 1)
     s = re.sub(r'mount\(\{assets:.*?\}\);',
@@ -84,6 +104,82 @@ def main() -> int:
             direction = json.loads(proc.stdout.strip().splitlines()[-1])
         else:
             problems.append('direction_failed: ' + (proc.stderr.strip() or proc.stdout.strip())[-200:])
+
+    # A duplicated append leaves two closing braces in a row. The director is
+    # otherwise valid, so drop the repeat instead of failing the build on it.
+    raw = director.read_text().splitlines()
+    cleaned = []
+    for ln in raw:
+        if ln.strip() == '};' and cleaned and cleaned[-1].strip() == '};':
+            continue
+        cleaned.append(ln)
+    if cleaned != raw:
+        director.write_text(chr(10).join(cleaned) + chr(10))
+
+    # A duplicated append leaves two closing braces in a row. The director is
+    # otherwise valid, so drop the repeat instead of failing the build on it.
+    raw = director.read_text().splitlines()
+    cleaned = []
+    for ln in raw:
+        if ln.strip() == '};' and cleaned and cleaned[-1].strip() == '};':
+            continue
+        cleaned.append(ln)
+    if cleaned != raw:
+        director.write_text(chr(10).join(cleaned) + chr(10))
+
+    # Old factories come in clusters, and two leftovers often import each other,
+    # so "is anything referencing this file" never reaches them. Walk the import
+    # graph from the real entry points instead and delete everything unreachable.
+    roots = {"main.ts", "episodeshots.ts", "paper_objects.ts", "six_objects.ts",
+             "episode-kit.ts", "meal_objects.ts", "series_grammar.ts"}
+    files = [f for f in src.glob("*.ts") if f.is_file()]
+    texts = {}
+    for f in files:
+        try:
+            texts[f] = f.read_text()
+        except OSError:
+            texts[f] = ""
+    reachable = set()
+    queue = [f for f in files if f.name in roots]
+    while queue:
+        cur = queue.pop()
+        if cur in reachable:
+            continue
+        reachable.add(cur)
+        for target in re.findall(r"from '(\./[A-Za-z0-9_./-]+)'", texts[cur]):
+            name = target.rsplit('/', 1)[-1] + '.ts'
+            for f in files:
+                if f.name == name and f not in reachable:
+                    queue.append(f)
+    for f in files:
+        if f not in reachable:
+            f.unlink()
+            removed.append(f.name)
+
+    # A director whose shot ids do not match score.json renders nothing, and the
+    # failure surfaces only as a generic render error. Check it here instead.
+    import json as _json
+    score_path = project / 'score.json'
+    if score_path.is_file():
+        score_ids = [sh['id'] for sh in _json.loads(score_path.read_text())['shots']]
+        mine = re.findall(r"id: '([^']+)'", director.read_text())
+        if mine != score_ids:
+            problems.append('shot ids differ: ' + str(mine) + ' vs ' + str(score_ids))
+
+    # Referring to an asset this episode does not own fails at render time with
+    # a generic playwright message. Compare the manifest while the intent is fresh.
+    manifest = project / 'asset_manifest.json'
+    if manifest.is_file():
+        data = _json.loads(manifest.read_text())
+        owned = set(a['asset_id'] for a in data['assets'])
+        text = director.read_text()
+        used = set()
+        for pattern in ASSET_USE_RES:
+            used.update(pattern.findall(text))
+        missing = sorted(used - owned)
+        if missing:
+            problems.append('assets not in this episode manifest: ' + str(missing))
+
 
     built = None
     if not args.no_build:

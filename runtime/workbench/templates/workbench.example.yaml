@@ -4,6 +4,7 @@ active_profiles:
   author: profiles/authors/example_author.yaml
   media_backends: profiles/backends/example_deployment.yaml
 authorities:
+  paper_theatre_baseline_standard: docs/38_纸剧场动画新标准总纲.md
   user_delivery_navigation: docs/30_用户交付目录与导航SOP.md
   workflow: docs/04_医学科普视频系列SOP.md
   first_draft_quality: docs/28_初版质量与高效返修流程.md

@@ -65,7 +65,7 @@ Stage 返回尽量引用真实产物与版本/来源信息，给出质量债务�
 
 用户交付目录 `publish/<系列展示名>/<集号_标题>/` 直接放唯一最新版视频、封面、字幕和平台文案；不嵌套 `current/`、版本号、时间戳、候选或归档。机器清单、Score、配音及审查材料归 `deliveries/<series>/<episode>/` 或原制作工程；被替换交付归 `archive/deliveries/<series>/<episode>/<revision>/`。交付文档和生成器按实际目录写归档路径，不能把一集路径推广为全季，也不能把历史归档误报为本轮替换。Progress First 下，版本或文档问题先修 owner 并保留可消费产物，记录 `quality_debt` 或诊断后继续；只有当前性、权限、执行器、身份和明确人工决定等硬边界才停止。方法细节见 `runtime/workbench/docs/25_全季交付回读与经验沉淀.md`。
 
-代码镜头制作与返修交给 `agent/professional_skills/medical-video-animation-craft/SKILL.md`。先读取当前风格的 STYLE.md，把 Treatment 与真实风格帧/短动作接上单集 score；`animation_lab` 提供七种原创媒介动作的可运行样例。实际实现、开放创作出口和质量边界见 `runtime/workbench/docs/26_代码动画技法与风格工作流.md`；样例、可调用工具和注册名不代表医学/艺术质量通过。
+代码镜头制作与返修交给 `agent/professional_skills/medical-video-animation-craft/SKILL.md`。先读 `runtime/workbench/docs/38_纸剧场动画新标准总纲.md`（动画新标准单一入口：下限自动化/上限不封顶的分层、七步流程、三条硬红线——逐集独立导演、动作因果"进入→接触→反应→落定"、去文字审片——与四道门），再读当前风格的 STYLE.md，把 Treatment 与真实风格帧/短动作接上单集 score；`animation_lab` 提供七种原创媒介动作的可运行样例。实际实现、开放创作出口和质量边界见 `runtime/workbench/docs/26_代码动画技法与风格工作流.md`；样例、可调用工具和注册名不代表医学/艺术质量通过。
 
 ## 面向用户的单一最新版交付
 

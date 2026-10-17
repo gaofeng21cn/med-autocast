@@ -36,14 +36,26 @@ def normalize(source, output, rate, target=-16, peak=-1.2):
     return data
 
 
-def foley(project, score, output, rate):
+def foley(project, score, output, rate, *, return_unresolved=False):
     length = round(score["duration"] * rate)
     mix = array.array("f", [0]) * length
     resolved = []
+    unresolved = []
     assets = json.loads((project / "asset_manifest.json").read_text())["assets"]
     for i, event in enumerate(score.get("sounds", [])):
-        shot = next(s for s in score["shots"] if s["id"] == event["shot"])
-        time = shot["start"] + shot["events"][event["event"]] + event.get("offset", 0)
+        shot = next((s for s in score["shots"] if s["id"] == event["shot"]), None)
+        if shot is None:
+            unresolved.append({**event, "reason": "shot_not_found"})
+            continue
+        event_name = event.get("event")
+        if event_name not in shot.get("events", {}):
+            # A stale/optional foley cue must not stop the narration and picture
+            # pipeline. Keep the cue visible for review, but continue with a
+            # valid voice-first mix. This is Progress First: unresolved foley is
+            # a quality debt, never a silent crash or fabricated timestamp.
+            unresolved.append({**event, "reason": "event_not_found", "shot_events": sorted(shot.get("events", {}))})
+            continue
+        time = shot["start"] + shot["events"][event_name] + event.get("offset", 0)
         resolved.append(dict(event, time=time))
         start = round(time * rate)
         if event.get("asset_id"):
@@ -80,7 +92,7 @@ def foley(project, score, output, rate):
         f.setsampwidth(2)
         f.setframerate(rate)
         f.writeframes(pcm.tobytes())
-    return resolved
+    return (resolved, unresolved) if return_unresolved else resolved
 
 
 def music_bus(project, score, audio, rate, music=None, gain=.085, plan_path=None):
@@ -132,7 +144,7 @@ def main():
     audio.mkdir(exist_ok=True)
     args.output.parent.mkdir(parents=True, exist_ok=True)
     rate, duration = args.sample_rate, score["duration"]
-    events = foley(project, score, audio / "foley.wav", rate)
+    events, unresolved_foley = foley(project, score, audio / "foley.wav", rate, return_unresolved=True)
     music, tracks, duck = music_bus(project, score, audio, rate, args.music, args.music_gain, args.music_plan)
     duck = {"threshold": .035, "ratio": 3., "attack_ms": 45, "release_ms": 480, **duck}
     compressor = f"threshold={float(duck['threshold'])}:ratio={float(duck['ratio'])}:attack={float(duck['attack_ms'])}:release={float(duck['release_ms'])}:detection=rms:link=average:makeup=1"
@@ -150,7 +162,7 @@ def main():
         "voice_source": str(args.voice.resolve()), "voice_resynthesized": False,
         "voice_sha256": hashlib.sha256(args.voice.read_bytes()).hexdigest(),
         "score": "score.json", "score_sha256": hashlib.sha256((project / "score.json").read_bytes()).hexdigest(),
-        "events": events, "music": str(args.music) if args.music else None,
+        "events": events, "unresolved_foley": unresolved_foley, "music": str(args.music) if args.music else None,
         "music_plan": str(args.music_plan) if args.music_plan else None,
         "music_tracks": tracks, "ducking": duck, "sample_rate": rate, "channels": 2,
         "premix_measurement": before, "output_measurement": measure(args.output),
@@ -158,7 +170,7 @@ def main():
         "full_listening": "pending", "tone_consistency": "unchanged_source_not_reapproved"
     }
     (audio / "mix-receipt.json").write_text(json.dumps(receipt, ensure_ascii=False, indent=2) + "\n")
-    print(json.dumps({"output": str(args.output), "events": len(events), "duration": duration,
+    print(json.dumps({"output": str(args.output), "events": len(events), "unresolved_foley": len(unresolved_foley), "duration": duration,
                       "music_stems": len(tracks), "sample_rate": rate, "voice_resynthesized": False}))
 
 

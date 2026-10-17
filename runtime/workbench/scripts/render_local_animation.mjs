@@ -6,6 +6,7 @@ import path from 'node:path';
 import {spawn, execFileSync} from 'node:child_process';
 import {once} from 'node:events';
 import {captureFilm} from './capture_frame.mjs';
+import {collectRuntimeReceipt} from './runtime_receipt.mjs';
 const config = JSON.parse(await fs.readFile(process.argv[2], 'utf8'));
 const project = path.resolve(config.project_root);
 const target = path.resolve(config.output);
@@ -85,7 +86,13 @@ try {
   // Hard-link publishes only a completed file and never overwrites another revision.
   await fs.link(path.join(temp,'video.mp4'),target);
   await fs.unlink(path.join(temp,'video.mp4'));
-  const receipt={status:'rendered',output:target,frames,duration,fps,width,height,evidence_directory:temp,renderer_runtime:rendererRuntime,style_sequence:styleSequence,release_eligible:false};
+  const runtimeReceipt = await collectRuntimeReceipt({
+    project,
+    entry,
+    audio: voice,
+    config: { fps, width, height },
+  });
+  const receipt={status:'rendered',output:target,frames,duration,fps,width,height,evidence_directory:temp,renderer_runtime:rendererRuntime,style_sequence:styleSequence,runtime_receipt:runtimeReceipt,release_eligible:false};
   await fs.writeFile(path.join(temp,'render.json'),JSON.stringify(receipt,null,2)+'\n');
   console.log(JSON.stringify(receipt));
 } finally {

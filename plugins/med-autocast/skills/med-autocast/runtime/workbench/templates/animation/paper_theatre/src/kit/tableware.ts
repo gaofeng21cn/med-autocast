@@ -28,7 +28,7 @@ export function paperPlate(s: Stage, x: number, y: number, w: number, seed = 41)
     );
     const g = s.g;
     g.save();
-    g.globalAlpha = 0.5;
+    g.globalAlpha *= 0.5;
     g.strokeStyle = '#9c8f72';
     g.lineWidth = 1.6;
     for (let i = 0; i < 6; i++) {
@@ -67,7 +67,7 @@ export function paperFood(
         3,
       );
       g.save();
-      g.globalAlpha = 0.45;
+      g.globalAlpha *= 0.45;
       g.strokeStyle = '#b9ac8f';
       g.lineWidth = 1.2;
       for (let i = 0; i < 9; i++) {
@@ -91,7 +91,7 @@ export function paperFood(
         3,
       );
       g.save();
-      g.globalAlpha = 0.4;
+      g.globalAlpha *= 0.4;
       g.strokeStyle = '#9c7550';
       g.lineWidth = 1.4;
       for (let i = 0; i < 3; i++) {
@@ -137,7 +137,7 @@ export function paperFood(
         1,
       );
       g.save();
-      g.globalAlpha = 0.5;
+      g.globalAlpha *= 0.5;
       g.strokeStyle = '#8d4a3c';
       g.lineWidth = 1.4;
       g.beginPath();
@@ -148,7 +148,7 @@ export function paperFood(
     } else if (kind === 'noodle') {
       cutout(s, { x: 0, y: 0 }, tornEllipse(w * 0.34, w * 0.2, seed, 1.6), '#e6d3ae', seed, 3);
       g.save();
-      g.globalAlpha = 0.55;
+      g.globalAlpha *= 0.55;
       g.strokeStyle = '#b99a6d';
       g.lineWidth = 1.3;
       for (let i = 0; i < 7; i++) {

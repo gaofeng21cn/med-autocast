@@ -40,14 +40,20 @@ export function caption(s: Stage, score: Score, t: number) {
   g.font = '500 27px "PingFang SC",sans-serif';
   g.textAlign = "center";
   g.textBaseline = "middle";
+  const lines = c.text.split(/\r\n|\r|\n/);
+  const lineHeight = 33;
+  // Keep the last line on the existing caption baseline; extra lines grow
+  // upwards inside the authored subtitle area rather than below the frame.
+  const firstY = s.height - 67 - (lines.length - 1) * lineHeight;
   // A textured dark paper floor needs a light caption. Sample its current
   // rendered pixels deterministically instead of adding an opaque color band.
   let luminance = 200;
   try {
-    const samples = [0.25, 0.375, 0.5, 0.625, 0.75].map(x => {
-      const d = g.getImageData(Math.round(s.width*x), s.height-67, 1, 1).data;
-      return d[0]*.2126 + d[1]*.7152 + d[2]*.0722;
-    });
+    const samples = lines.flatMap((_, i) =>
+      [0.25, 0.375, 0.5, 0.625, 0.75].map(x => {
+        const d = g.getImageData(Math.round(s.width*x), firstY+i*lineHeight, 1, 1).data;
+        return d[0]*.2126 + d[1]*.7152 + d[2]*.0722;
+      }));
     luminance = samples.reduce((a,b) => a+b,0)/samples.length;
   } catch { /* Local rendering normally permits pixel reads. */ }
   const dark = luminance < 142;
@@ -55,12 +61,20 @@ export function caption(s: Stage, score: Score, t: number) {
   g.lineJoin = "round";
   g.lineWidth = dark ? 3.6 : 2.3;
   g.strokeStyle = dark ? "#263733" : "rgba(255,249,234,.78)";
-  g.strokeText(c.text, s.width / 2, s.height - 67);
   g.fillStyle = dark ? "#fff8e8" : "#253f3b";
-  g.fillText(c.text, s.width / 2, s.height - 67);
-  const m = g.measureText(c.text);
-  const rect = { x: s.width/2-m.width/2, y: s.height-84,
-    w: m.width, h: 34, name: c.text };
+  lines.forEach((line, i) => {
+    const y = firstY + i * lineHeight;
+    g.strokeText(line, s.width / 2, y);
+    g.fillText(line, s.width / 2, y);
+  });
+  const metrics = lines.map(line => g.measureText(line));
+  const pad = g.lineWidth / 2;
+  const left = Math.max(...metrics.map(m => Math.max(m.width/2, m.actualBoundingBoxLeft))) + pad;
+  const right = Math.max(...metrics.map(m => Math.max(m.width/2, m.actualBoundingBoxRight))) + pad;
+  const top = Math.min(firstY-17, ...metrics.map((m, i) => firstY+i*lineHeight-m.actualBoundingBoxAscent-pad));
+  const bottom = Math.max(s.height-50, ...metrics.map((m, i) => firstY+i*lineHeight+m.actualBoundingBoxDescent+pad));
+  const rect = { x: s.width/2-left, y: top,
+    w: left+right, h: bottom-top, name: c.text };
   g.restore();
   return rect;
 }

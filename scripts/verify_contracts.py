@@ -39,6 +39,8 @@ print(json.dumps({'distribution_identity':'passed','version':package['version']}
 # Portable resources must stay reachable after installation, not only in the source workbench.
 for directory in ['agent/professional_skills','docs','runtime/workbench']:
     for p in (R/directory).rglob('*.md'):
+        if any(part in p.parts for part in ['node_modules', '__pycache__', 'dist']):
+            continue
         for target in re.findall(r'\]\(([^)]+)\)',p.read_text()):
             target=target.split('#')[0]
             if target and '://' not in target:

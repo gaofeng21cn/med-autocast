@@ -59,7 +59,7 @@ class SeriesNarrationTests(unittest.TestCase):
 
     def test_asr_word_timing_accounts_for_trimmed_reference_take(self):
         manifest = {"beats": [{"id": "B01", "text": "你好。", "start": .32, "end": 2.32, "trimmed_head_seconds": .4}]}
-        alignment = {"beats": [{"id": "B01", "segments": [{"start": .4, "end": 2.4,
+        alignment = {"timing_coordinates": "source_local_seconds", "beats": [{"id": "B01", "segments": [{"start": .4, "end": 2.4,
             "words": [{"word": "你好", "start": .4, "end": 2.4}]}]}]}
         before = json.dumps(alignment)
         cue = build_cues(manifest, alignment)[0]

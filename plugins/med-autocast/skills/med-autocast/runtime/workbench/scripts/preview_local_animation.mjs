@@ -7,6 +7,7 @@ import {execFileSync} from 'node:child_process';
 import {once} from 'node:events';
 import {observeLayout,observeCues} from './layout_observations.mjs';
 import {captureFilm} from './capture_frame.mjs';
+import {collectRuntimeReceipt} from './runtime_receipt.mjs';
 
 const config = JSON.parse(await fs.readFile(process.argv[2], 'utf8'));
 const project = path.resolve(config.project_root);
@@ -43,7 +44,9 @@ try {
   await page.goto(`http://127.0.0.1:${server.address().port}/${entry}`, {waitUntil:'networkidle', timeout:30000});
   await page.addStyleTag({content:'button, [role="button"] { visibility: hidden !important; }'});
   const entryUrl=`http://127.0.0.1:${server.address().port}/${entry}`;
-  const cleanUrl=`${entryUrl}${entryUrl.includes('?')?'&':'?'}clean=1`;
+  const primaryView=new URL(entryUrl).searchParams.get('clean')==='1'?'clean':'final';
+  const cleanAddress=new URL(entryUrl);cleanAddress.searchParams.set('clean','1');
+  const cleanUrl=cleanAddress.href;
   const timeline = await page.evaluate(async () => {
     await document.fonts.ready;
     await Promise.all([...document.images].map(image => image.decode()));
@@ -164,10 +167,24 @@ try {
     randomAccessChecks.push({scene,time:first.time,passed});
     if (!passed) errors.push(`乱序 seek 不确定: ${first.time.toFixed(3)}s`);
   }
-  execFileSync('ffmpeg', ['-y','-loglevel','error','-pattern_type','glob','-i',path.join(output,'[0-9][0-9][0-9]-*.png'),'-vf',`scale=400:-1,tile=5x${Math.ceil(frames.length/5)}:padding=8:margin=8:color=white`,'-frames:v','1',path.join(output,'contact.jpg')]);
-  const report = {status:errors.length ? 'failed' : 'previewed', project, output, duration:timeline.duration, range:[rangeStart,rangeEnd], scenes:cuts.length-1, frames, motionStrips, eventFrames, errors, renderer_runtime:timeline.renderer_runtime, contact_sheet:path.join(output,'contact.jpg'), release_eligible:false};
+  // Output folders retain earlier inspection evidence. Only this run's frames
+  // may enter its contact sheet; a glob would silently include stale times.
+  const contactInputs = path.join(output,'contact-frames.ffconcat');
+  await fs.writeFile(contactInputs, 'ffconcat version 1.0\n' + frames.map(frame => `file '${frame.file}'\n`).join(''));
+  execFileSync('ffmpeg', ['-y','-loglevel','error','-f','concat','-safe','1','-i',contactInputs,'-vf',`scale=400:-1,tile=5x${Math.ceil(frames.length/5)}:padding=8:margin=8:color=white`,'-frames:v','1',path.join(output,'contact.jpg')]);
+  const runtimeReceipt = await collectRuntimeReceipt({
+    project,
+    entry,
+    config: { width, height },
+  });
+  const report = {status:errors.length ? 'failed' : 'previewed', project, output, duration:timeline.duration, range:[rangeStart,rangeEnd], scenes:cuts.length-1, frames, motionStrips, eventFrames, errors, renderer_runtime:timeline.renderer_runtime, runtime_receipt:runtimeReceipt, contact_sheet:path.join(output,'contact.jpg'), release_eligible:false};
   report.text_observations=observeCues({cues:timeline.cues});
+  report.primary_view=primaryView;
+  report.primary_entry=entry;
   report.quality_debt=frames.flatMap(f=>f.layout_findings.map(d=>({...d,time:f.time,scene:f.scene,owner_stage:'visual-review'})));
+  if(primaryView==='clean')report.quality_debt.push({code:'final_text_view_not_sampled',
+    owner_stage:'visual-review',blocks_stage_progress:false,
+    detail:'本次主视图为去文字；不能据此判断正式画面的标签、字幕与遮挡，请另导出普通预览。'});
   report.richness=richness;
   report.richness_debt=richness.filter(r=>r.subject_count===0||r.subject_coverage<0.06).map(r=>({
     detail:r.subject_count===0?'去文字画面没有登记主体，表达可能只靠文字或装饰':'去文字画面主体占比偏低',

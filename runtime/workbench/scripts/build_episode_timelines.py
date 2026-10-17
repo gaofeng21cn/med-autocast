@@ -42,8 +42,18 @@ def alignment_text(text: str) -> str:
     return ALIGNMENT_IGNORED_RE.sub("", text).upper()
 
 
+def caption_display_text(text: str) -> str:
+    """Compact display whitespace while preserving English/numeric word spaces."""
+    def space(match):
+        before = text[match.start() - 1] if match.start() else ""
+        after = text[match.end()] if match.end() < len(text) else ""
+        return " " if (before and after and before.isascii() and after.isascii()
+                        and (before.isalnum() or before == ".") and after.isalnum()) else ""
+    return re.sub(r"\s+", space, text).strip()
+
+
 def splits_protected_term(text: str, position: int) -> bool:
-    for match in re.finditer(r"[A-Za-z]+(?:-\d+)?", text):
+    for match in re.finditer(r"[A-Za-z]+(?:-\d+)?|[+-]?(?:\d+(?:\.\d+)?|\.\d+)(?:-(?:\d+(?:\.\d+)?|\.\d+))?", text):
         if match.start() < position < match.end():
             return True
     for term in PROTECTED_TERMS:
@@ -81,7 +91,7 @@ def choose_break(text: str, minimum: int, maximum: int, target: float) -> int:
 
 
 def split_units(text: str, max_chars: int = MAX_CAPTION_CHARS) -> list[str]:
-    text = re.sub(r"\s+", "", text).strip()
+    text = caption_display_text(text)
     sentences = re.findall(r"[^。！？；]+[。！？；]?", text)
     units: list[str] = []
     for sentence in sentences:
@@ -112,7 +122,7 @@ def split_units(text: str, max_chars: int = MAX_CAPTION_CHARS) -> list[str]:
 
 
 def wrap_caption(text: str, line_limit: int = MAX_LINE_CHARS) -> str:
-    text = re.sub(r"\s+", "", text).strip()
+    text = caption_display_text(text)
     if visible_length(text) <= line_limit:
         return strip_visual_line_punctuation(text)
 
@@ -202,6 +212,26 @@ def align_approved_characters(approved: str, beat_alignment: dict, beat_duration
     return [value for value in mapped if value is not None], matched / len(target)
 
 
+def source_local_alignment(alignment: dict, beat_alignment: dict) -> dict:
+    """Use declared coordinates only; never infer a legacy origin from values."""
+    coordinates = beat_alignment.get("timing_coordinates", alignment.get("timing_coordinates"))
+    if coordinates == "source_local_seconds":
+        offset = 0.0
+    elif coordinates == "timeline_global_seconds":
+        if "source_to_timeline_offset_seconds" not in beat_alignment:
+            raise ValueError("global_alignment_requires_source_to_timeline_offset_seconds")
+        offset = float(beat_alignment["source_to_timeline_offset_seconds"])
+    else:
+        raise ValueError("alignment_coordinates_undeclared_or_unsupported")
+    local = deepcopy(beat_alignment)
+    for segment in local.get("segments", []):
+        for timed in [segment, *segment.get("words", [])]:
+            timed["start"] = float(timed["start"]) - offset
+            timed["end"] = float(timed["end"]) - offset
+    local["timing_coordinates"] = "source_local_seconds"
+    return local
+
+
 def build_cues(manifest: dict, alignment: dict | None = None) -> list[dict]:
     cues = []
     alignment_beats = {beat["id"]: beat for beat in alignment.get("beats", [])} if alignment else {}
@@ -214,16 +244,25 @@ def build_cues(manifest: dict, alignment: dict | None = None) -> list[dict]:
         beat_duration = float(beat["end"]) - beat_start
         char_times = None
         match_ratio = None
+        timing_note = None
         if beat["id"] in alignment_beats:
-            local_alignment = deepcopy(alignment_beats[beat["id"]])
-            trim = float(beat.get("trimmed_head_seconds", 0.0))
-            for segment in local_alignment.get("segments", []):
-                for timed in [segment, *segment.get("words", [])]:
-                    timed["start"] = max(0.0, float(timed["start"]) - trim)
-                    timed["end"] = max(timed["start"], float(timed["end"]) - trim)
-            char_times, match_ratio = align_approved_characters(
-                beat["text"], local_alignment, beat_duration
-            )
+            try:
+                local_alignment = source_local_alignment(alignment, alignment_beats[beat["id"]])
+                if (beat.get("source_sha256") and local_alignment.get("source_sha256")
+                        and beat["source_sha256"] != local_alignment["source_sha256"]):
+                    raise ValueError("alignment_source_sha256_mismatch")
+                trim = float(beat.get("trimmed_head_seconds", 0.0))
+                for segment in local_alignment.get("segments", []):
+                    for timed in [segment, *segment.get("words", [])]:
+                        timed["start"] = max(0.0, float(timed["start"]) - trim)
+                        timed["end"] = max(timed["start"], float(timed["end"]) - trim)
+                char_times, match_ratio = align_approved_characters(
+                    beat["text"], local_alignment, beat_duration
+                )
+            except (ValueError, KeyError, TypeError) as error:
+                # Keep the complete editorial proposal available when timing
+                # evidence is incomplete; do not guess an origin or ASR words.
+                timing_note = str(error)
         cursor_chars = 0
         for unit, unit_length in zip(units, unit_lengths):
             if char_times:
@@ -240,6 +279,7 @@ def build_cues(manifest: dict, alignment: dict | None = None) -> list[dict]:
                     "beat_id": beat["id"],
                     "timing_source": "whisper_word_alignment" if char_times else "character_ratio_fallback",
                     "alignment_match_ratio": round(match_ratio, 4) if match_ratio is not None else None,
+                    "timing_note": timing_note,
                 }
             )
             cursor_chars += unit_length

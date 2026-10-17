@@ -219,7 +219,7 @@ export function contactShadow(
   const g = stage.g;
   g.save();
   try {
-    g.globalAlpha = 0.26 * amount;
+    g.globalAlpha *= 0.26 * amount;
     g.fillStyle = "#3b3428";
     g.beginPath();
     g.ellipse(x, y, radius * (0.7 + 0.3 * amount), radius * 0.22, 0, 0, Math.PI * 2);

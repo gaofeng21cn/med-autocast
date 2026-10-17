@@ -1,62 +1,53 @@
 # 旁白拼接边界 SOP
 
-分段配音的每一段都是独立 take。TTS 输出常带不等量的前导静音，直接按固定偏移首尾相接，会把这段静音叠在设计好的停顿上。结果是每次切段之后观众听到一段不该有的空白，随后第一个字已经过去——听起来就像“丢了两个字”。
+段落切换听起来“少了头几个字”时，先定位最早发生变化的真实音频，不先归因为静音。源 take 可能漏读，拼接可能截字或错位，混音可能遮盖首词，当前视频也可能仍使用旧轨。前导静音会推迟起声，但静音本身不会删除词。能量阈值、频谱和 ASR 只用于定位，不能批准发音或授权裁掉低能量辅音。
 
-## 真实故障
+## 范围与当前版本
 
-2026-10-12，11 个系列 172 个工程中 137 个受影响，且每集的每一个 beat 都中招。这不是个别 take 的问题，是拼接方式的系统缺陷。
+从 `workbench.yaml` 的当前系列和单集登记、`project.json`、`out/current.json` 与交付 manifest 读取精确工程和媒体。修复只作用于当前目标集合，不遍历 `productions/*/*/v*`；工程副本和历史版本不能计为新增集数，也不能随当前修复批量改写。具体缺陷、数量和音频证据保存在工作区本轮报告，通用 SOP 不固化历史扫描计数。
 
-`render_narration.py` 原来这样拼：
+## 沿声音链查实
 
-```python
-cursor = 0.65
-for b in records:
-    b["start"] = cursor
-    cursor = b["end"] + 0.65
-    pcm.extend([data, b"\0" * round(rate * 0.65) * 2])
-```
+对每段沿“审定正文/配音输入 → 源 take → 拼接旁白 → 归一化旁白 → 最终 mix → 当前 MP4 解复用音轨”比较首词、尾词、段长与接缝。分别保存无 BGM 和最终视频中包含完整短句的检查窗口；拼接回执写着 repaired、声轨时长正常或文件哈希更新，不证明首词完整可闻。
 
-固定 0.65 秒 + take 自带 0.3–0.5 秒前导静音 = 实际 0.95–1.15 秒空白。垂体瘤 09 的 B03 实测前导静音 0.37 秒，频谱图显示 0.78 秒近全静音后才出现语音，且首字没有爆破音渐入，说明“经”“具”这类清辅音开头被完全吞掉。
+先核对源采样率、声道、解码采样数和实际时长。采样率转换必须真实重采样，不能把一种采样率的 PCM 按另一采样率直接解释。落位以实际写入采样数为准，不能只信 Score、ASR 或旧 splice 元数据。历史实现曾混用 IndexTTS 源 WAV 与目标采样率，必须通过真实媒体查出受影响工程，不把一次样本结论外推到全季。
 
-## 修复
+`audit_narration_lineage.py` 对源 take、拼接/归一化整轨、mix 和视频音轨做波形指纹比对，定位 source_prefix_correlation、实际落位和元数据偏移。当前审计器使用 `narration_lineage_audit/v2`：以 `beat.start` 为中心建立局部 expected window，同时比较段首、段中、段尾多个波形锚点，并以联合分数和覆盖率判定位置；不会在整条长音轨中用偶然重复的短语冒充正确段落。它仍只证明特定信号在链路中的保留与位置，不证明词读对、整片听起来自然或音乐没有影响理解。
 
-`scripts/narration_splice.py` 按实测语音边界拼接：
+`mix-receipt.json` 的 `voice_sha256` 与 `score_sha256` 是当前混音输入的谱系声明。每次审查或打包前都要用实际读取的旁白整轨和 `score.json` 重新计算并比较；任一不一致都记录为 `mix_lineage_mismatch`，当前 mix 及其 MP4 不能作为修复后的声音证据，必须重新 mix，并按实际时长重新 build/render 后再回读。旧 mix、旧 MP4 和只更新 receipt 的报告可以保留作诊断，但不能用来填 `final_mp4_listening` 或发布状态。
 
-1. 逐 take 计算 10ms 窗 RMS 包络，用峰值 6% 作阈值定位真实语音起止。
-2. 裁掉前导与尾部静音，但**保留 40ms 前沿与 90ms 尾部**：切到能量边缘会削掉爆破音的瞬态，那是同一个缺陷的另一个方向。
-3. 拼接时把裁掉的静音还给停顿，并按 `total_seconds` 精确配平，保证成片时长不变。
+`source_timeline_bound`/边界扫描通过只说明源段已经绑定到某个时间线，不说明最终文件听到了首词。每个语段都要从最终 MP4 解复用音轨中实际听辨段首，至少覆盖首词前后的完整短句和相邻接缝；无 BGM 轨与最终混音分别记录。最终 MP4 未实际听辨时，`final_mp4_headword` 与 `full_listening` 保持 `pending`，不得用源 take、ASR、波形指纹或静音报告代替。
 
-关键约束：**修复不能改变成片时长**。第一次尝试直接把停顿缩到 260ms，音轨短了约 10 秒，字幕和镜头全部错位——137 个集音画失配。这比原缺陷更严重，已回滚。
+## 修复方式
 
-现在的做法是：`available = total_seconds - speech_total - overhead`，平均分给每个间隙。校验 175 个工程，音画时长误差全部小于 0.5 秒。
+1. 源 take 已漏读或错读时，只重配该段，并拒用精确旧 take；未变且正确的声段继续复用。
+2. 拼接读取或采样率处理有错时，修真实读取者。`narration_splice.py` 使用 FFmpeg 按源采样率解码并重采样至统一采样率，默认保留源 take 的全部解码样本；相对峰值裁切已废止，避免删弱首辅音。确需调整静音时先审实际边界，并保留必要余量。
+3. 重新生成拼接轨、归一化轨和 receipt，写源路径/哈希、源采样率、保留采样数及实际 start/end。归一化不应改变语音时间线；发现变化先修音频链。
+4. 真实新音轨时长可以与旧片不同。先按新声音 retime 字幕、镜头与事件，再 build、mix、render；不能以“保持旧总时长”为由删声、变速、均摊间隙或沿用旧时码。语义断句尽量保留，动作放不下时由导演重新编排。
+5. 重新核对最终编码音轨、返修接缝与相邻切点；用户目录那份视频必须使用修复后的实际声音。完整听感、发音、动态和医学复核仍分开记录。
 
-## 工具
+## 当前工具
+
+先输出只读链路报告，可缩到单集：
 
 ```sh
-# 扫描：哪些集的前导静音超过阈值
-python3 scripts/scan_narration_boundaries.py --root productions
-
-# 修复：重拼 narration.wav 与 narration-normalized.wav
-python3 scripts/scan_narration_boundaries.py --root productions --apply
-python3 scripts/scan_narration_boundaries.py --root productions --repair-normalized
-
-# 重渲染受影响的集（retime → build → mix → render，可中断续跑）
-python3 scripts/rerender_spliced_episodes.py --workspace . --minutes 25
+python3 scripts/audit_narration_lineage.py --workspace <工作台> --series <系列ID> --episode <单集ID> --output <报告.json>
 ```
 
-`rerender_spliced_episodes.py` 依据旁白指纹判断是否已是当前版本；只做音频改动时必须依次重跑 retime、build、mix、render，缺一步会被现有门拦下。
+已确认拼接缺陷时，在外部备份目录保全当前声音、Score 与工程登记，再重建目标声轨：
 
-## 为什么机器检查此前没有发现
+```sh
+python3 scripts/rebuild_narration_lossless.py --workspace <工作台> --series <系列ID> --episode <单集ID> --backup-root <备份目录> --manifest <修复回执.json> --apply
+```
 
-时长对、响度对、LUFS 对、解码正常。一个晚 0.4 秒开始的 take 完全满足这些检查。
+`rebuild_narration_lossless.py` 只修声轨和 receipt，状态是 `narration_ready_needs_retime_mix_render`；它不更新成片指针、不代表修后视频已完成。随后使用当前项目工具的 retime、build、mix、render，回读实际输出和交付版本。
 
-检测必须看**语音起点**，不是看文件起点：测 take 的 head silence，或看拼接后音轨里每个 beat 起点前后的能量。`scan_narration_boundaries.py` 输出的 `head_silence` 与 `splice.takes` 就是这个证据。
+`scan_narration_boundaries.py` 的 head_silence 可以找起声迟到的疑点；它不能证明丢字，也不能代替源 take 到视频的查实。旧按阈值裁头或按旧总时长配平的修复方式不用于新返修。
 
-## 检查清单
+## Review 与交接
 
-- 每段 take 的前导静音是否在听辨可接受的范围内（中文短句建议 < 0.08 秒）。
-- 拼接后停顿是否听得见完整首字，特别是以“经”“具”“特”“此”开头的中文。
-- 修复后成片总时长是否与 score 一致；不一致先 retime 再 mix。
-- 修音轨不动字幕断句；重配音才动字幕。
+逐集核对所有声段首尾与接缝，并记录实际输入、源 take、当前混音/视频路径、检查方法、问题位置、修复和复核范围。没有实际听辨的范围保持 pending；波形保留、ASR 同字、响度和解码通过不能填 pronunciation/full_listening passed。
 
-机器测量只证明边界在哪里。是否听得自然仍需完整听辨，`pronunciation-review.json` 的 `full_listening` 保持 pending 直到实际听过。
+Review 看当前真实声音；Meta Review 核对声音与字幕、镜头、mix、MP4 是否同版，以及逐集覆盖是否完整。Progress First 保留候选和诊断，继续其他独立工作；已知缺字、错读、旧轨或遮蔽缺陷不能以 passed/ready 进入用户最新版。总方法见[逐集表意与段首完整性验收](39_逐集表意与段首完整性验收.md)。
+
+修复或重新生成任一声段后，先运行 `scripts/audit_narration_samples.py --workspace <工作台> --output work/<本轮>/narration-samples.json`，检查源 take 是否完整落在原始 `audio/narration.wav` 的对应 PCM 窗口；再运行 `scripts/audit_audio_freshness.py --workspace <工作台> --output work/<本轮>/audio-freshness.json`，检查 source/timing/mix/render/publish 的实际 SHA 绑定。前者定位物理截字或错位，后者防止工程已修但用户仍拿旧 MP4；二者均不批准首字听清、发音、语气或完整听感。发现失配后按当前项目真实依赖重新执行 retime、build、mix、render、package 并回读；保留候选与诊断，其他独立工作继续，旧 MP4 不得作为用户最新版。

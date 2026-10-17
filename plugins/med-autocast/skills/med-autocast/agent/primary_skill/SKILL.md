@@ -24,7 +24,7 @@ description: 使用 Med Auto Cast 规划、制作、修订和审查医学科普�
 
 专业 Skill 及 SOP 可按当前任务选择加载，不要求用户重复批准已授权的本地工作。部署、生产媒体生成与发布须符合当前请求范围。详见 `docs/production-sop.md`、`docs/workspace-adapter.md`。
 
-默认纸剧场先把医学素材转为患者问题地图，再规划系列故事圣经和每集 `episode_blueprint`。blueprint 是创意交接，不是机器表单：推荐先写视觉处理稿、风格帧和带声音事件的分镜，再做完整粗动态分镜；低保真代码预览、独立镜头、声音准备和安全替代可以并行推进。这个顺序提高初稿质量，不是阶段启动门；信息不足或质量检查未通过时，保留可消费候选/诊断与质量债，继续不依赖该缺口的工作。被拒绝的医学素材不得进入渲染；没有安全替代时省略受影响镜头，不臆造解剖。新系列使用 `content/<topic>/` 与 `productions/<series>/<episode>/` 的分层结构；`work/`、`output/`、`deliveries/` 和 `archive/` 分别承担运行态、批量输出、交接记录和历史只读用途，不能互相充当制作权威。预览联系表和每镜固定 12 姿态 strip 是导演的定位证据，不是机器质量门；透明素材出现图册残片时应回到单件生成或合法素材准入，不能靠遮挡卡片掩盖。可用 HyperFrames storyboard/Studio 或本地 HTML 预览做导演审片面；静帧、联系表和代码检查只辅助定位故障，不定义视频质量。方法见 `runtime/workbench/docs/15_纸剧场系列策划与制作.md`、`runtime/workbench/docs/16_纸剧场前置策划与质量门.md`、`runtime/workbench/docs/17_工作台目录结构与资产生命周期.md`。
+默认纸剧场先把医学素材转为患者问题地图，再规划系列故事圣经和每集 `episode_blueprint`。blueprint 是创意交接，不是机器表单：推荐先写视觉处理稿、风格帧和带声音事件的分镜，再做完整粗动态分镜；低保真代码预览、独立镜头、声音准备和安全替代可以并行推进。这个顺序提高初稿质量，不是阶段启动门；信息不足或质量检查未通过时，保留可消费候选/诊断与质量债，继续不依赖该缺口的工作。被拒绝的医学素材不得进入渲染；没有安全替代时省略受影响镜头，不臆造解剖。新系列使用 `content/<topic>/` 与 `productions/<series>/<episode>/` 的分层结构；`work/`、`output/`、`deliveries/` 和 `archive/` 分别承担运行态、批量输出、交接记录和历史只读用途，不能互相充当制作权威。预览联系表和按关键状态取样的 strip 是导演的定位材料，不是机器质量门；透明素材出现图册残片时应回到单件生成或合法素材准入，不能靠遮挡卡片掩盖。可用 HyperFrames storyboard/Studio 或本地 HTML 预览做导演审片面；静帧、联系表和代码检查只辅助定位故障，不定义视频质量。方法见 `runtime/workbench/docs/15_纸剧场系列策划与制作.md`、`runtime/workbench/docs/16_纸剧场前置策划与质量门.md`、`runtime/workbench/docs/17_工作台目录结构与资产生命周期.md`。
 
 从 Video Shotcraft 吸收的镜头配方卡、单镜主运动、`prepare -> action -> reaction -> settle -> hold/rest` 动作弧、首帧/连续动作 strip/邻镜/整片的多轮审片，以及旁白、BGM、拟音分轨方法，见 `docs/video-shotcraft方法适配.md`。这里的 `shot_recipe` 是自然语言导演交接材料，不是阻断 Stage 的脚本 DSL；固定 seed、显式时间和 `window.__seek(t)` 只用于可复现预览。Remotion、HyperFrames 等可以辅助预览或作为替换渲染器，但不改变本地 Canvas 2D 纸剧场默认路线。
 
@@ -36,6 +36,10 @@ description: 使用 Med Auto Cast 规划、制作、修订和审查医学科普�
 
 
 新建或重构代码动画采用 `runtime/workbench/templates/animation/paper_theatre/` 的 TypeScript/Canvas 镜头模块，方法见 `runtime/workbench/docs/19_纸剧场模块架构与镜头打磨.md`。先做导演与 animatic，再准入透明素材；素材清单持有路径和连接点，score 持有事件时间，镜头持有构图与相机，播放器只装配。独立镜头预览、动作样本与版本对照用于持续打磨，不把复用解释为固定构图或故事。保持单集版本冻结和自定义镜头出口；通用模板不含医生、疾病和品牌。
+
+代码动画的初稿扩展必须先登记 `signature_shot` 并完成真实短动作；预览/渲染自动写入 `motion_audit` 与 `medical_animation_runtime_receipt/v1`。前者只提供非阻断导演质量债，后者绑定实际工具和输入指纹；两者都不能替代连续动态、听感或医学审查。详见 `runtime/workbench/docs/41_代码动画动作审片与运行时回执.md`。
+
+整季或大批量复核先运行 `scripts/build_episode_review_queue.py` 建立逐集任务队列，再分别消费声音链与视觉语义证据。队列只导航当前工程和下一步检查，不按源码统计、元数据或代表集结果批准其他集；未覆盖范围保留 pending，其他可消费工作继续。
 
 纸剧场实际操作统一走 `paper_project`，按 `runtime/workbench/docs/20_纸剧场单集工具与局部返修.md` 执行初始化/接入、素材台、精确声段配音、真实时码、ASR 辅助字幕、邻镜预览、混音、导出和审看交付。用 `library` 查询跨集纸件；医生品牌来自工作区。新工具减少搬运，不代替导演判断或视觉探索。
 
@@ -65,7 +69,7 @@ Stage 返回尽量引用真实产物与版本/来源信息，给出质量债务�
 
 用户交付目录 `publish/<系列展示名>/<集号_标题>/` 直接放唯一最新版视频、封面、字幕和平台文案；不嵌套 `current/`、版本号、时间戳、候选或归档。机器清单、Score、配音及审查材料归 `deliveries/<series>/<episode>/` 或原制作工程；被替换交付归 `archive/deliveries/<series>/<episode>/<revision>/`。交付文档和生成器按实际目录写归档路径，不能把一集路径推广为全季，也不能把历史归档误报为本轮替换。Progress First 下，版本或文档问题先修 owner 并保留可消费产物，记录 `quality_debt` 或诊断后继续；只有当前性、权限、执行器、身份和明确人工决定等硬边界才停止。方法细节见 `runtime/workbench/docs/25_全季交付回读与经验沉淀.md`。
 
-代码镜头制作与返修交给 `agent/professional_skills/medical-video-animation-craft/SKILL.md`。先读 `runtime/workbench/docs/38_纸剧场动画新标准总纲.md`（动画新标准单一入口：下限自动化/上限不封顶的分层、七步流程、三条硬红线——逐集独立导演、动作因果"进入→接触→反应→落定"、去文字审片——与四道门），再读当前风格的 STYLE.md，把 Treatment 与真实风格帧/短动作接上单集 score；`animation_lab` 提供七种原创媒介动作的可运行样例。实际实现、开放创作出口和质量边界见 `runtime/workbench/docs/26_代码动画技法与风格工作流.md`；样例、可调用工具和注册名不代表医学/艺术质量通过。
+代码镜头制作与返修交给 `agent/professional_skills/medical-video-animation-craft/SKILL.md`。先读 `runtime/workbench/docs/38_纸剧场动画新标准总纲.md`：工程事实由工具核对，基本表意与声音逐集确认，导演继续探索表现力；再按 `runtime/workbench/docs/39_逐集表意与段首完整性验收.md` 对同一精确候选反向读图、核对同期事实和真实声音链。当前风格的 STYLE.md、Treatment、风格帧与短动作接上本集 score；`animation_lab` 的可运行样例只帮助学习技法。操作镜头、静态科学关系与生活情境可有不同语法，不以固定动作链、前景、代码计数或样例成功批准质量。开放创作出口见 `runtime/workbench/docs/26_代码动画技法与风格工作流.md`。
 
 ## 面向用户的单一最新版交付
 
@@ -100,3 +104,7 @@ python3 runtime/native_helpers/med_autocast.py assets --workspace <workspace> --
 用户从 publish/观看与发布.html 查找所有当前主题，系列与分集使用用户语言展示名；英文技术 ID 继续用于制作与内部交接。名称映射由 workbench.yaml.series.<series_id>.delivery 持有，所有包器共享 delivery_layout.locations。publish_catalog 提供离线观看页、实际 TXT 文案合集、链接回查和显式可恢复迁移；不把制作批次、历史、候选和机器清单留在用户入口。初始化默认此布局，旧工作区不静默搬迁；名称或导航欠项保留候选与质量债。见 runtime/workbench/docs/30_用户交付目录与导航SOP.md。
 
 当前配音统一通过随包 `render_narration` 与 `render_series_tts`，默认条理讲解；原生中文拼音和英文 CMU 音素从可读编辑标记转换，固定参考声线，`normalize=false`。每批复用参考编码，缓存绑定模型、运行包与 worker 身份，停顿与时码按真实采样写回。IndexTTS 已退役，新生成不使用其环境或权重；历史作品和原回执可只读复核。
+
+配音修复后先用 `audit_narration_samples` 核对每个源 take 是否完整保留在原始拼接 PCM，再用 `audit_audio_freshness` 核对 source/timing/mix/render/publish 的当前绑定。两者只定位物理截字、旧轨和交接失配，不批准读音、语气或完整听感。发现失配时保留可消费候选并继续独立 Stage，已知旧 MP4 不得当作用户最新版。
+
+`audit_paper_captions` 只读核对完整批准正文与当前字幕并输出独立提案；字幕缺句与声音缺字分开处理。`retime` 按正文和 `beat_id` 保全字幕，不再按旧 cue 中点归镜头后裁切；缺少整段配音时列出缺项并回配音，不臆造时码。数值、范围和词间空格不能在比对中丢失；时间提案与 ASR 均不批准实际同期或听感。

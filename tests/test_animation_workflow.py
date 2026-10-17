@@ -25,6 +25,25 @@ class AnimationWorkflowTests(unittest.TestCase):
         self.root = Path(self.temporary.name)
         for name in ['anatomy.png', 'facts.yaml', 'prompt.txt', 'generation.json']:
             (self.root / name).write_text('fixture only')
+        # The renderer now records a non-blocking motion audit for every
+        # preview/render. Keep this fixture representative so the test can
+        # assert the asset-review debt without inheriting an unrelated
+        # missing-score diagnostic.
+        (self.root / 'score.json').write_text(json.dumps({
+            'duration': 1,
+            'signature_shot': 'B01',
+            'shots': [{
+                'id': 'B01', 'start': 0, 'end': 1,
+                'events': {'prepare': 0.1, 'action': 0.3, 'reaction': 0.5, 'settle': 0.7},
+                'shot_recipe': {
+                    'audience_read': '读懂资料',
+                    'visual_anchor': '资料纸片',
+                    'primary_motion': '从左侧进入并展开',
+                    'motion_arc': '准备、操作、反应、落定',
+                    'carrier': '资料袋',
+                },
+            }],
+        }))
         self.asset = {'asset_id': 'pituitary', 'path': 'anatomy.png', 'source_type': 'imagegen',
             'medical': True, 'medical_reference': 'facts.yaml', 'visual_meaning': 'location',
             'must_not_imply': 'diagnostic image', 'prompt_ref': 'prompt.txt',
@@ -114,16 +133,30 @@ class AnimationWorkflowTests(unittest.TestCase):
                 'renderer_runtime': {'renderer_id': 'canvas2d', 'style_id': 'paper_collage'},
             }))
 
+        def subprocess_run(command, *args, **kwargs):
+            # The production renderer records the motion-audit receipt before
+            # probing the final movie. Keep that side effect in the fixture.
+            if 'audit_motion.py' in ' '.join(map(str, command)):
+                audit_output = Path(command[command.index('--output') + 1])
+                audit_output.parent.mkdir(parents=True, exist_ok=True)
+                audit_output.write_text(json.dumps({
+                    'schema': 'medical_motion_audit/v1',
+                    'status': 'completed', 'quality_debt': [],
+                    'summary': {'quality_debt_count': 0, 'blocking_debt_count': 0},
+                }))
+                return subprocess.CompletedProcess(command, 0, stdout='')
+            return subprocess.CompletedProcess(command, 0, stdout=json.dumps({
+                'format': {'duration': '1'},
+                'streams': [{'codec_type': 'video'}, {'codec_type': 'audio'}],
+            }))
+
         args = ['renderer', '--project-root', str(self.root), '--asset-manifest', 'assets.json',
                 '--output', str(output_path), '--audio', str(audio), '--review-candidate']
         with (
             patch.object(sys, 'argv', args),
             patch('shutil.which', return_value='/fixture/tool'),
             patch.object(render_javascript_animation, 'run', side_effect=render),
-            patch.object(subprocess, 'run', return_value=subprocess.CompletedProcess(
-                ['ffprobe'], 0,
-                stdout='{"format":{"duration":"1"},"streams":[{"codec_type":"video"},{"codec_type":"audio"}]}',
-            )),
+            patch.object(subprocess, 'run', side_effect=subprocess_run),
             redirect_stdout(io.StringIO()),
         ):
             render_javascript_animation.main()
@@ -132,12 +165,36 @@ class AnimationWorkflowTests(unittest.TestCase):
         self.assertEqual({item['code'] for item in receipt['quality_debt']}, {'asset_review_pending'})
         self.assertFalse(receipt['release_eligible'])
 
+    def test_successful_preview_keeps_layout_debt_alongside_asset_debt(self):
+        self.asset['status'] = 'pending_review'
+        self.check()
+        preview = self.root / 'preview'
+        finding = {'kind': 'text_region_overflow', 'element': '不能丢失的布局诊断',
+                   'blocks_stage_progress': False}
+        def successful_preview(command, cwd, capture_output=False):
+            preview.mkdir(exist_ok=True)
+            (preview / 'preview.json').write_text(json.dumps({
+                'status': 'previewed', 'frames': [{'file': 'frame.png'}],
+                'quality_debt': [finding],
+                'renderer_runtime': {'renderer_id': 'canvas2d', 'style_id': 'paper_collage'},
+            }))
+        args = ['renderer', '--project-root', str(self.root), '--asset-manifest', 'assets.json',
+                '--preview', '--preview-output', str(preview), '--review-candidate']
+        with patch.object(sys, 'argv', args), patch('shutil.which', return_value='/fixture/tool'), \
+             patch.object(render_javascript_animation, 'run', side_effect=successful_preview), \
+             redirect_stdout(io.StringIO()):
+            render_javascript_animation.main()
+        report = json.loads((preview / 'preview.json').read_text())
+        self.assertEqual(report['status'], 'previewed')
+        self.assertIn(finding, report['quality_debt'])
+        self.assertTrue(any(row.get('code') == 'asset_review_pending' for row in report['quality_debt']))
+
     def test_failed_browser_preview_is_not_reported_as_previewed(self):
         self.check()
         preview = self.root / 'preview'
 
         def failed_preview(command, cwd, capture_output=False):
-            preview.mkdir()
+            preview.mkdir(exist_ok=True)
             (preview / 'preview.json').write_text(json.dumps({
                 'status': 'failed', 'frames': [{'file': 'partial.png'}], 'errors': ['browser error'],
             }))

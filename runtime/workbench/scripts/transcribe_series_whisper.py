@@ -118,6 +118,7 @@ def main() -> None:
 
         payload = {
             "schema": "whisper_word_alignment/v1",
+            "timing_coordinates": "source_local_seconds",
             "episode_id": episode_dir.name,
             "model": args.model,
             "device": args.device,

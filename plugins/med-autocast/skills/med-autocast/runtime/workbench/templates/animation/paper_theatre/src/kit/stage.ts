@@ -1,4 +1,5 @@
 import type { Asset, Camera, Layout, Point, Pose, Rect } from "./types";
+import { textBox, type CardTitleOptions } from "./labels";
 import { hash } from "./motion";
 export class Stage {
   readonly images: Record<string, HTMLImageElement> = {};
@@ -195,6 +196,14 @@ export class Stage {
       align?: CanvasTextAlign;
       weight?: number;
       screen?: boolean;
+      /**
+       * Optional explicit local region. Low-level text remains available for
+       * hand-drawn marks, but paper labels should use textBox/label so the
+       * region is measured and reviewed as a contract.
+       */
+      region?: Rect;
+      owner?: string;
+      placement?: "on-paper" | "annotation" | "screen";
     } = {},
   ) {
     const g = this.g;
@@ -206,20 +215,58 @@ export class Stage {
     g.fillStyle = color;
     g.fillText(text, x, y);
     const m = g.measureText(text),
-      w = m.width;
+      w = m.width,
+      fallbackLeft = g.textAlign === "center" ? w / 2 : g.textAlign === "right" ? w : 0,
+      inkLeft = m.actualBoundingBoxLeft ?? fallbackLeft,
+      inkRight = m.actualBoundingBoxRight ?? (w - fallbackLeft),
+      ascent = m.actualBoundingBoxAscent ?? size * 0.62,
+      descent = m.actualBoundingBoxDescent ?? size * 0.62,
+      left = x - inkLeft;
     this.bounds(
       {
-        x:
-          x -
-          (g.textAlign === "center" ? w / 2 : g.textAlign === "right" ? w : 0),
-        y: y - size * 0.62,
-        w,
-        h: size * 1.24,
+        x: left,
+        y: y - ascent,
+        w: inkLeft + inkRight,
+        h: ascent + descent,
         name: text,
       },
       "text",
     );
+    if (options.region && this.tracking && g.globalAlpha >= 0.025) {
+      const local = options.region;
+      const ink = { x: left, y: y - ascent, w: inkLeft + inkRight, h: ascent + descent };
+      const region = this.worldRect(local);
+      const drawn = this.worldRect(ink);
+      const overflow = {
+        left: Math.max(0, local.x - ink.x),
+        right: Math.max(0, ink.x + ink.w - local.x - local.w),
+        top: Math.max(0, local.y - ink.y),
+        bottom: Math.max(0, ink.y + ink.h - local.y - local.h),
+      };
+      const layout = this.layout() as Layout & { textRegions?: unknown[] };
+      (layout.textRegions ??= []).push({
+        text,
+        owner: options.owner,
+        placement: options.placement ?? "on-paper",
+        region: { ...region, name: local.name },
+        ink: { ...drawn, name: text },
+        local_region: local,
+        local_ink: ink,
+        fits: Object.values(overflow).every((v) => v < 0.01),
+        size,
+        lines: [text],
+        overflow,
+      });
+    }
     g.restore();
+  }
+  /**
+   * Named entry point for on-paper labels. It keeps raw `text()` available
+   * for illustration and screen captions while making the safe region
+   * explicit at the call site.
+   */
+  label(text: string, box: Rect, opts: CardTitleOptions = {}) {
+    return textBox(this, box, text, opts);
   }
   edge(x: number, y: number, w: number, h: number, seed = 1, rough = 4) {
     const g = this.g,

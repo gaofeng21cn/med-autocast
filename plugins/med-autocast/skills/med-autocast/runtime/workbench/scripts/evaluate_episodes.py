@@ -1,10 +1,9 @@
 #!/usr/bin/env python3
-"""Per-episode animation diagnosis from real source signals.
+"""Locate source signals for episode review; never score animation quality.
 
-Every number here is read out of the episode's own TypeScript or score file, so
-the report says what the code actually does rather than what a contact sheet
-looks like at a glance. The output is one diagnosis per episode, ordered by how
-much the animation body needs rewriting.
+Calls and imports cannot establish what a viewer sees. A function may be unused,
+draw the wrong specimen, or perform no visible action. This report locates code
+for an episode-specific review of the actual candidate and its narration.
 """
 from __future__ import annotations
 
@@ -78,30 +77,22 @@ def diagnose(project: Path) -> dict:
     event_driven = bool(re.search(r"beat\.events|\bev\(", text))
     depth_on = bool(re.search(r"\bdepth\s*:", text)) or "staging" in text
 
-    # Per-shot action density is the single most useful rewrite signal.
+    # Lexical counts include vocabulary and possibly unused code. They are
+    # navigation hints, not an estimate of visible action or explanatory quality.
     density = action_calls / n
     problems = []
     if density < 0.35:
-        problems.append("动作密度低：几乎只有进入与停留")
+        problems.append("已登记动作函数调用较少；需看实际镜头，可能存在自定义动作")
     if prop_calls / n < 0.2:
-        problems.append("缺少纸件容器与固定件")
+        problems.append("容器/固定件函数调用较少；不代表镜头需要增加容器")
     if cams and dynamic_cams / max(1, len(cams)) < 0.34:
-        problems.append("多数镜头机位固定")
+        problems.append("匹配到的相机代码多为固定机位；固定机位本身不是缺陷")
     if labels / n > 2.4:
-        problems.append("画内文字偏多，表达依赖标签")
+        problems.append("文字调用较多；需核对实际可见内容及其解释职责")
     if env_set <= 2 and n >= 4:
-        problems.append("舞台单一，空间没有变化")
+        problems.append("匹配到的环境调用较少；自定义布景/有意保持同一空间未计入")
     if not event_driven:
-        problems.append("动作时点未由 score 事件驱动")
-
-    score_val = (
-        min(40, density * 44)
-        + min(18, prop_calls / n * 26)
-        + min(16, (dynamic_cams / max(1, len(cams))) * 16 if cams else 8)
-        + min(12, env_set * 3)
-        + (8 if event_driven else 0)
-        + (10 if depth_on else 0)
-    )
+        problems.append("未匹配到命名事件读取；需核对实际时钟与旁白落点")
     return {
         "project": str(project),
         "files": files,
@@ -116,9 +107,10 @@ def diagnose(project: Path) -> dict:
         "labels": labels,
         "environments": sorted(set(envs)),
         "event_driven": event_driven,
-        "baseline_score": round(score_val, 1),
-        "problems": problems,
-        "verdict": "rewrite" if score_val < 55 else "upgrade" if score_val < 75 else "hold",
+        "baseline_score": None,
+        "review_locators": problems,
+        "verdict": "semantic_review_required",
+        "explanation": "源码词频不能证明对象正确、画面表意或动作实际发生；必须审查当前成片",
     }
 
 
@@ -138,20 +130,17 @@ def main() -> None:
             project = (args.workspace / ep["project"]).resolve()
             report[f"{sid}/{eid}"] = diagnose(project)
 
-    order = sorted(report.items(), key=lambda kv: kv[1]["baseline_score"])
-    summary = {
-        "rewrite": sum(1 for _, v in order if v["verdict"] == "rewrite"),
-        "upgrade": sum(1 for _, v in order if v["verdict"] == "upgrade"),
-        "hold": sum(1 for _, v in order if v["verdict"] == "hold"),
-    }
-    out = {"schema": "episode_animation_diagnosis/v1", "summary": summary, "episodes": dict(order)}
+    order = sorted(report.items())
+    summary = {"episodes": len(order), "semantic_review_required": len(order),
+               "quality_approved_by_this_tool": 0}
+    out = {"schema": "episode_source_review_locators/v2", "summary": summary, "episodes": dict(order)}
     dest = args.output or (args.workspace / "work/episode-animation-diagnosis.json")
     dest.parent.mkdir(parents=True, exist_ok=True)
     dest.write_text(json.dumps(out, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
 
     print(json.dumps({"summary": summary, "output": str(dest)}, ensure_ascii=False))
     for key, v in order:
-        print(f"{v['baseline_score']:>5} {v['verdict']:<8} {key}")
+        print(f"{v['verdict']} {key}")
 
 
 if __name__ == "__main__":

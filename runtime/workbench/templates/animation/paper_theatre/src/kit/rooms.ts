@@ -112,7 +112,7 @@ function pane(s: Stage, spec: RoomSpec, w: NonNullable<RoomSpec['window']>, seed
     });
     const g = s.g;
     g.save();
-    g.globalAlpha = 0.5;
+    g.globalAlpha *= 0.5;
     g.strokeStyle = spec.bandEdge;
     g.lineWidth = 3;
     g.beginPath();
@@ -191,7 +191,7 @@ export function paperRoom(s: Stage, kind: RoomKind, opts: { seed?: number } = {}
         s.paper({ x: 0, y: 0, w: c.w, h: c.h, color: '#f6f0e0', seed: seed + 51, lift: 3, name: '墙面图表' });
         const gg = s.g;
         gg.save();
-        gg.globalAlpha = 0.45;
+        gg.globalAlpha *= 0.45;
         gg.strokeStyle = spec.bandEdge;
         gg.lineWidth = 2;
         for (let i = 1; i < 4; i++) {
@@ -277,7 +277,7 @@ export function paperRoom(s: Stage, kind: RoomKind, opts: { seed?: number } = {}
 
     if (spec.rail) {
       g.save();
-      g.globalAlpha = 0.85;
+      g.globalAlpha *= 0.85;
       g.strokeStyle = '#b7bfb3';
       g.lineWidth = 5;
       g.beginPath();

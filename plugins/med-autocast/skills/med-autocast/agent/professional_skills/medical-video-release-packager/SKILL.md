@@ -56,6 +56,8 @@ metadata:
 
 发布文字只在系列登记的 `release_catalog` 维护。先按[系列SOP第7.1节](../../../runtime/workbench/docs/04_医学科普视频系列SOP.md#71-单集更新与回读)核对打包器与当前source/Schema匹配；审看包沿登记的已验证更新入口，不能用旧脚本回退新版。下列命令仅用于匹配的正式final合同：
 
+发布前先运行 `audit_audio_freshness --workspace W --output work/audio-freshness.json`；若本轮涉及分段配音或历史丢头字疑点，再运行 `audit_narration_samples --workspace W --output work/narration-samples.json`。它们分别检查下游字节是否同版、源 take 是否逐段完整落在原始 PCM 中；均不替代首词听辨、语气稳定性、完整听感、动画表意或医学终审。发现旧 publish 或中间回执过期时，按当前项目真实依赖顺序重新执行 retime、build、mix、render、package，回读后再发布。
+
 ```bash
 python3 scripts/build_release_packages.py --series <series_id>
 python3 scripts/build_release_packages.py --series <series_id> --check

@@ -238,6 +238,11 @@ class ProjectTests(unittest.TestCase):
         def normalization(src, dst):
             dst.write_bytes(src.read_bytes())
 
+        def decoded_or_probed(cmd, **kwargs):
+            if cmd[0] == "ffprobe":
+                return json.dumps({"streams": [{"sample_rate": "24000"}]})
+            return b"\x10\x10" * 24000
+
         with (
             patch.object(
                 rn, "load_author_profile", return_value=(root / "author.yaml", author)
@@ -248,7 +253,7 @@ class ProjectTests(unittest.TestCase):
                 return_value=(root / "backend.yaml", {"audio": {"voice": spec}}),
             ),
             patch.object(rn, "select_audio_backend", return_value="voice"),
-            patch.object(rn.subprocess, "check_output", return_value=b"\x10\x10" * 24000),
+            patch.object(rn.subprocess, "check_output", side_effect=decoded_or_probed),
             patch.object(rn, "normalize", side_effect=normalization),
         ):
             with patch.object(rn.subprocess, "run", side_effect=successful):
@@ -376,6 +381,7 @@ class ProjectTests(unittest.TestCase):
 
     def test_partial_asr_does_not_drop_editorial_opening_caption(self):
         import align_narration
+        from paper_captions import caption_rows_text, caption_text
         voice = self.root / "voice.wav"
         voice.write_bytes(b"voice")
         pp.save(self.root / "receipt.json", {"audio": str(voice), "beats": [{
@@ -388,9 +394,13 @@ class ProjectTests(unittest.TestCase):
         with patch.dict(sys.modules, {"whisper": fake}), patch.object(sys, "argv", argv):
             align_narration.main()
         segment = pp.read(self.root / "alignment/alignment.json")["beats"][0]["segments"][0]
-        self.assertAlmostEqual(segment["start"], 4.2 + .65 - .4)
-        cue = pp.read(self.root / "alignment/cues.proposed.json")["cues"][0]
-        self.assertEqual((cue["start"], cue["end"], cue["text"]), (.65, 10.65, "第一句。后一条说明。"))
+        self.assertAlmostEqual(segment["start"], 4.2)
+        proposal = pp.read(self.root / "alignment/cues.proposed.json")
+        cues = proposal["cues"]
+        self.assertEqual((cues[0]["start"], cues[-1]["end"]), (.65, 10.65))
+        self.assertEqual(caption_rows_text("第一句。后一条说明。", cues), caption_text("第一句。后一条说明。"))
+        self.assertEqual(len(cues), 2)
+        self.assertEqual(proposal["timing_coordinates"], "timeline_global_seconds")
 
     def test_pronunciation_audit_checks_each_word_and_rejected_take(self):
         import yaml

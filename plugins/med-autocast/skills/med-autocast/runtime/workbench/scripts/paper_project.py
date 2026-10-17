@@ -457,6 +457,8 @@ def narrate(a):
 
 
 def retime(a):
+    from paper_captions import complete_caption_proposal
+
     p, c = get_project(a)
     score = read(p / c["score"])
     reference = getattr(a, "reference_score", None)
@@ -485,10 +487,9 @@ def retime(a):
         reference_narration = reference.parent / "narration_beats.json"
     source_receipt = reference_narration or (prior if prior.is_file() and not reference else None)
     prior_beats = {b["id"]: b for b in read(source_receipt).get("beats", [])} if source_receipt else {}
-    old_shots = {s["id"]: s for s in old_score.get("shots", [])}
     # Repeating retime for an unchanged voice must not repeatedly remap beat
-    # padding onto itself. Keep already adopted editorial cues when the exact
-    # voice and actual shot cuts are unchanged; an explicit reference still wins.
+    # padding onto itself. Exact same voice/cuts can preserve timing only when
+    # the captions still contain the complete approved text.
     timing_path = p / "audio/timing-receipt.json"
     timing = read(timing_path) if timing_path.is_file() else {}
     same_voice = timing.get("voice_sha256") == sha(p / c["voice"])
@@ -496,25 +497,25 @@ def retime(a):
         abs(old["start"] - shot["start"]) < 1e-6 and abs(old["end"] - shot["end"]) < 1e-6
         for old, shot in zip(old_score.get("shots", []), score["shots"])
     )
-    preserve_adopted_cues = not reference and same_voice and same_cuts
-    cues = list(old_score.get("cues", [])) if preserve_adopted_cues else []
-    for shot, beat in ([] if preserve_adopted_cues else zip(score["shots"], ordered)):
-        old = old_shots.get(shot["id"])
-        pieces = [q for q in old_score.get("cues", [])
-                  if old and old["start"] <= (q["start"] + q["end"]) / 2 < old["end"]]
-        previous = prior_beats.get(beat["id"])
-        source_start, source_end = ((previous["start"], previous["end"])
-                                    if previous and previous.get("text") == beat["text"]
-                                    else (old["start"], old["end"]) if old else (0, 1))
-        if pieces and source_end > source_start:
-            scale = (beat["end"] - beat["start"]) / (source_end - source_start)
-            for q in pieces:
-                start = max(shot["start"], beat["start"] + (q["start"] - source_start) * scale)
-                end = min(shot["end"], beat["start"] + (q["end"] - source_start) * scale)
-                if end > start:
-                    cues.append({**q, "start": start, "end": end})
-        else:
-            cues.append({"start": beat["start"], "end": beat["end"], "text": beat["text"]})
+    narration_path = p / c.get("narration", "preproduction/narration.json")
+    editorial = {b['id']: b for b in read(narration_path).get('beats', [])} if narration_path.is_file() else {}
+    caption_beats = [{**beat, 'text': editorial.get(beat['id'], beat)['text']} for beat in ordered]
+    source_text_changes = [beat['id'] for beat, caption_beat in zip(ordered, caption_beats)
+                           if beat['text'] != caption_beat['text']]
+    source_without_audio = sorted(set(editorial) - {beat['id'] for beat in ordered})
+    cues, caption_report = complete_caption_proposal(
+        caption_beats, old_score.get("cues", []), prior_beats=prior_beats,
+        preserve_timing=not reference and same_voice and same_cuts and (
+            timing.get("caption_status") == "editorial_timing"
+            or (timing.get("caption_proposal") or {}).get("schema") == "paper_caption_timing/v2"
+        ),
+    )
+    caption_report['source_beats_without_audio'] = source_without_audio
+    caption_report['complete_text_check']['source_beats_without_audio'] = source_without_audio
+    if source_without_audio:
+        # Keep usable captions for real source takes, but never fabricate a
+        # time window or report all approved words covered by that subset.
+        caption_report['complete_text_check']['text_complete'] = False
     score["cues"] = cues
     overflow = [
         s["id"]
@@ -536,7 +537,10 @@ def retime(a):
         {
             "voice_sha256": sha(p / c["voice"]),
             "caption_status": "draft",
-            "caption_breaks": "preserved_when_available",
+            "caption_breaks": "complete_editorial_breaks_or_full_text_rebuild",
+            "caption_proposal": caption_report,
+            "narration_text_changes_need_new_audio": source_text_changes,
+            "source_beats_without_audio": source_without_audio,
             "reference_score": str(reference) if reference else None,
             "reference_narration": str(source_receipt) if source_receipt else None,
             "score_sha256": sha(p / c["score"]),
@@ -546,8 +550,14 @@ def retime(a):
         "status": "retimed",
         "duration": score["duration"],
         "caption_status": "draft",
-        "caption_breaks": "preserved_when_available",
-        "note": "未拉伸动作，需校准句级字幕",
+        "caption_breaks": "complete_editorial_breaks_or_full_text_rebuild",
+        "caption_text_complete": caption_report["complete_text_check"]["text_complete"],
+        "caption_repairs": caption_report["changes"],
+        "narration_text_changes_need_new_audio": source_text_changes,
+        "source_beats_without_audio": source_without_audio,
+        "note": ("缺失声段或正文已变，须补配音后再建立全量字幕；现有声段时间为待审提案，未拉伸动作"
+                 if source_without_audio or source_text_changes else
+                 "完整正文已保留；句级时间为提案，实际原音与字幕同期仍需审听，未拉伸动作"),
     }
 
 

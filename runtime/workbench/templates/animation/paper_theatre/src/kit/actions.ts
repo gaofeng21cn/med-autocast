@@ -215,7 +215,6 @@ export function turnPage(
         grad.addColorStop(0, `rgba(58,48,37,${0.34 * p.corner})`);
         grad.addColorStop(0.55, `rgba(58,48,37,${0.12 * p.corner})`);
         grad.addColorStop(1, "rgba(58,48,37,0)");
-        g.globalAlpha = 1;
         g.fillStyle = grad;
         g.beginPath();
         g.moveTo(0, -opts.h / 2);

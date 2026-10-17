@@ -99,6 +99,59 @@ def asset_admission_quality_debt(admission: dict) -> list[dict]:
     }]
 
 
+def run_motion_audit(project: Path, output: Path) -> dict:
+    """Run the non-blocking directing audit against the current Score."""
+    output.parent.mkdir(parents=True, exist_ok=True)
+    command = [
+        sys.executable,
+        str(Path(__file__).with_name("audit_motion.py")),
+        "--project",
+        str(project),
+        "--output",
+        str(output),
+    ]
+    try:
+        subprocess.run(command, check=True, capture_output=True, text=True)
+    except (OSError, subprocess.CalledProcessError) as exc:
+        report = {
+            "schema": "medical_motion_audit/v1",
+            "status": "diagnostic",
+            "project": str(project),
+            "quality_debt": [{
+                "code": "motion_audit_unavailable",
+                "owner_stage": "story-directing",
+                "blocks_stage_progress": False,
+                "detail": str(exc)[:2000],
+            }],
+            "summary": {"quality_debt_count": 1, "blocking_debt_count": 0, "progress_first": True},
+        }
+        output.write_text(json.dumps(report, ensure_ascii=False, indent=2) + "\n")
+        return report
+    try:
+        return json.loads(output.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError) as exc:
+        return {
+            "schema": "medical_motion_audit/v1",
+            "status": "diagnostic",
+            "project": str(project),
+            "quality_debt": [{
+                "code": "motion_audit_receipt_missing",
+                "owner_stage": "story-directing",
+                "blocks_stage_progress": False,
+                "detail": str(exc),
+            }],
+            "summary": {"quality_debt_count": 1, "blocking_debt_count": 0, "progress_first": True},
+        }
+
+
+def motion_audit_quality_debt(report: dict) -> list[dict]:
+    return [
+        {**item, "source": "motion_audit"}
+        for item in report.get("quality_debt", [])
+        if isinstance(item, dict)
+    ]
+
+
 def write_attempt_diagnostic(
     *,
     project: Path,
@@ -226,6 +279,7 @@ def main() -> None:
     admission["release_eligible"] = False
     if args.preview:
         output_dir = preview_output
+        motion_audit = run_motion_audit(project, output_dir / "motion-audit.json")
         config = {"project_root": str(project), "entry": args.html_entry,
                   "output": str(output_dir), "width": args.width, "height": args.height,
                   "start": args.start, "end": args.end}
@@ -277,9 +331,12 @@ def main() -> None:
             )
             report["asset_admission"] = admission
             report["quality_debt"] = [
+                *report.get("quality_debt", []),
                 *asset_admission_quality_debt(admission),
                 *report["renderer_selection"]["quality_debt"],
+                *motion_audit_quality_debt(motion_audit),
             ]
+            report["motion_audit"] = motion_audit
             report_path.write_text(json.dumps(report, ensure_ascii=False, indent=2) + "\n")
         else:
             report = {
@@ -289,6 +346,7 @@ def main() -> None:
                 "asset_admission": admission,
                 "quality_debt": [
                     *asset_admission_quality_debt(admission),
+                    *motion_audit_quality_debt(motion_audit),
                     {
                     "code": "preview_receipt_missing",
                     "owner_stage": "visual-review",
@@ -297,6 +355,7 @@ def main() -> None:
                 ],
                 "release_eligible": False,
                 "output_created": False,
+                "motion_audit": motion_audit,
             }
             report_path.parent.mkdir(parents=True, exist_ok=True)
             report_path.write_text(json.dumps(report, ensure_ascii=False, indent=2) + "\n")
@@ -305,6 +364,7 @@ def main() -> None:
     render_entry = project / args.render_entry
     mux_entry = project / args.mux_entry
     renderer_runtime = {}
+    motion_audit = run_motion_audit(project, output.with_suffix(".motion-audit.json"))
     try:
         if args.audio:
             config = {"project_root": str(project), "entry": args.html_entry,
@@ -358,7 +418,9 @@ def main() -> None:
                "quality_debt": [
                    *asset_admission_quality_debt(admission),
                    *renderer_selection["quality_debt"],
+                   *motion_audit_quality_debt(motion_audit),
                ],
+               "motion_audit": motion_audit,
                "release_eligible": False}
     output.with_suffix(".receipt.json").write_text(json.dumps(receipt, ensure_ascii=False, indent=2))
     print(json.dumps(receipt, ensure_ascii=False))

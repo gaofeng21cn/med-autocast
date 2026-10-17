@@ -77,7 +77,8 @@ export function paperFolder(
     stage.paper({x:0,y:0,w:width,h:height,color:options.color ?? '#6d8884',seed:203,lift:4,name:'case-folder'});
     stage.paper({x:-width*.33,y:-height*.50,w:width*.27,h:23,color:options.color ?? '#6d8884',seed:204,lift:1,name:'folder-tab'});
     stage.paper({x:0,y:0,w:width*.94,h:height*.91,color:'#eee6d5',seed:205,lift:1,name:'folder-lining'});
-    contents();
+    // 开到边缘的封面在插入纸页下方；否则留下的窄脊会切穿移动中的文字。
+    if (open < .98) contents();
     stage.group({x:-width*.5,y:0}, () => {
       const g=stage.g; g.scale(Math.max(.018, Math.cos(open*Math.PI/2)),1);
       stage.paper({x:width*.5,y:0,w:width,h:height,color:options.color ?? '#74958f',seed:209,lift:open*5,name:'folder-cover'});
@@ -87,5 +88,6 @@ export function paperFolder(
       for(let i=0;i<3;i++){g.beginPath();g.moveTo(width*.375,-height*.10+i*height*.065);g.lineTo(width*.475,-height*.10+i*height*.065);g.stroke();}
       g.restore();
     });
+    if (open >= .98) contents();
   });
 }

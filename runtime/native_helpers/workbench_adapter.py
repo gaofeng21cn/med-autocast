@@ -28,6 +28,11 @@ TOOLS = {
         "按明确旁白输入和声段生成；自动选择登记的独立声音环境",
     ),
     "audit_pronunciation": ("write", "从当前系列定位具体词的注音覆盖、原音与待听范围；不判断发音通过"),
+    "audit_audio_freshness": ("read_only", "核对源 take、时码、混音、当前渲染和 publish 的 SHA 绑定；不判断发音或完整听感"),
+    "audit_narration_samples": ("read_only", "逐段检查源 take 是否完整包含在原始拼接 PCM 中；不判断发音、语气或最终视频"),
+    "audit_paper_captions": ("read_only", "核对批准正文与当前字幕完整性、声段归属和时间窗口；输出独立提案，不批准同期或听感"),
+    "audit_text_layout": ("write", "从登记的当前预览定位文字区域越界与遮挡疑点，生成审查裁图；不自动改布局或批准视觉"),
+    "audit_label_contract": ("write", "扫描单集代码中未绑定文字安全区的低层调用；生成质量债导航，不阻断制作"),
     "build_no_music_mix": ("write", "导出绑定当前旁白与事件的无BGM审听音轨；不改正式混音"),
     "workbench_config": ("read_only", "配置、作者覆盖、依赖和资产校验"),
     "media_backend": ("network_read", "后端解析和按需服务诊断；不生成媒体"),
@@ -68,7 +73,7 @@ TOOLS = {
 }
 
 
-CANONICAL_TOOLS = {"media_asset_library", "publish_catalog", "animation_lab", "paper_project", "render_narration", "render_series_tts", "configure_voice", "environment_check", "render_javascript_animation", "audit_pronunciation", "build_no_music_mix"}
+CANONICAL_TOOLS = {"media_asset_library", "publish_catalog", "animation_lab", "paper_project", "render_narration", "render_series_tts", "configure_voice", "environment_check", "render_javascript_animation", "audit_pronunciation", "audit_audio_freshness", "audit_narration_samples", "audit_paper_captions", "audit_text_layout", "audit_label_contract", "build_no_music_mix"}
 
 
 def resolve_tool(root: Path, name: str, bundled=False) -> tuple[Path, Path]:

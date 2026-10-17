@@ -129,7 +129,7 @@ audio_mix:
 
 新单集顺序是“患者问题地图 -> 系列故事圣经 -> 资产库查询 -> episode_blueprint/beat grid -> 粗动态分镜 -> 透明分层素材准入 -> JS 实现 -> 连续预览 -> QA -> 编码”。角色、语气和医学审核从 pending 开始；不使用技术 smoke 代替质量样片。外部资产库由 `workbench.yaml.asset_library` 指向；库不可用时继续本地缓存或新创候选，不把同步失败当成启动门。
 
-初稿复核入口是 `work/first-draft-review.md` 和 `docs/28_初版质量与高效返修流程.md`。先做代表镜头与完整代表集，检查真实 alpha、认知比例、去文字事件和首句/术语整段声音；源码更新后重新 build/preview，再 render 并回读实际媒体。欠项保留候选和可用成果，不作为表单启动门。
+初稿复核入口是 `work/first-draft-review.md` 和 `docs/28_初版质量与高效返修流程.md`。先做代表镜头与完整代表集，检查真实 alpha、认知比例、去文字事件和首句/术语整段声音；源码更新后重新 build/preview，再 render 并回读实际媒体。整季或大批量复核先运行 `scripts/build_episode_review_queue.py --workspace <目录>`，再逐集沿声音链和实际画面审片；队列只导航缺项，不评分、不批准、不阻断其他可消费工作。欠项保留候选和可用成果，不作为表单启动门。
 ''', encoding='utf-8')
     (target / '.gitignore').write_text(
         '.venv/\nnode_modules/\n__pycache__/\n*.pyc\n.env\n.DS_Store\n'

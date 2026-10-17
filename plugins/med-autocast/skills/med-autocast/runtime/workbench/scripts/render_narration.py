@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Single-episode narration, exact segment selection, one registered voice baseline."""
 
-import argparse, array, hashlib, json, os, re, subprocess, sys, tempfile, wave
+import argparse, hashlib, json, os, re, subprocess, sys, tempfile, wave
 from pathlib import Path
 from workbench_config import (
     load_author_profile,
@@ -10,7 +10,7 @@ from workbench_config import (
 )
 from media_backend import expand
 from audio_baseline import normalize
-from narration_splice import trim_bounds
+from narration_splice import join
 
 
 def digest(value):
@@ -378,67 +378,41 @@ def synthesize(
                 )
         finally:
             staging.cleanup()
-    # Convert each source explicitly; never assume a model's sample rate.
-    # Takes are joined on their measured speech boundaries. A fixed offset used
-    # to stack each take's own leading silence on top of the intended pause, so
-    # the first syllable after every boundary was inaudible.
-    pcm = []
+    # Keep the tested splice implementation as the single source of truth.
+    # A second inline implementation had drifted from narration_splice.join;
+    # fixes made there therefore did not necessarily reach fresh synthesis.
     rate = 24000
     if not 0 <= gap_seconds <= 3:
         raise ValueError("声段停顿须在 0 到 3 秒之间")
-    lead_frames, gap_frames, tail_frames = [round(rate * seconds) for seconds in (0.32, gap_seconds, 0.7)]
-    cursor_frames = lead_frames
-    splice_report = []
-    for index, b in enumerate(records):
-        take = subprocess.check_output(
-            [
-                "ffmpeg",
-                "-v",
-                "error",
-                "-i",
-                b["audio"],
-                "-ar",
-                str(rate),
-                "-ac",
-                "1",
-                "-f",
-                "s16le",
-                "-",
-            ],
-        )
-        if not take:
-            raise ValueError(f"声段 {b['id']} 解码为空，未替换当前整轨")
-        samples = array.array("h")
-        samples.frombytes(take)
-        start, end = trim_bounds(samples, rate)
-        data = samples[start:end].tobytes()
-        b["start"] = round(cursor_frames / rate, 6)
-        cursor_frames += len(data) // 2
-        b["end"] = round(cursor_frames / rate, 6)
-        b["trimmed_head_seconds"] = round(start / rate, 3)
-        splice_report.append({"id": b["id"], "trimmed_head_seconds": round(start / rate, 3),
-                              "trimmed_tail_seconds": round((len(samples) - end) / rate, 3),
-                              "start": b["start"], "end": b["end"]})
-        pcm.append(data)
-        if index < len(records) - 1:
-            cursor_frames += gap_frames
-            pcm.append(b"\0" * gap_frames * 2)
+    source_paths = [Path(b["audio"]) for b in records]
+    for b, path in zip(records, source_paths):
+        if not path.is_file():
+            raise ValueError(f"声段 {b['id']} 音频不存在，未替换当前整轨: {path}")
     with tempfile.TemporaryDirectory(prefix="mac-track-", dir=output) as tmp:
         raw = Path(tmp) / "narration.wav"
-        with wave.open(str(raw), "wb") as w:
-            w.setnchannels(1)
-            w.setsampwidth(2)
-            w.setframerate(rate)
-            w.writeframes(
-                b"\0" * lead_frames * 2
-                + b"".join(pcm)
-                + b"\0" * tail_frames * 2
-            )
+        splice_report = join(source_paths, raw, rate=rate,
+                             gap_ms=round(gap_seconds * 1000),
+                             lead_ms=320, tail_ms=700)
+        for b, row in zip(records, splice_report):
+            b["start"] = row["placed_at"]
+            b["end"] = row["placed_end"]
+            b["trimmed_head_seconds"] = row["trim_start"]
+            b["trimmed_tail_seconds"] = round(row["duration"] - row["trim_end"], 3)
+            b["source_sample_rate"] = row["source_sample_rate"]
+            b["source_sha256"] = hashlib.sha256(Path(b["audio"]).read_bytes()).hexdigest()
+            row["id"] = b["id"]
+            row["source_sha256"] = b["source_sha256"]
+            row["decoded_sample_rate"] = rate
+            row["preserved_frames"] = row["placed_end_frame"] - row["placed_start_frame"]
+        with wave.open(str(raw), "rb") as w:
+            if w.getnchannels() != 1 or w.getframerate() != rate:
+                raise ValueError("旁白拼接输出不是 24 kHz 单声道 PCM")
+            raw_duration = w.getnframes() / w.getframerate()
         normalized = Path(tmp) / "narration-normalized.wav"
         normalize(raw, normalized)
         with wave.open(str(normalized), "rb") as w:
             actual_duration = w.getnframes() / w.getframerate()
-        if abs(actual_duration - (cursor_frames + tail_frames) / rate) > 1 / rate:
+        if abs(actual_duration - raw_duration) > 1 / rate:
             raise ValueError("归一化改变音轨时长，未替换当前整轨")
         raw.replace(output / "narration.wav")
         normalized.replace(output / "narration-normalized.wav")
@@ -457,11 +431,14 @@ def synthesize(
         "tone_consistency": "pending",
     }
     result["splice"] = {
-        "policy": "按实测语音边界裁掉前导与尾部静音，再按固定短停顿拼接",
-        "gap_seconds": gap_frames / rate,
-        "lead_seconds": lead_frames / rate,
-        "tail_seconds": tail_frames / rate,
+        "schema": "narration_splice/v2",
+        "policy": "resample_correctly_preserve_all_source_samples",
+        "gap_seconds": round(gap_seconds, 6),
+        "lead_seconds": 0.32,
+        "tail_seconds": 0.7,
         "takes": splice_report,
+        "raw_sha256": hashlib.sha256((output / "narration.wav").read_bytes()).hexdigest(),
+        "normalized_sha256": hashlib.sha256(normalized.read_bytes()).hexdigest(),
         "review": "拼接处应可听到完整首字；实际听辨仍待审",
     }
     save(output / "narration_beats.json", result)

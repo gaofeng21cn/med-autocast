@@ -112,3 +112,5 @@ python3 runtime/native_helpers/med_autocast.py assets \
 独立资产库在标准工作台 setup 中自动获取或复用；已有本地库不覆盖，离线/私有权限失败保留诊断并继续新创。导演先 query 并看原件，制作 use 复制精确版本后重新审查当前镜头；不设复用率。实际命令及载体安装边界见 [独立库接入](media-assets-integration.md)。
 
 用户入口按主题和集名组织：publish/观看与发布.html 覆盖全部当前系列；展示名映射见 workbench.yaml.series.<series_id>.delivery，内部 series_id/episode_id 保持不变。publish_catalog 更新观看页与全季 TXT 文案合集，--check 只读检查实际链接；--migrate 配合显式选集进行可恢复迁移。单集更换从 delivery_layout.locations 定位，不重建英文目录，不重编码未变媒体，不改变审核和上传状态。标准方法见 runtime/workbench/docs/30_用户交付目录与导航SOP.md。
+
+音频防复发工具：`audit_narration_samples --workspace W --output work/narration-samples.json` 逐段检查 source take 与原始 narration PCM 的精确采样包含关系；`audit_audio_freshness --workspace W --output work/audio-freshness.json` 核对 source/timing/mix/render/publish 的当前 SHA 绑定。两者只生成定位诊断，不批准读音、语气、完整听感、动画表意或医学含义。发现失配先修最早断点，再只更新受影响下游；其他可消费 Stage 继续。

@@ -3,6 +3,7 @@
 
 import argparse, hashlib, json
 from pathlib import Path
+from build_episode_timelines import build_cues
 
 
 def main():
@@ -17,55 +18,56 @@ def main():
     receipt = json.loads(a.receipt.read_text())
     model = whisper.load_model(a.model, device=a.device)
     result = []
-    cues = []
     for beat in receipt["beats"]:
+        source = Path(beat["audio"])
+        source_sha = hashlib.sha256(source.read_bytes()).hexdigest()
         r = model.transcribe(
-            beat["audio"],
+            str(source),
             language="zh",
             condition_on_previous_text=False,
             word_timestamps=True,
             fp16=a.device.startswith("cuda"),
         )
         segments = r.get("segments", [])
-        offset = beat["start"] - beat.get("trimmed_head_seconds", 0.0)
-        for s in segments:
-            s["start"] += offset
-            s["end"] += offset
-            for w in s.get("words", []):
-                w["start"] += offset
-                w["end"] += offset
         result.append(
             {
                 "id": beat["id"],
                 "approved_text": beat["text"],
                 "asr_text": r.get("text", ""),
+                "source_audio": str(source.resolve()),
+                "source_sha256": source_sha,
+                "timing_coordinates": "source_local_seconds",
                 "segments": segments,
-            }
-        )
-        cues.append(
-            {
-                # A recognizer can omit the opening phrase or final words.
-                # Its partial window must not squeeze the complete editorial text.
-                "start": beat["start"],
-                "end": beat["end"],
-                "text": beat["text"],
             }
         )
     a.output.mkdir(parents=True, exist_ok=True)
     data = {
+        "schema": "whisper_word_alignment/v2",
         "voice_sha256": hashlib.sha256(Path(receipt["audio"]).read_bytes()).hexdigest(),
+        "narration_receipt_sha256": hashlib.sha256(a.receipt.read_bytes()).hexdigest(),
         "model": a.model,
+        "timing_coordinates": "source_local_seconds",
         "beats": result,
         "full_listening": "pending",
         "text_authority": "narration.json",
-        "timing_scope": "ASR窗口用于定位，整段提案保留真实声段区间；分句由导演结合原音校准",
+        "timing_scope": "ASR为源音频局部秒数；字幕只加一次段落起点，保留完整批准正文并拆句/双行，实际同期仍需审听",
     }
+    cues = build_cues(receipt, data)
     (a.output / "alignment.json").write_text(
         json.dumps(data, ensure_ascii=False, indent=2) + "\n"
     )
     (a.output / "cues.proposed.json").write_text(
         json.dumps(
-            {"voice_sha256": data["voice_sha256"], "cues": cues},
+            {
+                "voice_sha256": data["voice_sha256"],
+                "narration_receipt_sha256": data["narration_receipt_sha256"],
+                "source_sha256": {beat["id"]: beat["source_sha256"] for beat in result},
+                "timing_coordinates": "timeline_global_seconds",
+                "timing_review": "draft",
+                "text_authority": data["text_authority"],
+                "full_listening": "pending",
+                "cues": cues,
+            },
             ensure_ascii=False,
             indent=2,
         )

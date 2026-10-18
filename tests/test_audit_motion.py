@@ -21,7 +21,7 @@ class MotionAuditTests(unittest.TestCase):
                     "hold_reason": "已登记阅读", "motion_quality_review": {"status": "intentional_reading_hold"}})
             (root / "score.json").write_text(json.dumps(score))
             report = audit(root)
-            codes = [item["code"] for item in report["quality_debt"]]
+            codes = [item["code"] for item in report["review_locators"]]
             self.assertEqual(codes.count("long_motion_dead_zone"), 4)
             self.assertIn("repeated_event_signature", codes)
             self.assertTrue(all(row["legacy_auto_enriched"] for row in report["shots"]))
@@ -85,7 +85,7 @@ class MotionAuditTests(unittest.TestCase):
             path = root / "score.json"
             path.write_text(json.dumps(score), encoding="utf-8")
             report = audit(root)
-            codes = {item["code"] for item in report["quality_debt"]}
+            codes = {item["code"] for item in report["review_locators"]}
             self.assertIn("repeated_shot_recipe", codes)
             self.assertIn("representative_shot_unregistered", codes)
             self.assertTrue(all(item["blocks_stage_progress"] is False for item in report["quality_debt"]))
@@ -111,7 +111,7 @@ class MotionAuditTests(unittest.TestCase):
             report = audit(root)
             self.assertEqual(report["representative_shot"], "hero")
             self.assertFalse(any(item["code"] == "representative_shot_unregistered" for item in report["quality_debt"]))
-            self.assertTrue(any(item["code"] == "long_motion_dead_zone" for item in report["quality_debt"]))
+            self.assertTrue(any(item["code"] == "long_motion_dead_zone" for item in report["review_locators"]))
 
 
 if __name__ == "__main__":

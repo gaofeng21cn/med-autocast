@@ -22,6 +22,7 @@ def check_assets(manifest: Path) -> dict:
         return path
 
     assets, pending = {}, []
+    evidence_integrity = []
     if not isinstance(data.get("assets"), list) or not data["assets"]:
         raise ValueError("No declared animation assets")
     for asset in data["assets"]:
@@ -46,6 +47,26 @@ def check_assets(manifest: Path) -> dict:
             if not asset.get("source_url") or not asset.get("license"):
                 raise ValueError(f"{aid}: missing source URL or license")
             file(asset.get("license_evidence"))
+    shots = data.get("shots")
+    if not isinstance(shots, list) or not shots:
+        raise ValueError("Missing shot asset coverage")
+    seen = set()
+    used_ids = set()
+    for shot in shots:
+        sid = shot.get("shot_id")
+        if not isinstance(sid, str) or not sid or sid in seen:
+            raise ValueError("Missing or duplicate shot ID")
+        seen.add(sid)
+        used = shot.get("asset_ids")
+        if not isinstance(used, list) or not used or any(aid not in assets for aid in used):
+            raise ValueError(f"{sid}: missing or unknown shot assets")
+        used_ids.update(used)
+    # A manifest is also an inventory. Review debt belongs to the assets that
+    # the current shot coverage actually uses; unused candidates remain visible
+    # as inventory metadata and do not block or pollute this render's report.
+    for aid, asset in assets.items():
+        if aid not in used_ids:
+            continue
         if asset.get("status") == "rejected":
             raise ValueError(f"{aid}: rejected asset cannot enter rendering")
         if asset.get("status") != "approved_direct_use":
@@ -57,25 +78,49 @@ def check_assets(manifest: Path) -> dict:
             if record.get("status") != "passed":
                 pending.append(f"{aid}:{kind}_pending")
                 continue
-            evidence = json.loads(file(record.get("evidence_ref")).read_text())
-            if (evidence.get("asset_id") != aid or file(evidence.get("asset_ref")) != source
+            evidence_path = file(record.get("evidence_ref"))
+            evidence = json.loads(evidence_path.read_text())
+            if (evidence.get("asset_id") != aid or file(evidence.get("asset_ref")) != (base / asset["path"]).resolve()
                     or evidence.get(kind) != "passed" or not evidence.get("reviewer")
                     or not evidence.get("notes")):
                 raise ValueError(f"{aid}: review evidence does not match asset and review type")
-    shots = data.get("shots")
-    if not isinstance(shots, list) or not shots:
-        raise ValueError("Missing shot asset coverage")
-    seen = set()
-    for shot in shots:
-        sid = shot.get("shot_id")
-        if not isinstance(sid, str) or not sid or sid in seen:
-            raise ValueError("Missing or duplicate shot ID")
-        seen.add(sid)
-        used = shot.get("asset_ids")
-        if not isinstance(used, list) or not used or any(aid not in assets for aid in used):
-            raise ValueError(f"{sid}: missing or unknown shot assets")
+            # Older review receipts commonly listed contact sheets inside an
+            # ``evidence`` array.  Checking only the outer JSON made a deleted
+            # contact sheet look like a valid pass.  Missing nested evidence
+            # downgrades the record to an unverified source review; it never
+            # becomes a blocking production error by itself.
+            nested = evidence.get("evidence", [])
+            if isinstance(nested, str):
+                nested = [nested]
+            if isinstance(nested, list):
+                missing_nested = []
+                for ref in nested:
+                    if not isinstance(ref, str) or not ref.strip():
+                        missing_nested.append(str(ref))
+                        continue
+                    candidate = (base / ref).resolve()
+                    if not candidate.is_file():
+                        missing_nested.append(ref)
+                if missing_nested:
+                    evidence_integrity.append({
+                        "asset_id": aid, "review": kind,
+                        "evidence_ref": str(evidence_path),
+                        "status": "missing_nested_evidence",
+                        "missing": missing_nested,
+                    })
+                    pending.append(f"{aid}:{kind}_evidence_integrity_pending")
+            elif nested:
+                evidence_integrity.append({
+                    "asset_id": aid, "review": kind,
+                    "evidence_ref": str(evidence_path),
+                    "status": "malformed_nested_evidence",
+                })
+                pending.append(f"{aid}:{kind}_evidence_integrity_pending")
     return {"schema": "medical_animation_asset_check/v1", "status": "blocked" if pending else "passed",
             "manifest": str(manifest.resolve()), "assets": len(assets), "shots": len(shots),
+            "used_asset_ids": sorted(used_ids), "unused_asset_ids": sorted(set(assets) - used_ids),
+            "evidence_integrity": evidence_integrity,
+            "administrative_status": "continue_with_review_queue" if pending else "ready_for_scene_review",
             "pending": pending, "domain_quality_approved": False,
             "note": "Checks declared coverage and review references only; inspect actual artwork and rendered frames."}
 

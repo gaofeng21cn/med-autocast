@@ -291,6 +291,20 @@ def audit(project: Path, score_path: Path | None = None) -> dict:
     if duration and previous_end > duration + 0.02:
         debts.append(debt("score_exceeds_duration", "镜头尾部超出 Score duration", owner="media-production"))
 
+    # These findings locate material for a director or visual reviewer. They
+    # are not confirmed defects because this command has not watched source
+    # frames or normal-speed motion. Keep them separate from structural debts
+    # (invalid timing, missing recipe data, or overlaps) so a report cannot
+    # imply that a large count of locators is a large count of broken shots.
+    locator_codes = {
+        "motion_phase_evidence_incomplete", "long_motion_dead_zone",
+        "shot_has_no_named_events", "repeated_shot_recipe",
+        "repeated_event_signature", "representative_shot_unregistered",
+        "motion_direction_low_diversity", "carrier_continuity_unreported",
+        "transition_intent_unreported",
+    }
+    review_locators = [item for item in debts if item.get("code") in locator_codes]
+    debts = [item for item in debts if item.get("code") not in locator_codes]
     repeated_count = sum(max(0, len(ids) - 1) for ids in signatures.values())
     return {
         "schema": SCHEMA,
@@ -307,8 +321,10 @@ def audit(project: Path, score_path: Path | None = None) -> dict:
         "representative_shot": representative,
         "shots": per_shot,
         "quality_debt": debts,
+        "review_locators": review_locators,
         "summary": {
             "quality_debt_count": len(debts),
+            "review_locator_count": len(review_locators),
             "blocking_debt_count": 0,
             "next_owner_stages": sorted({item["owner_stage"] for item in debts}),
             "progress_first": True,

@@ -65,6 +65,27 @@ class AnimationWorkflowTests(unittest.TestCase):
         self.assertEqual(report['status'], 'passed')
         self.assertFalse(report['domain_quality_approved'])
 
+    def test_missing_nested_review_evidence_is_downgraded(self):
+        evidence = json.loads((self.root / 'review.json').read_text())
+        evidence['evidence'] = ['qa/old-contact-sheet.jpg']
+        (self.root / 'review.json').write_text(json.dumps(evidence))
+        report = self.check()
+        self.assertEqual(report['status'], 'blocked')
+        self.assertTrue(report['evidence_integrity'])
+        self.assertTrue(any('evidence_integrity_pending' in item for item in report['pending']))
+        self.assertEqual(report['administrative_status'], 'continue_with_review_queue')
+
+    def test_unused_inventory_candidate_does_not_block_current_shot(self):
+        unused = dict(self.asset, asset_id='unused', status='pending_review',
+                      visual_review={'status': 'pending'}, medical_review={'status': 'pending'})
+        path = self.root / 'assets.json'
+        path.write_text(json.dumps({'schema': 'medical_animation_assets/v1',
+            'assets': [self.asset, unused], 'shots': [{'shot_id': 'B01', 'asset_ids': ['pituitary']}]}))
+        report = check_assets(path)
+        self.assertEqual(report['status'], 'passed')
+        self.assertEqual(report['used_asset_ids'], ['pituitary'])
+        self.assertEqual(report['unused_asset_ids'], ['unused'])
+
     def test_pending_and_rejected_assets_block(self):
         self.asset['status'] = 'pending_review'
         self.assertEqual(self.check()['status'], 'blocked')

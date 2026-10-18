@@ -14,6 +14,8 @@ from reclassify_quality_debt import (  # noqa: E402
     classify_motion_locator,
     json_hash,
     load_actual_asset_usage,
+    validate_actual_usage,
+    classify_current_asset_review,
     source_binding,
 )
 
@@ -116,6 +118,59 @@ class ReclassifyQualityDebtTests(unittest.TestCase):
             self.assertFalse(diagnostics)
             self.assertEqual(usage[("s", "e")]["shots"]["B01"]["used_asset_ids"], ["drawn"])
             self.assertEqual(usage[("s", "e")]["coverage_method"], "source_trace")
+
+    def test_asset_queue_counts_distinguishes_manifest_and_shot_declarations(self):
+        from reclassify_quality_debt import asset_queue_counts
+        result = asset_queue_counts({"declared"}, {"declared", "mounted"}, {"declared"},
+                                    {"shots": {}}, ["declared:pending"], {})
+        self.assertEqual(result["manifest_assets"], 2)
+        self.assertEqual(result["declared_shot_assets"], 1)
+        self.assertEqual(result["mounted_only_assets"], 1)
+
+    def test_actual_usage_mismatch_is_diagnostic_and_unknown_ids_are_excluded(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            project = root / "productions/s/e/v2"
+            project.mkdir(parents=True)
+            score = {"shots": [{"id": "s01"}]}
+            manifest = {"assets": [{"asset_id": "known"}]}
+            usage = {"project": "productions/s/e/v2", "shots": {
+                "s01": {"used_asset_ids": ["known", "ghost"]},
+                "missing": {"used_asset_ids": ["known"]},
+            }}
+            checked, diagnostics = validate_actual_usage(usage, root, project, manifest, score)
+            self.assertIsNotNone(checked)
+            self.assertEqual(checked["shots"]["s01"]["used_asset_ids"], ["known"])
+            self.assertTrue(any(item["code"] == "actual_usage_shot_unmatched" for item in diagnostics))
+            self.assertTrue(any(item["code"] == "actual_usage_asset_unmatched" for item in diagnostics))
+
+    def test_current_asset_review_requires_current_hashes_and_readable_evidence(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            project = Path(tmp)
+            source = project / "piece.png"
+            source.write_bytes(b"asset")
+            evidence = project / "frame.png"
+            evidence.write_bytes(b"frame")
+            binding = {"score_sha256": "score", "source_sha256": "source"}
+            record = {
+                "series": "s", "episode": "e", "project": str(project),
+                "shot_id": "s01", "asset_id": "piece",
+                "score_sha256": "score", "source_sha256": "source",
+                "asset_sha256": hashlib.sha256(source.read_bytes()).hexdigest(),
+                "decision": "not_a_defect", "reason": "当前纸片与动作范围一致。",
+                "evidence": {"frames": [{"path": str(evidence),
+                                           "sha256": hashlib.sha256(evidence.read_bytes()).hexdigest()}]},
+            }
+            result = classify_current_asset_review([record], "s", "e", project,
+                {"asset_id": "piece", "path": "piece.png"}, binding,
+                {"s01": {"used_asset_ids": ["piece"]}}, project)
+            self.assertEqual(result["status"], "reviewed_not_defect")
+            stale = dict(record, source_sha256="stale")
+            result = classify_current_asset_review([stale], "s", "e", project,
+                {"asset_id": "piece", "path": "piece.png"}, binding,
+                {"s01": {"used_asset_ids": ["piece"]}}, project)
+            self.assertEqual(result["status"], "scene_review_required")
+            self.assertTrue(any(item["code"] == "asset_review_stale_or_unbound" for item in result["diagnostics"]))
 
 
 if __name__ == "__main__":

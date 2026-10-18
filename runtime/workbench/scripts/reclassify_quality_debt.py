@@ -278,6 +278,35 @@ def _review_evidence(record: dict, review_base: Path | None, project: Path,
     evidence = record.get("evidence")
     if not isinstance(evidence, dict):
         return False, [{"code": "asset_review_evidence_missing"}]
+    # Current-scene evidence belongs to the current rendered candidate, not
+    # merely to any readable historic MP4. Updating the top-level source SHA
+    # cannot turn a review of an old render into a review of the current one.
+    try:
+        current = json.loads((project / "out/current.json").read_text(encoding="utf-8"))
+        current_ref = current.get("path")
+        if not isinstance(current_ref, str) or not current_ref:
+            raise ValueError("current render has no video path")
+        current_path = Path(current_ref)
+        if not current_path.is_absolute():
+            current_path = project / current_path
+        current_hash = sha256(current_path, cache)
+        if not current_hash or (current.get("sha256") and current["sha256"] != current_hash):
+            raise ValueError("current render is unreadable or does not match its manifest SHA")
+    except (OSError, ValueError, TypeError, AttributeError) as exc:
+        return False, [{"code": "asset_review_current_render_unverified", "detail": str(exc)}]
+    video_ref = evidence.get("video_path")
+    if not isinstance(video_ref, str) or not video_ref:
+        return False, [{"code": "asset_review_current_video_evidence_missing"}]
+    video_candidates = [Path(video_ref)]
+    if not video_candidates[0].is_absolute():
+        video_candidates = [(review_base or Path.cwd()) / video_ref, project / video_ref]
+    evidence_video = next((path.resolve() for path in video_candidates if path.is_file()), None)
+    evidence_video_hash = sha256(evidence_video, cache) if evidence_video else None
+    if evidence_video_hash != current_hash:
+        return False, [{"code": "asset_review_video_not_current", "evidence_video_path": video_ref,
+                        "evidence_video_sha256": evidence_video_hash,
+                        "current_video_sha256": current_hash,
+                        "detail": "旧候选证据只可交模型判断未变区间继承，不能自动批准当前场景。"}]
     refs = []
     for key in ("video_path", "frames", "source_refs"):
         value = evidence.get(key)

@@ -151,6 +151,13 @@ class ReclassifyQualityDebtTests(unittest.TestCase):
             source.write_bytes(b"asset")
             evidence = project / "frame.png"
             evidence.write_bytes(b"frame")
+            (project / "out").mkdir()
+            current_video = project / "out/current.mp4"
+            current_video.write_bytes(b"current-video")
+            current_hash = hashlib.sha256(current_video.read_bytes()).hexdigest()
+            (project / "out/current.json").write_text(json.dumps({
+                "path": str(current_video), "sha256": current_hash,
+            }), encoding="utf-8")
             binding = {"score_sha256": "score", "source_sha256": "source"}
             record = {
                 "series": "s", "episode": "e", "project": str(project),
@@ -158,7 +165,8 @@ class ReclassifyQualityDebtTests(unittest.TestCase):
                 "score_sha256": "score", "source_sha256": "source",
                 "asset_sha256": hashlib.sha256(source.read_bytes()).hexdigest(),
                 "decision": "not_a_defect", "reason": "当前纸片与动作范围一致。",
-                "evidence": {"frames": [{"path": str(evidence),
+                "evidence": {"video_path": str(current_video), "video_sha256": current_hash,
+                             "frames": [{"path": str(evidence),
                                            "sha256": hashlib.sha256(evidence.read_bytes()).hexdigest()}]},
             }
             result = classify_current_asset_review([record], "s", "e", project,
@@ -171,6 +179,20 @@ class ReclassifyQualityDebtTests(unittest.TestCase):
                 {"s01": {"used_asset_ids": ["piece"]}}, project)
             self.assertEqual(result["status"], "scene_review_required")
             self.assertTrue(any(item["code"] == "asset_review_stale_or_unbound" for item in result["diagnostics"]))
+
+            old_video = project / "out/old.mp4"
+            old_video.write_bytes(b"old-video")
+            old_evidence = dict(record, evidence={
+                "video_path": str(old_video),
+                "video_sha256": hashlib.sha256(old_video.read_bytes()).hexdigest(),
+            })
+            # Both files exist and all top-level current hashes match, but a
+            # valid old candidate SHA cannot approve the current scene.
+            result = classify_current_asset_review([old_evidence], "s", "e", project,
+                {"asset_id": "piece", "path": "piece.png"}, binding,
+                {"s01": {"used_asset_ids": ["piece"]}}, project)
+            self.assertEqual(result["status"], "scene_review_required")
+            self.assertTrue(any(item["code"] == "asset_review_video_not_current" for item in result["diagnostics"]))
 
 
 if __name__ == "__main__":

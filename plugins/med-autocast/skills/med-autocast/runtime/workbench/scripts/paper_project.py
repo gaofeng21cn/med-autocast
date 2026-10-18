@@ -477,8 +477,41 @@ def retime(a):
         ]
         + [receipt["duration"]]
     )
+    old_shots_by_id = {str(s.get("id")): s for s in old_score.get("shots", [])}
     for i, s in enumerate(score["shots"]):
         s.update(start=cuts[i], end=cuts[i + 1])
+        # A newly synthesized take can be shorter or longer than the previous
+        # voice.  Shot-local event times must follow that change; leaving the
+        # old offsets in place is what made retime reject otherwise usable
+        # narration with events beyond the new shot end.  Preserve the event's
+        # relative position inside its shot and keep the event shape (scalar
+        # or {time}/{at} object) intact.
+        old_shot = old_shots_by_id.get(str(s.get("id")))
+        old_span = (float(old_shot.get("end", 0)) - float(old_shot.get("start", 0))) if old_shot else 0.0
+        new_span = float(s.get("end", 0)) - float(s.get("start", 0))
+        if old_shot and old_span > 0 and new_span >= 0 and abs(old_span - new_span) > 1e-9:
+            ratio = new_span / old_span
+            events = s.get("events") or {}
+            adjusted = {}
+            for name, raw in events.items():
+                if isinstance(raw, dict):
+                    value_key = "time" if "time" in raw else "at" if "at" in raw else None
+                    if value_key is None:
+                        adjusted[name] = raw
+                        continue
+                    value = raw.get(value_key)
+                    try:
+                        copied = dict(raw)
+                        copied[value_key] = round(float(value) * ratio, 6)
+                        adjusted[name] = copied
+                    except (TypeError, ValueError):
+                        adjusted[name] = raw
+                else:
+                    try:
+                        adjusted[name] = round(float(raw) * ratio, 6)
+                    except (TypeError, ValueError):
+                        adjusted[name] = raw
+            s["events"] = adjusted
     score["duration"] = receipt["duration"]
     # Editorial line breaks survive voice edits. Retiming is only a time proposal.
     prior = p / "audio/previous-narration_beats.json"
@@ -517,10 +550,19 @@ def retime(a):
         # time window or report all approved words covered by that subset.
         caption_report['complete_text_check']['text_complete'] = False
     score["cues"] = cues
+    def event_time(value):
+        if isinstance(value, dict):
+            value = value.get("time", value.get("at", 0))
+        try:
+            return float(value)
+        except (TypeError, ValueError):
+            return 0.0
+
     overflow = [
         s["id"]
         for s in score["shots"]
-        if max(s["events"].values(), default=0) > s["end"] - s["start"]
+        if max((event_time(value) for value in (s.get("events") or {}).values()), default=0)
+        > s["end"] - s["start"]
     ]
     save(p / "score.proposed.json", score)
     if overflow:
@@ -539,6 +581,7 @@ def retime(a):
             "caption_status": "draft",
             "caption_breaks": "complete_editorial_breaks_or_full_text_rebuild",
             "caption_proposal": caption_report,
+            "event_retiming": "scaled_to_new_shot_spans",
             "narration_text_changes_need_new_audio": source_text_changes,
             "source_beats_without_audio": source_without_audio,
             "reference_score": str(reference) if reference else None,

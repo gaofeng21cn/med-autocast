@@ -1,7 +1,8 @@
 import type { Camera, Point, Pose } from "./types";
 import { clamp, mix, smooth } from "./motion.ts";
 
-export type Key<T> = { time: number; value: T; ease?: "linear" | "smooth" | "hold" };
+// Ease belongs to the segment LEAVING this key, unlike upstream act()'s arrival key.
+export type Key<T> = { time: number; value: T; ease?: "linear" | "smooth" | "hold" | "in" | "out" };
 // A track is compiled once; sampling has no frame history and supports reverse seeks.
 export function track<T extends Record<string, number>>(keys: readonly Key<T>[]) {
   if (!keys.length) throw Error("轨道需要至少一个关键帧");
@@ -13,7 +14,8 @@ export function track<T extends Record<string, number>>(keys: readonly Key<T>[])
     if (i === list.length - 1) return { ...list[i].value };
     const a = list[i], b = list[i + 1];
     const p = clamp((t - a.time) / (b.time - a.time));
-    const q = a.ease === "hold" ? 0 : a.ease === "linear" ? p : smooth(p);
+    const q = a.ease === "hold" ? 0 : a.ease === "linear" ? p
+      : a.ease === "in" ? p ** 3 : a.ease === "out" ? 1 - (1 - p) ** 3 : smooth(p);
     return Object.fromEntries(Object.keys(a.value).map(k =>
       [k, mix(a.value[k], b.value[k], q)])) as T;
   };

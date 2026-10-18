@@ -13,6 +13,10 @@ metadata:
 
 整季排期使用 `scripts/build_episode_review_queue.py --workspace <工作台>` 从当前登记生成逐集证据队列；随后分批运行音频边界/波形 lineage 工具，并逐集完成语义审片与修后回看。队列只负责定位与分派，不打质量分、不签发通过，也不让单集缺项阻断其他集。
 
+长时间全季优化必须文件化恢复：每集按 `retime → build → preview → mix → render → package` 写回阶段回执，使用 `scripts/rebuild_current_episodes.py` 的 `summary.json` 记录完成/失败集合。中断后先读取最近完整回执、`out/current.json`、当前 Score 与 publish manifest，再从最深未完成阶段继续；不重复生成已绑定的旁白，不用旧版本目录或修改时间猜当前版本。五小时级批处理的经验是：批次只负责推进和绑定，动作、表意、段首声音和医学质量仍必须逐集记录。
+
+新集先看真实道具状态图和本集代表动作，再看整集 animatic；其他独立工作继续。resolve_motion_audit 只读导出声明，不写动作证据或宣布修好；动作问题回本集导演/实现。方法见 [纸剧场制作方法适配](../../../runtime/workbench/docs/42_paper-collage-mv制作方法适配.md)，复用技法不统一全季故事。
+
 默认从[纸剧场模块](../../../runtime/workbench/templates/animation/paper_theatre/README.md)开始；先保留系列基线，再推进内容、导演、素材、动画与剪辑审片。单集锁定源码版本和依赖，已有片不随模板升级自动改写。通用纸件/动作不持有疾病或品牌；医生身份、授权声音、品牌露出归目标档案。
 
 逐镜可独立预览，返修后放回整片检查邻接关系；构建后才用既有渲染器导出。时间以单集 `score.json` 为源，画面与混音共享命名事件。技术制作、有限采样、全片动态、听感、医学终审分开交付。职责和路径见[模块架构](../../../runtime/workbench/docs/19_纸剧场模块架构与镜头打磨.md)。

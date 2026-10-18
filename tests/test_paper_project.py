@@ -338,7 +338,7 @@ class ProjectTests(unittest.TestCase):
             pp.retime(args)
         score = pp.read(p / "score.json")
         self.assertEqual([q["text"] for q in score["cues"]], ["第一句。", "第二句。"])
-        self.assertEqual(score["shots"][0]["events"], {"contact": 2})
+        self.assertEqual(score["shots"][0]["events"], {"contact": 2.4})
         # Real production retries used the same padded voice interval repeatedly.
         # The second call used to move subtitles again despite unchanged media.
         pp.retime(args)

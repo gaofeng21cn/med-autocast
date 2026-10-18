@@ -57,17 +57,35 @@ def run_stage(workspace: Path, project: Path, stage: str, extra: list[str] | Non
     return result
 
 
-def rebuild(workspace: Path, series: str, episode: str, project: Path, review_root: Path) -> dict:
+def rebuild(workspace: Path, series: str, episode: str, project: Path, review_root: Path,
+            *, narration_only: bool = False, media_only: bool = False) -> dict:
     stages: list[dict] = []
     preview_dir = review_root / series / episode / "preview"
-    sequence = [
+    try:
+        project_config = json.loads((project / "project.json").read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        project_config = {}
+    voice_ref = project_config.get("voice", "audio/narration-normalized.wav")
+    voice_path = Path(voice_ref)
+    if not voice_path.is_absolute():
+        voice_path = project / voice_path
+    # A previous cleanup removed the source narration WAVs while leaving the
+    # beat manifest and final mix. Recreate the current registered voice first
+    # so retime/build/mix/render all bind to a real source take chain.
+    narration_stage = [
+        ("narrate", ["--force"]),
+    ] if not voice_path.is_file() else []
+    if narration_only:
+        sequence = narration_stage
+    else:
+        sequence = ([] if media_only else narration_stage) + [
         ("retime", []),
         ("build", []),
         ("preview", ["--neighbors", "--output", str(preview_dir)]),
         ("mix", []),
         ("render", []),
         ("package", []),
-    ]
+        ]
     for stage, extra in sequence:
         result = run_stage(workspace, project, stage, extra)
         stages.append(result)
@@ -93,6 +111,7 @@ def rebuild(workspace: Path, series: str, episode: str, project: Path, review_ro
         "series": series, "episode": episode, "project": str(project),
         "stages": stages,
         "completed_stages": [row["stage"] for row in stages if row["status"] == "completed"],
+        "narration_regenerated": any(row["stage"] == "narrate" and row["status"] == "completed" for row in stages),
         "failed_stage": next((row["stage"] for row in stages if row["status"] == "failed"), None),
         "current": {"pointer": str(pointer), "path": str(current_path) if current_path else None,
                     "sha256": sha(current_path) if current_path else None},
@@ -111,9 +130,15 @@ def main() -> None:
     parser.add_argument("--series", action="append", default=[])
     parser.add_argument("--episode", action="append", default=[])
     parser.add_argument("--workers", type=int, default=2)
+    parser.add_argument("--narration-only", action="store_true",
+                        help="只补齐缺失的当前旁白源轨，不改动画或交付")
+    parser.add_argument("--media-only", action="store_true",
+                        help="假定当前旁白已存在，只执行 retime 到 package")
     parser.add_argument("--review-root", type=Path,
                         default=Path("work/audit-20261014/rebuild-20261015"))
     args = parser.parse_args()
+    if args.narration_only and args.media_only:
+        parser.error("--narration-only 与 --media-only 不能同时使用")
     workspace = args.workspace.resolve()
     review_root = args.review_root if args.review_root.is_absolute() else workspace / args.review_root
     config = yaml.safe_load((workspace / "workbench.yaml").read_text(encoding="utf-8")) or {}
@@ -128,7 +153,8 @@ def main() -> None:
                 jobs.append((series, episode, (workspace / row["project"]).resolve()))
     review_root.mkdir(parents=True, exist_ok=True)
     with concurrent.futures.ThreadPoolExecutor(max_workers=max(1, args.workers)) as pool:
-        futures = {pool.submit(rebuild, workspace, series, episode, project, review_root): (series, episode)
+        futures = {pool.submit(rebuild, workspace, series, episode, project, review_root,
+                                narration_only=args.narration_only, media_only=args.media_only): (series, episode)
                    for series, episode, project in jobs}
         results = []
         for future in concurrent.futures.as_completed(futures):

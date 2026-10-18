@@ -1,0 +1,27 @@
+{
+  "fps": 24,
+  "duration": 12,
+  "style": {"styleId": "paper_collage", "appliedStyleId": "paper_collage", "renderer": "canvas2d"},
+  "signature_shot": "packing",
+  "cues": [],
+  "sounds": [
+    {"shot": "packing", "event": "check", "kind": "slide"},
+    {"shot": "packing", "event": "grip", "kind": "clip"},
+    {"shot": "packing", "event": "stowed", "kind": "slide"},
+    {"shot": "packing", "event": "closed", "kind": "fold"}
+  ],
+  "shots": [{
+    "id": "packing", "title": "出门前，再核对一次", "start": 0, "end": 12,
+    "events": {"check": 0.7, "notice": 1.6, "turn": 2.4, "grip": 3.6, "handoff": 4.8, "stowed": 5.8, "closed": 7.3, "lift": 8.2, "ready": 9.3},
+    "shot_recipe": {
+      "audience_read": "检查袋内物件后，把桌边药板带上，提袋准备出门。只演复诊准备。",
+      "visual_anchor": "同一张药板从桌边经双手进入资料袋，袋口始终真实遮住内件。",
+      "primary_motion": "看袋—转身—取药板—胸前交接—放入—压口—提袋准备出门。",
+      "motion_arc": "检查后停顿才转身，接触后物件随手；入袋后松手再提袋，手与提手保持连接，袋子完整离桌。"
+    },
+    "hold_reason": "发现与胸前交接各停一下，入袋后留出观察结果的时间；取放与停顿不均分。",
+    "carrier": "同一空间内同一袋与药板，无跨镜承接假设。",
+    "transition": "单一连续镜头，提袋后回到完整空间，准备出门，不使用盖屏转场。"
+  }],
+  "review": {"continuous_motion": "pending", "full_listening": "pending", "medical_review": "not_applicable_technical_study"}
+}

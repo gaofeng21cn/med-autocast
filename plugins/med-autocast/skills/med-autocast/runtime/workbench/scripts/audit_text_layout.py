@@ -70,7 +70,11 @@ process.stdout.write(JSON.stringify(rows));
             "kind_counts": dict(Counter(c["kind"] for c in cases)), "episodes": episodes, "cases": cases,
             "note": "相交是定位线索；纸上标题、独立题注、操作叠压与真实缺陷须看原尺寸画面区分。无疑点仅指当前抽样，不代表全时间线通过。"}
     (output / "report.json").write_text(json.dumps(data, ensure_ascii=False, indent=2)+"\n")
-    make_sheets(cases, output)
+    sheets_generated = make_sheets(cases, output)
+    data["sheets_generated"] = sheets_generated
+    # Crop sheets are optional visual aids.  Keep the structured frame/rect
+    # report usable when Pillow is not installed in a minimal local runtime.
+    (output / "report.json").write_text(json.dumps(data, ensure_ascii=False, indent=2)+"\n")
     lines = ["# 文字布局全季抽样复查", "", data["note"], "",
              f"登记单集 {len(episodes)}；缺预览 {len(missing)}；待目视归类 {len(cases)} 组。", "",
              "| 集数 | 主视图 | 检查帧 | 疑点组 | 状态 |", "| --- | --- | ---: | ---: | --- |"]
@@ -80,7 +84,10 @@ process.stdout.write(JSON.stringify(rows));
     print(json.dumps({k: data[k] for k in ("episodes_checked","missing_previews","candidate_groups","kind_counts")}, ensure_ascii=False))
 
 def make_sheets(cases, output):
-    from PIL import Image, ImageDraw, ImageFont
+    try:
+        from PIL import Image, ImageDraw, ImageFont
+    except ModuleNotFoundError:
+        return False
     candidates = ["/System/Library/Fonts/STHeiti Light.ttc", "C:/Windows/Fonts/msyh.ttc",
                   "/usr/share/fonts/opentype/noto/NotoSansCJK-Regular.ttc",
                   "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf"]
@@ -109,6 +116,7 @@ def make_sheets(cases, output):
         sheet=Image.new("RGB",(1240,300*((len(batch)+1)//2)),"#dedede")
         for i,tile in enumerate(batch):sheet.paste(tile,((i%2)*620,(i//2)*300))
         sheet.save(output/f"sheet-{offset//12+1:02d}.jpg",quality=94)
+    return True
 
 def main():
     parser=argparse.ArgumentParser(description=__doc__)

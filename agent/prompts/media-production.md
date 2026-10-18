@@ -49,3 +49,7 @@
 独立 `mac-media-assets` 是默认发现入口。先用 `media_asset_library query --query <视觉锚点>` 或 native `assets --library external` 检索，再实际查看 `resolved_payloads` 的原图/动作与本库 Skill。按本集故事决定复用、适配、另找合法素材或 ImageGen 新创，不设复用率，不让已有素材决定故事、构图、风格或镜头数。库缺失、无匹配或旧素材不合适时继续新创与其他工作，质量债随交接保留。实际取用用 `media_asset_library use --project <单集路径> --id <精确外库ID>`，沿用工作台版本包与 uses，复制后当前镜头重新审查；作者范围仍按作者档案约束。安装/发现方法见 `docs/media-assets-integration.md`。
 
 按中文对象、动作和叙事用途检索外库，使用 `collections` 查看装配与事件关系，查看真实小样后决定是否 `use-collection`。集合不固定故事与构图，欠项保留债务继续新创。部件bounds分别使用，不把单层总览当可配准分层。完整方法由资产策展Skill与随包 docs/32_资产发现与可重组事件SOP.md 提供。
+
+### 长批次恢复与初稿证据
+
+五小时级全季优化按单集保存 `retime/build/preview/mix/render/package` 回执和当前 Score/MP4 指针。中断后先读最近完整回执、当前 `out/current.json`、mix lineage 与 publish manifest，从最深未完成阶段继续；不重复生成已经绑定的旁白，不用旧目录或修改时间猜当前版本。第一次 animatic 后查看实际动作，再决定本集如何继续；resolve_motion_audit 仅只读汇集声明。按 runtime/workbench/docs/42_paper-collage-mv制作方法适配.md 先做道具各状态与局部完整小戏，用接触锚点、不同缓动和停顿落实导演；不靠字段/动作量清零扩展全季。

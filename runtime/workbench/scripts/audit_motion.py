@@ -102,6 +102,35 @@ def infer_phases(points: list[tuple[str, float, str]], recipe: Any) -> dict[str,
     return phases
 
 
+def explicit_phase_evidence(shot: dict, recipe: Any) -> dict[str, list[str]]:
+    """Read director evidence separately from runtime event names.
+
+    Older scores often named only a physical contact point (for example
+    ``page_contact`` and ``read_hold``), while the source animation already
+    contained the complete prepare/action/read/settle arc.  This layer records
+    that interpretation without pretending metadata is a new rendered frame.
+    """
+    phases: dict[str, list[str]] = {phase: [] for phase in PHASES}
+    mapping = shot.get("event_phases")
+    if isinstance(mapping, dict):
+        for name, values in mapping.items():
+            values = values if isinstance(values, list) else [values]
+            for phase in PHASES:
+                if phase in values:
+                    phases[phase].append(str(name))
+    evidence = shot.get("phase_evidence")
+    if isinstance(evidence, dict):
+        for phase in PHASES:
+            if evidence.get(phase):
+                phases[phase].append("director_evidence")
+    arc = shot.get("motion_arc")
+    if isinstance(arc, str):
+        for phase, pattern in PHASES.items():
+            if pattern.search(arc):
+                phases[phase].append("motion_arc")
+    return phases
+
+
 def debt(code: str, detail: str, *, shot: str | None = None, owner: str = "story-directing", **extra: Any) -> dict:
     item = {
         "code": code,
@@ -139,17 +168,26 @@ def audit(project: Path, score_path: Path | None = None) -> dict:
         recipe_key = canonical(recipe) if recipe else ""
         if recipe_key:
             signatures[recipe_key].append(shot_id)
-        event_key = canonical([name for name, _time, _phase in points])
+        # Keep raw event order visible even when prose differs. This locates
+        # possible reuse; it never decides whether the stories are identical.
+        event_key = canonical([name for name, _time, _phase in points]) if points else ""
         if event_key:
             event_signatures[event_key].append(shot_id)
         text = recipe_text(recipe)
         for token in DIRECTION_TOKENS.findall(text):
             directions[token.lower()] += 1
         phases = infer_phases(points, recipe)
+        legacy_generated = (score.get("motion_review") or {}).get("schema") == "motion_director_evidence/v1"
+        explicit = {phase: [] for phase in PHASES} if legacy_generated else explicit_phase_evidence(shot, recipe)
+        for phase in phases:
+            phases[phase].extend(explicit[phase])
         missing_phases = [phase for phase in ("prepare", "action", "reaction", "settle") if not phases[phase]]
         if isinstance(recipe, dict):
             for field in REQUIRED_RECIPE_FIELDS:
-                if not str(recipe.get(field, "")).strip():
+                value = recipe.get(field, "")
+                if field == "motion_arc" and not str(value).strip():
+                    value = shot.get("motion_arc", "")
+                if not str(value).strip():
                     debts.append(debt("shot_recipe_missing_field", f"缺少导演交接字段 {field}", shot=shot_id))
         elif not text:
             debts.append(debt("shot_recipe_missing", "镜头没有自然语言导演交接，无法判断观看任务与动作责任", shot=shot_id))
@@ -168,6 +206,13 @@ def audit(project: Path, score_path: Path | None = None) -> dict:
             anchors = [0.0, *event_times, span]
             gaps = [round(b - a, 3) for a, b in zip(anchors, anchors[1:]) if b >= a]
         max_gap = max(gaps, default=span)
+        hold_review = shot.get("motion_quality_review") if isinstance(shot.get("motion_quality_review"), dict) else {}
+        hold_reason = shot.get("hold_reason") or (recipe.get("hold_reason") if isinstance(recipe, dict) else None)
+        # Keep long intervals visible even with a declared reading/settle
+        # responsibility; declarations are context for watching the scene.
+        intentional_hold = bool(not legacy_generated and hold_reason and hold_review.get("status") == "intentional_reading_hold")
+        # We have read no implementation or frames. A declaration cannot remove
+        # a locating interval or certify its actual pacing.
         if span >= 6 and max_gap >= max(2.5, span * 0.45):
             debts.append(debt(
                 "long_motion_dead_zone",
@@ -191,6 +236,14 @@ def audit(project: Path, score_path: Path | None = None) -> dict:
             "max_event_gap": round(max_gap, 3),
             "phase_coverage": {phase: bool(values) for phase, values in phases.items()},
             "missing_phases": missing_phases,
+            "phase_evidence_source": "director_metadata" if any(explicit.values()) else "score_event_names",
+            "evidence_scope": "score_declarations_only_no_frame_observation",
+            "legacy_auto_enriched": legacy_generated,
+            "hold_review": {
+                "status": hold_review.get("status") if hold_review else None,
+                "reason": hold_reason,
+                "intentional": intentional_hold,
+            },
         })
 
     for key, ids in signatures.items():
@@ -213,6 +266,11 @@ def audit(project: Path, score_path: Path | None = None) -> dict:
             "Score 没有登记 signature_shot/representative_shot；本集缺少可先验收的代表镜头入口",
             owner="story-directing",
         ))
+    for shot in shots:
+        explicit_dirs = shot.get("motion_directions")
+        if isinstance(explicit_dirs, list):
+            for token in explicit_dirs:
+                directions[str(token).lower()] += 1
     if len(shots) >= 3 and len(directions) <= 1:
         debts.append(debt(
             "motion_direction_low_diversity",
@@ -228,7 +286,7 @@ def audit(project: Path, score_path: Path | None = None) -> dict:
 
     if shots and not all(has_carrier(shot) for shot in shots):
         debts.append(debt("carrier_continuity_unreported", "至少一个镜头没有登记跨镜承接物，需在邻镜审片确认桌面状态是否连续", owner="story-directing"))
-    if shots and len(shots) > 1 and not any("transition" in shot for shot in shots[1:]):
+    if shots and len(shots) > 1 and not all("transition" in shot for shot in shots[1:]):
         debts.append(debt("transition_intent_unreported", "镜头之间未登记转场/承接意图；允许硬切，但需要导演在邻镜中说明关系", owner="visual-review"))
     if duration and previous_end > duration + 0.02:
         debts.append(debt("score_exceeds_duration", "镜头尾部超出 Score duration", owner="media-production"))

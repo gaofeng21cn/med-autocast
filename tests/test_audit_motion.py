@@ -3,12 +3,52 @@ import tempfile
 import unittest
 from pathlib import Path
 import sys
+import subprocess
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "runtime/workbench/scripts"))
 from audit_motion import audit
 
 
 class MotionAuditTests(unittest.TestCase):
+    def test_declared_holds_and_different_prose_do_not_hide_locating_intervals(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            score = {"duration": 40, "motion_review": {"schema": "motion_director_evidence/v1"}, "shots": []}
+            for i in range(4):
+                score["shots"].append({"id": str(i), "start": i*10, "end": (i+1)*10,
+                    "events": {"contact": 1}, "motion_arc": f"different prose {i}",
+                    "phase_evidence": {phase: {"at": 1} for phase in ["prepare","action","reaction","settle"]},
+                    "hold_reason": "已登记阅读", "motion_quality_review": {"status": "intentional_reading_hold"}})
+            (root / "score.json").write_text(json.dumps(score))
+            report = audit(root)
+            codes = [item["code"] for item in report["quality_debt"]]
+            self.assertEqual(codes.count("long_motion_dead_zone"), 4)
+            self.assertIn("repeated_event_signature", codes)
+            self.assertTrue(all(row["legacy_auto_enriched"] for row in report["shots"]))
+            self.assertTrue(all("reaction" in row["missing_phases"] for row in report["shots"]))
+
+    def test_review_export_does_not_mutate_scores_or_infer_missing_events(self):
+        tool = Path(__file__).resolve().parents[1] / "runtime/workbench/scripts/resolve_motion_audit.py"
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            project = root / "productions/one"; project.mkdir(parents=True)
+            score_path = project / "score.json"
+            original = b'{"shots":[{"id":"one","events":{"contact":1}}]}'
+            score_path.write_bytes(original)
+            (root / "workbench.yaml").write_text("series:\n  s:\n    episodes:\n      e:\n        project: productions/one\n")
+            subprocess.run([sys.executable, str(tool), "--workspace", str(root)], check=True, capture_output=True)
+            report = json.loads((root / "work/review/motion-review-packet.json").read_text())
+            self.assertEqual(score_path.read_bytes(), original)
+            self.assertFalse(report["production_inputs_modified"])
+            self.assertFalse(report["source_code_or_frames_inspected"])
+            row = report["detail"][0]["shots"][0]
+            self.assertEqual(row["events"], {"contact": 1})
+            self.assertEqual(row["declared"], {})
+            # Even an explicitly requested output cannot overwrite a score.
+            result = subprocess.run([sys.executable, str(tool), "--workspace", str(root), "--output", str(score_path)], capture_output=True)
+            self.assertNotEqual(result.returncode, 0)
+            self.assertEqual(score_path.read_bytes(), original)
+
     def test_reports_repeated_recipe_and_missing_phases_without_blocking(self):
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)

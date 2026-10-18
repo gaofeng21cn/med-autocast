@@ -105,15 +105,29 @@ export function textBox(s: Stage, box: Rect, text: string, opts: CardTitleOption
 }
 
 export function cardTitle(s: Stage, w: number, h: number, text: string, opts: CardTitleOptions = {}) {
-  const inset = opts.inset ?? Math.max(14, w * .06), y = opts.y ?? 0;
-  // The safe box is in the very same local coordinates as the paper. A title
-  // near an edge gets only the remaining height, not the whole paper height.
-  // A narrow badge needs horizontal padding, not that same amount removed
-  // vertically. Explicit inset still applies to both axes when requested.
-  const verticalInset = opts.inset ?? Math.max(3, Math.min(inset, h * .08));
-  const halfHeight = Math.max(0, h / 2 - verticalInset - Math.abs(y));
-  return textBox(s, {x: -w / 2 + inset, y: y - halfHeight, w: Math.max(0, w - 2 * inset),
-    h: 2 * halfHeight, name: opts.owner ?? '纸上标题排版区'}, text, {...opts, inset: 0, placement: 'on-paper'});
+  const inset = opts.inset ?? Math.max(14, w * .06);
+  // Build a real vertical safe region instead of centring a box around the
+  // requested baseline.  The old formula made a title near the top edge get a
+  // region only a few pixels high, so actual glyph ascent/descent overflowed
+  // while the paper itself still looked large enough.  The region is clamped
+  // to the paper and remains large enough for the requested line count.
+  // `inset` is primarily a horizontal padding control.  Reusing a large
+  // horizontal inset as vertical padding collapses short tabs (for example a
+  // 245×112 card with inset 52) into an 8px text region and creates a false
+  // overflow even though the card has ample height.
+  const verticalInset = Math.max(3, Math.min(inset, h * .08));
+  const safeTop = -h / 2 + verticalInset;
+  const safeBottom = h / 2 - verticalInset;
+  const requested = opts.size ?? 24;
+  const maxLines = opts.maxLines ?? 2;
+  const desiredHeight = Math.max(28, requested * 1.3 * Math.min(maxLines, 2));
+  const regionHeight = Math.min(Math.max(8, safeBottom - safeTop), desiredHeight);
+  const y = opts.y ?? 0;
+  let top = y - regionHeight / 2;
+  if (top < safeTop) top = safeTop;
+  if (top + regionHeight > safeBottom) top = safeBottom - regionHeight;
+  return textBox(s, {x: -w / 2 + inset, y: top, w: Math.max(0, w - 2 * inset),
+    h: Math.max(8, regionHeight), name: opts.owner ?? '纸上标题排版区'}, text, {...opts, inset: 0, placement: 'on-paper'});
 }
 export function tagLabel(s: Stage, w: number, h: number, text: string, opts: CardTitleOptions = {}) {
   return cardTitle(s, w, h, text, {...opts, size: opts.size ?? 20, color: opts.color ?? '#33504c',

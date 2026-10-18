@@ -108,3 +108,7 @@ python3 runtime/native_helpers/med_autocast.py assets --workspace <workspace> --
 配音修复后先用 `audit_narration_samples` 核对每个源 take 是否完整保留在原始拼接 PCM，再用 `audit_audio_freshness` 核对 source/timing/mix/render/publish 的当前绑定。两者只定位物理截字、旧轨和交接失配，不批准读音、语气或完整听感。发现失配时保留可消费候选并继续独立 Stage，已知旧 MP4 不得当作用户最新版。
 
 `audit_paper_captions` 只读核对完整批准正文与当前字幕并输出独立提案；字幕缺句与声音缺字分开处理。`retime` 按正文和 `beat_id` 保全字幕，不再按旧 cue 中点归镜头后裁切；缺少整段配音时列出缺项并回配音，不臆造时码。数值、范围和词间空格不能在比对中丢失；时间提案与 ASR 均不批准实际同期或听感。
+
+## 五小时级全季优化后的默认生产纪律
+
+手绘拼贴初稿按 runtime/workbench/docs/42_paper-collage-mv制作方法适配.md 推进：同期语义变可见的小戏/科学关系，核心道具先看各状态，有角色才做重心/视线/表情样本；先把本集一段做深再审整集。动作有快慢与停顿，镜头/转场服务事件，不设数量配额或共用导演工厂。resolve_motion_audit 只读导出声明，不补写反应、承接或确认画面。中断按每集真实回执恢复；声明与批量成功不替代连续动态、听感或医学审查。

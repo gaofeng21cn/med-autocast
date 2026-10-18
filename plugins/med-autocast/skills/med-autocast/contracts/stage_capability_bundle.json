@@ -64,6 +64,7 @@
         {"tool_id": "paper_project", "surface": "workbench_tool", "purpose": "检查镜头、素材和邻镜预览；library 只读查询纸件、环境、动作和组件", "effect": "write_when_authorized"},
         {"tool_id": "build_timeline_review", "surface": "workbench_tool", "purpose": "把旁白、字幕和画面放在同一时间轴定位", "effect": "write_when_authorized"},
         {"tool_id": "render_javascript_animation", "surface": "workbench_tool", "purpose": "在正式编码前预览动作和构图", "effect": "write_when_authorized"},
+        {"tool_id": "resolve_motion_audit", "surface": "workbench_tool", "purpose": "汇集现有 Score 声明供真实动作审看；不写 Score、不自动补反应/落定/方向或认证连续性", "effect": "write_when_authorized"},
         {"tool_id": "check_animation_assets", "surface": "workbench_tool", "purpose": "检查素材来源、分层和镜头覆盖", "effect": "read_only"},
         {"tool_id": "animation_lab", "surface": "workbench_tool", "purpose": "按需加载风格方法并实际看原创媒介动作样例；不覆盖现有单集", "effect": "write_when_authorized"},
         {"tool_id": "audit_pronunciation", "surface": "workbench_tool", "purpose": "配音前按具体语境定位注音遗漏，不判定读音正确", "effect": "write_when_authorized"}
@@ -87,6 +88,7 @@
         {"tool_id": "render_edge_tts", "surface": "workbench_tool", "purpose": "无专用声线时的整篇保底旁白", "effect": "generate"},
         {"tool_id": "paper_project", "surface": "workbench_tool", "purpose": "单集制作与返修；library 显式复制精确素材版本、保存图像及代码/动作/声音；init/adopt 选择本集风格与 renderer", "effect": "write"},
         {"tool_id": "render_javascript_animation", "surface": "workbench_tool", "purpose": "统一预览和正式渲染入口", "effect": "write"},
+        {"tool_id": "resolve_motion_audit", "surface": "workbench_tool", "purpose": "汇集现有 Score 声明供真实动作审看；不写 Score、不自动补反应/落定/方向或认证连续性", "effect": "write_when_authorized"},
         {"tool_id": "animation_lab", "surface": "workbench_tool", "purpose": "按需加载风格方法并实际看原创媒介动作样例；不覆盖现有单集", "effect": "write_when_authorized"},
         {"tool_id": "audit_pronunciation", "surface": "workbench_tool", "purpose": "按当前项目定位逐词注音、真实原音与听辨待审范围，不批准实际发音", "effect": "write_when_authorized"},
         {"tool_id": "build_no_music_mix", "surface": "workbench_tool", "purpose": "导出当前旁白与拟音的无BGM审听音轨，保留正式混音", "effect": "write_when_authorized"}
@@ -107,6 +109,7 @@
         {"tool_id": "build_timeline_review", "surface": "workbench_tool", "purpose": "同步查看画面、PCM、SRT和ASR定位", "effect": "write_when_authorized"},
         {"tool_id": "audio_baseline", "surface": "workbench_tool", "purpose": "检测响度异常并定位听审重点", "effect": "write_when_authorized"},
         {"tool_id": "render_javascript_animation", "surface": "workbench_tool", "purpose": "生成固定帧和动作 strip", "effect": "write_when_authorized"},
+        {"tool_id": "resolve_motion_audit", "surface": "workbench_tool", "purpose": "汇集现有 Score 声明供真实动作审看；不写 Score、不自动补反应/落定/方向或认证连续性", "effect": "write_when_authorized"},
         {"tool_id": "animation_lab", "surface": "workbench_tool", "purpose": "按需加载风格方法并实际看原创媒介动作样例；不覆盖现有单集", "effect": "write_when_authorized"},
         {"tool_id": "audit_pronunciation", "surface": "workbench_tool", "purpose": "按当前项目定位逐词注音、真实原音与听辨待审范围，不批准实际发音", "effect": "write_when_authorized"},
         {"tool_id": "build_no_music_mix", "surface": "workbench_tool", "purpose": "导出当前旁白与拟音的无BGM审听音轨，保留正式混音", "effect": "write_when_authorized"}

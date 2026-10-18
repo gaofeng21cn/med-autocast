@@ -22,13 +22,15 @@ export function run(kind) {
  const c=document.createElement('canvas');c.width=800;c.height=600;
  const g=c.getContext('2d');const s=new Stage(g,800,600);let result;
  g.clearRect(0,0,800,600);
- s.group({x:400,y:300,rotation:kind==='rotated'?.24:0,scale:kind==='rotated'?1.4:1},()=>{
+ s.group({x:kind==='offscreen'?-25:400,y:300,rotation:kind==='rotated'?.24:0,scale:kind==='rotated'?1.4:1},()=>{
    if(kind.startsWith('raw-')){
      s.text('读数 mmHg',0,0,27,'#254a48',{align:kind.slice(4),region:{x:-230,y:-50,w:460,h:100},owner:'原始绘字真实边界'});
      result={fits:true};
    }
    else if(kind==='stage-label')result=s.label('纸件与标签共用区域',{x:-125,y:-35,w:250,h:70},{size:26});
    else if(kind==='tiny')result=textBox(s,{x:-18,y:-8,w:36,h:16},'不能裁掉医学文字的后半句',{size:24,minSize:20,maxLines:2});
+   else if(kind==='top')result=cardTitle(s,250,100,'顶部医学标签',{size:26,y:-40});
+   else if(kind==='inset')result=cardTitle(s,245,112,'内分泌检查',{size:26,inset:52});
    else if(kind==='badge')result=cardTitle(s,100,29,'内分泌',{size:18});
    else if(kind==='long')result=cardTitle(s,250,140,'这是需要换行但必须完整保留的中文医学标题',{size:26,minSize:22,maxLines:2});
    else result=cardTitle(s,250,100,'从第一口开始计时',{size:26,minSize:22});
@@ -46,10 +48,12 @@ export function run(kind) {
   try {
     const page=await browser.newPage();await page.setContent('<!doctype html><meta charset=utf-8>');
     await page.addScriptTag({content:bundle.outputFiles[0].text});await page.evaluate(()=>document.fonts.ready);
-    const rows=await page.evaluate(()=>Object.fromEntries(['normal','rotated','long','tiny','badge','stage-label','raw-left','raw-center','raw-right'].map(kind=>[kind,(window as any).Fixture.run(kind)])));
-    for(const kind of ['normal','rotated','long','badge','stage-label','raw-left','raw-center','raw-right']){
+    const rows=await page.evaluate(()=>Object.fromEntries(['normal','rotated','long','tiny','badge','top','inset','offscreen','stage-label','raw-left','raw-center','raw-right'].map(kind=>[kind,(window as any).Fixture.run(kind)])));
+    for(const kind of ['normal','rotated','long','badge','top','inset','stage-label','raw-left','raw-center','raw-right']){
       assert.equal(rows[kind].result.fits,true,kind);assert.ok(rows[kind].ink>0);assert.equal(rows[kind].outside,0,kind);
     }
+    assert.ok(rows.offscreen.bounds.x<0,'offscreen paper labels must leave with their owner');
+    assert.ok(Math.abs(rows.offscreen.bounds.x-(rows.normal.bounds.x-425))<1,'do not clamp text independently of its paper');
     assert.equal(rows.long.result.lines.join(''),'这是需要换行但必须完整保留的中文医学标题');
     assert.equal(rows.tiny.result.lines.join(''),'不能裁掉医学文字的后半句');
     assert.equal(rows.tiny.result.fits,false);assert.equal(rows.tiny.r.size,20);

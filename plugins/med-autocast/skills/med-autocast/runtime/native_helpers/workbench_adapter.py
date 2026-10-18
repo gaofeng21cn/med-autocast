@@ -52,6 +52,10 @@ TOOLS = {
         "write",
         "素材准入后先 --preview 检查定帧与联系表，再执行本地 JS 渲染与合成",
     ),
+    "resolve_motion_audit": (
+        "write",
+        "只读汇集当前 Score 声明为待审材料；不写 Score、不推断反应/落定或批准真实动作",
+    ),
     "transcribe_series_whisper": ("write", "ASR 辅助对齐；不覆盖审定医学文字"),
     "build_episode_timelines": ("write", "审定字幕、节拍和制作单"),
     "queue_h3_shots": ("generate", "显式备选 H3 提交、原任务轮询、官方提示直通"),
@@ -73,7 +77,7 @@ TOOLS = {
 }
 
 
-CANONICAL_TOOLS = {"media_asset_library", "publish_catalog", "animation_lab", "paper_project", "render_narration", "render_series_tts", "configure_voice", "environment_check", "render_javascript_animation", "audit_pronunciation", "audit_audio_freshness", "audit_narration_samples", "audit_paper_captions", "audit_text_layout", "audit_label_contract", "build_no_music_mix"}
+CANONICAL_TOOLS = {"media_asset_library", "publish_catalog", "animation_lab", "paper_project", "render_narration", "render_series_tts", "configure_voice", "environment_check", "render_javascript_animation", "audit_pronunciation", "audit_audio_freshness", "audit_narration_samples", "audit_paper_captions", "audit_text_layout", "audit_label_contract", "build_no_music_mix", "resolve_motion_audit"}
 
 
 def resolve_tool(root: Path, name: str, bundled=False) -> tuple[Path, Path]:

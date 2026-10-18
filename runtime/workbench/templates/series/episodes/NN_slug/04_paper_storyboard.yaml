@@ -18,6 +18,8 @@ shots:
     visual_intent: null
     framing: null
     reading_order: []
+    # 用本镜具体动词描述事情/科学关系；不强制小意外或人物，不统一动作时长。
+    # 道具状态图/重心视线/表情触发/真实光源可附自然语言备注，不是必填字段。
     action_start: null
     action_change: null
     action_result: null

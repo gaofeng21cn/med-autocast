@@ -9,6 +9,7 @@ from pathlib import Path
 import shutil
 import subprocess
 import sys
+import uuid
 from html import escape
 
 BUNDLE = Path(__file__).resolve().parents[1]
@@ -26,26 +27,25 @@ def run(command, project):
     subprocess.run(command, cwd=project, check=True)
 
 
-def create(project):
+def create(project, study='style_lab'):
     if project.exists() and any(project.iterdir()):
         raise ValueError('样例只写入新空目录；不会覆盖现有作品')
     project.mkdir(parents=True, exist_ok=True)
-    for name in ('src','scripts','tests','preproduction','index.html','score.json','asset_manifest.json','package.json','package-lock.json','tsconfig.json','README.md'):
+    for name in ('src','scripts','tests','examples','contracts','preproduction','index.html','score.json','asset_manifest.json','package.json','package-lock.json','tsconfig.json','README.md'):
         source=TEMPLATE/name
         if source.is_dir():
             shutil.copytree(source,project/name,ignore=shutil.ignore_patterns('node_modules','dist','__pycache__'))
         elif source.is_file():
             shutil.copy2(source,project/name)
-    shutil.copy2(TEMPLATE/'examples/style_lab/main.ts',project/'src/main.ts')
-    shutil.copy2(TEMPLATE/'examples/style_lab/score.json',project/'score.json')
-    shutil.copy2(TEMPLATE/'examples/style_lab/TREATMENT.md',project/'TREATMENT.md')
+    for name, destination in [('main.ts','src/main.ts'),('score.json','score.json'),('TREATMENT.md','TREATMENT.md')]:
+        shutil.copy2(TEMPLATE/'examples'/study/name,project/destination)
     save(project/'asset_manifest.json',{'schema':'medical_animation_assets/v1','assets':[],'shots':[]})
     # Existing tests exercise the basic template; the lab still carries a neutral brand file.
     save(project/'brand.json',{'enabled':False,'text':'','ink':'#304c49','accent':'#b97153','paper':'#f3e7cc'})
     html=(project/'index.html').read_text().replace('纸剧场动作样本','MAC 媒介动作实验室')
     html=html.replace('<nav>', '<audio id="voice" src="audio/study.wav" preload="none"></audio><nav>')
     (project/'index.html').write_text(html)
-    (project/'LAB.json').write_text(json.dumps({'kind':'mac-original-style-study','version':'1.0.0','medical_content':False,'renderer':'canvas2d','narration':None,'source':'bundled examples/style_lab','production_quality_approved':False},indent=2)+'\n')
+    (project/'LAB.json').write_text(json.dumps({'kind':'mac-original-style-study','version':'1.0.0','study':study,'medical_content':False,'renderer':'canvas2d','narration':None,'source':f'bundled examples/{study}','production_quality_approved':False},indent=2)+'\n')
 
 
 def build(project):
@@ -69,8 +69,17 @@ def audio(project):
 def capture(project, command):
     score=json.loads((project/'score.json').read_text())
     output=project/'review' if command=='preview' else project/'out/style-study.mp4'
-    if command=='render' and not (project/'audio/study.wav').is_file():audio(project)
-    config={'project_root':str(project),'output':str(output),'entry':'index.html','width':1280,'height':720,
+    # Foley is cheap, local and deterministic; always bind it to the current
+    # Score, including after event edits. This never invokes a narration model.
+    if command=='render':audio(project)
+    # The production renderer protects immutable outputs. For this isolated lab,
+    # render a fresh candidate and replace its one viewing copy only on success.
+    # A failed iteration leaves the previously watchable example intact.
+    render_target=output
+    if command=='render':
+        output.parent.mkdir(parents=True,exist_ok=True)
+        render_target=output.parent/f'.style-study-{uuid.uuid4().hex}.mp4'
+    config={'project_root':str(project),'output':str(render_target),'entry':'index.html','width':1280,'height':720,
         'fps':score['fps'],'audio':str(project/'audio/study.wav')}
     config_path=project/f'{command}-config.json';save(config_path,config)
     runner='preview_local_animation.mjs' if command=='preview' else 'render_local_animation.mjs'
@@ -81,9 +90,16 @@ def capture(project, command):
     result.check_returncode()
     if command=='render':
         receipt=json.loads(result.stdout.strip().splitlines()[-1])
+        os.replace(render_target,output)
+        receipt['output']=str(output)
         receipt['video_sha256']=hashlib.sha256(output.read_bytes()).hexdigest()
         save(project/'out/render-receipt.json',receipt)
     if command=='preview':
+        study=json.loads((project/'LAB.json').read_text()).get('study','style_lab')
+        if study=='followup_bag':
+            props_config={**config,'entry':'index.html?props=1','output':str(output/'props')}
+            save(project/'props-preview-config.json',props_config)
+            run(['node',str(BUNDLE/'scripts/preview_local_animation.mjs'),str(project/'props-preview-config.json')],project)
         report=json.loads((output/'preview.json').read_text())
         cards=[]
         for i,beat in enumerate(score['shots'],1):
@@ -91,6 +107,9 @@ def capture(project, command):
             frame=min(candidates,key=lambda f:abs(f['time']-(beat['start']+(beat['end']-beat['start'])*.75)))
             cards.append(f'<article><a href="index.html?shot={escape(beat["id"])}"><img src="review/{escape(frame["file"])}"><h2>{escape(beat["title"])}</h2></a><p>{escape(beat.get("styleId",beat["id"]))} · Canvas 2D</p><a href="review/strip-s{i}.jpg">动作 strip</a></article>')
         html='''<!doctype html><html lang="zh-CN"><meta charset="utf-8"><title>MAC 媒介动作实验室</title><style>body{margin:32px;background:#ece5d7;color:#304c49;font:16px system-ui}main{max-width:1280px;margin:auto}.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:24px}article{background:#f8f3e8;padding:12px}img{width:100%}h2{font-size:20px}a{color:inherit}</style><main><h1>一粒种子，七种媒介</h1><p>独立原创技法研究。点击画面查看完整动作；它是可复用代码示例，不是医学成片或艺术批准。</p><p><a href="index.html">整片播放器</a> · <a href="out/style-study.mp4">52 秒 MP4</a> · <a href="TREATMENT.md">导演稿</a> · <a href="score.json">共用时间轴</a></p><div class="grid">'''+''.join(cards)+'</div></main></html>'
+        if study=='followup_bag':
+            html=html.replace('一粒种子，七种媒介','出门前，再核对一次').replace('52 秒 MP4','12 秒 MP4')
+            html=html.replace('<div class="grid">','<p><a href="index.html?props=1">道具状态图</a> · <a href="review/props/contact.jpg">状态图预览</a></p><div class="grid">')
         (project/'gallery.html').write_text(html)
 
 
@@ -99,6 +118,7 @@ def main():
     p.add_argument('command',choices=['list','create','build','audio','preview','render'])
     p.add_argument('--project',type=Path)
     p.add_argument('--complete',action='store_true',help='create 后构建、音效、预览和正式渲染')
+    p.add_argument('--study',choices=['style_lab','followup_bag'],default='style_lab',help='材质研究或完整小戏；只用于 create，不覆盖真实单集')
     a=p.parse_args()
     if a.command=='list':
         print((STYLES/'index.json').read_text());return 0
@@ -106,7 +126,7 @@ def main():
     project=a.project.resolve()
     try:
         if a.command=='create':
-            create(project)
+            create(project,a.study)
             if a.complete:
                 build(project);audio(project);capture(project,'preview');capture(project,'render')
         elif not (project/'LAB.json').is_file():

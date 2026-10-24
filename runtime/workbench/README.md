@@ -8,4 +8,6 @@
 
 代码动画的 `audit_motion.py` 是非阻断式动作审片工具，`runtime_receipt.mjs` 由预览/渲染入口写入运行时与输入指纹。两者用于提高初稿和返修可复现性，不替代导演、连续动态、完整听感或医学判断。
 
+初稿前可运行 `scripts/first_draft_preflight.py --project <单集工程> --pretty`，集中定位人物完整性、姿态尺度、复杂对象阅读面积和动画参考接线。它只生成候选/质量债报告，不阻断创作，也不签发视觉、听感、医学或发布通过。
+
 新系列的稳定结构是 `content/<topic_id>/`、`productions/<series_id>/<episode_id>/`、`assets/`、`publish/<series_id>/`；`work/`、`output/`、`tmp/` 是不同生命周期的运行态。旧工作区可以保留历史路径，迁移前必须检索引用并保留恢复指针。

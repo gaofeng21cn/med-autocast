@@ -103,7 +103,7 @@ H3按[调研策略](../../../runtime/workbench/docs/12_H3调研与制作策略.m
 
 提高初版下限靠患者任务、联合导演稿、语境注音、首句/术语小样与代表镜头。返修用 paper_project revise 复制独立文件，不硬链接可编辑工程；只重做受影响依赖，一次正式编码与打包。 方法见[初版质量与高效返修](../../../runtime/workbench/docs/28_初版质量与高效返修流程.md)。
 
-批量编排默认先做代表镜头与完整代表集，消费[初稿复核记录](../../../runtime/workbench/templates/series/08_first_draft_review.md) 的实际范围与欠项；其他集研究、故事和独立素材继续，不把表单变启动门。复用已成立技法/声线而非同一整篇镜头。源码更新后统一 paper_project build/preview/render，批次逐集回读真实帧、MP4与当前指针，保留成功产物和诊断，不凭退出码推进完成状态。新工作区自带初稿记录；既有工作区增量补缺不覆盖已有记录。
+批量编排默认先做代表镜头与完整代表集，消费[初稿复核记录](../../../runtime/workbench/templates/series/08_first_draft_review.md)的实际范围与欠项；在导演稿进入制作前运行 `scripts/first_draft_preflight.py --project <单集工程> --pretty`，把程序拼片、姿态标尺、小尺寸复杂对象和动画参考接线作为初稿定位项。其他集研究、故事和独立素材继续，不把表单或预检变启动门。复用已成立技法/声线而非同一整篇镜头。源码更新后统一 paper_project build/preview/render，批次逐集回读真实帧、MP4与当前指针，保留成功产物和诊断，不凭退出码推进完成状态。新工作区自带初稿记录；既有工作区增量补缺不覆盖已有记录。
 
 ## 初稿质量与资产复用
 

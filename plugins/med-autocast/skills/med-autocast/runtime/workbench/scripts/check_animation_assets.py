@@ -75,6 +75,32 @@ def check_assets(manifest: Path) -> dict:
         # An explicit [] declares zero file dependencies. Procedural drawing
         # remains a scene-review responsibility, never an invented file asset.
         used_ids.update(used)
+    animation_references = data.get("animation_references", [])
+    if animation_references is None:
+        animation_references = []
+    if not isinstance(animation_references, list):
+        raise ValueError("animation_references must be an array")
+    reference_ids = set()
+    for reference in animation_references:
+        if not isinstance(reference, dict):
+            raise ValueError("animation_references entries must be objects")
+        external_id = reference.get("external_asset_id")
+        if not isinstance(external_id, str) or not external_id.strip() or external_id in reference_ids:
+            raise ValueError("Missing or duplicate animation reference ID")
+        reference_ids.add(external_id)
+        if reference.get("mode") not in {"baseline_reference", "adapted", "new_creation"}:
+            raise ValueError(f"{external_id}: invalid animation reference mode")
+        if reference.get("creative_ceiling") != "open":
+            raise ValueError(f"{external_id}: animation reference must keep creative ceiling open")
+        entry = file(reference.get("entry"))
+        record = file(reference.get("library_record"))
+        expected_record_sha = reference.get("library_record_sha256")
+        if expected_record_sha and hashlib.sha256(record.read_bytes()).hexdigest() != expected_record_sha:
+            raise ValueError(f"{external_id}: animation reference record changed")
+        linked_shots = reference.get("shots", [])
+        if not isinstance(linked_shots, list) or any(
+                not isinstance(shot_id, str) or shot_id not in seen for shot_id in linked_shots):
+            raise ValueError(f"{external_id}: animation reference shots must name declared shots")
     # A manifest is also an inventory. Review debt belongs to the assets that
     # the current shot coverage actually uses; unused candidates remain visible
     # as inventory metadata and do not block or pollute this render's report.
@@ -133,6 +159,7 @@ def check_assets(manifest: Path) -> dict:
     return {"schema": "medical_animation_asset_check/v1", "status": "blocked" if pending else "passed",
             "manifest": str(manifest.resolve()), "assets": len(assets), "shots": len(shots),
             "used_asset_ids": sorted(used_ids), "unused_asset_ids": sorted(set(assets) - used_ids),
+            "animation_references": len(animation_references),
             "evidence_integrity": evidence_integrity,
             "administrative_status": "continue_with_review_queue" if pending else "ready_for_scene_review",
             "pending": pending, "domain_quality_approved": False,

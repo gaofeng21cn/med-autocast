@@ -13,6 +13,7 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / 'runtime/workbench/scripts'))
 import animation_library as local
 import media_asset_library as companion
+from check_animation_assets import check_assets
 
 
 class MediaCompanionTests(unittest.TestCase):
@@ -74,6 +75,67 @@ class MediaCompanionTests(unittest.TestCase):
         self.assertEqual(asset['medical_review']['status'], 'pending')
         self.assertEqual(companion.use(self.workspace,'productions/s/e', self.row['id'])['status'], 'copied_and_verified')
         self.assertEqual(len(local.read(self.workspace/'assets/paper-theatre/uses.json')['uses']), 1)
+
+    def test_animation_reference_brief_prioritizes_executable_motion_and_keeps_ceiling_open(self):
+        companion.ensure(self.workspace, repository=str(self.repo))
+        motion = {
+            **self.row,
+            'id': 'paper:motion@v1',
+            'source_id': 'motion',
+            'revision': 'v1',
+            'kind': 'motion_recipe',
+            'discovery': {'category': 'motion', 'actions': ['坐下']},
+        }
+
+        def fake_query(*args, **kwargs):
+            kind = kwargs.get('kind')
+            if kind == 'motion_recipe':
+                return {'status': 'available', 'assets': [motion]}
+            return {'status': 'available', 'assets': []}
+
+        with patch.object(companion, 'query', side_effect=fake_query):
+            brief = companion.animation_reference(self.workspace, text='坐下', limit=1)
+        self.assertEqual(brief['schema'], 'med_autocast_animation_reference/v1')
+        self.assertTrue(brief['baseline_only'])
+        self.assertEqual(brief['creative_ceiling'], 'open')
+        self.assertEqual(brief['candidates'][0]['reference_role'], 'motion_baseline')
+        self.assertEqual(brief['candidates'][0]['reference_mode'], 'baseline_reference')
+
+    def test_external_motion_use_records_exact_open_animation_reference(self):
+        sequence = self.base / 'sequence.json'
+        entry = self.base / 'index.html'
+        sequence.write_text('{"frames": [], "events": []}')
+        entry.write_text('<canvas></canvas>')
+        archived = local.archive(self.repo, {
+            'id': 'motion', 'kind': 'motion_recipe', 'entry': 'index.html',
+            'title': '可复用坐下动作', 'registration': {'frames_ref': 'sequence.json'},
+            'reuse_scope': {'kind': 'general'},
+        }, [
+            {'source': entry, 'path': 'index.html', 'role': 'source'},
+            {'source': sequence, 'path': 'sequence.json', 'role': 'payload'},
+        ])
+        record = local.read(self.repo / archived['record'])
+        row = {'id': 'paper:motion@' + record['revision'], 'source_id': 'motion',
+               'revision': record['revision'], 'kind': 'motion_recipe',
+               'portable_record': archived['record'],
+               'portable_record_sha256': local.digest(self.repo / archived['record']),
+               'reuse_scope': {'kind': 'general'},
+               'review_boundary': {'admission': 'reusable_candidate'},
+               'payload': [{**item, 'path': str(Path(archived['record']).parent / item['path'])}
+                           for item in record['files']]}
+        (self.repo / 'catalog/assets.jsonl').write_text(json.dumps(row) + '\n')
+        imported = companion.use(self.workspace, 'productions/s/e', row['id'], explicit=self.repo)
+        self.assertEqual(imported['status'], 'copied_and_verified')
+        self.assertEqual(imported['animation_reference']['creative_ceiling'], 'open')
+        manifest = local.read(self.project / 'asset_manifest.json')
+        self.assertEqual(len(manifest['animation_references']), 1)
+        reference = manifest['animation_references'][0]
+        self.assertEqual(reference['external_asset_id'], row['id'])
+        self.assertTrue((self.project / reference['entry']).is_file())
+        manifest.update({'schema': 'medical_animation_assets/v1',
+                         'shots': [{'shot_id': 'S01', 'asset_ids': []}]})
+        self.project.joinpath('asset_manifest.json').write_text(json.dumps(manifest))
+        self.assertEqual(check_assets(self.project / 'asset_manifest.json')['animation_references'], 1)
 
     def test_framework_headless_install_is_discovered_without_a_second_download(self):
         state = self.base / 'opl-state'

@@ -106,7 +106,7 @@ JavaScript 动画先交付视觉处理稿、两张风格帧、分镜和粗动态
 第一轮就设计完整纸面空间和可表演事件链，写清对象原关系、触发动作、反应、结果停留及下镜承接。先做代表镜头短动作，再审完整代表集的邻镜、字幕和声音；复用技法不复制构图。按实际纸件内容和视觉重量定比例，去文字仍看得见关系；无职责底板、色带和线段回到导演处理，不能交实现层填空。方法见[初版质量流程](../../../runtime/workbench/docs/28_初版质量与高效返修流程.md)。
 
 
-独立 `mac-media-assets` 是默认发现入口。先用 `media_asset_library query --query <视觉锚点>` 或 native `assets --library external` 检索，再实际查看 `resolved_payloads` 的原图/动作与本库 Skill。按本集故事决定复用、适配、另找合法素材或 ImageGen 新创，不设复用率，不让已有素材决定故事、构图、风格或镜头数。库缺失、无匹配或旧素材不合适时继续新创与其他工作，质量债随交接保留。实际取用用 `media_asset_library use --project <单集路径> --id <精确外库ID>`，沿用工作台版本包与 uses，复制后当前镜头重新审查；作者范围仍按作者档案约束。安装/发现方法见 `docs/media-assets-integration.md`。
+独立 `mac-media-assets` 是默认发现入口。动画制作先用 native `assets --library external --animation-reference --query <动作或视觉锚点>` 得到按可运行动作、代码组件、分层部件和环境排序的候选，再实际查看 `resolved_payloads` 的原图/动作与本库 Skill。它只提供可复用下限，`creative_ceiling=open`；按本集故事决定复用、适配、另找合法素材或 ImageGen 新创，不设复用率，也不让已有素材决定故事、构图、风格、镜头数或新效果。库缺失、无匹配或旧素材不合适时继续新创与其他工作，质量债随交接保留。实际取用用 `media_asset_library use --project <单集路径> --id <精确外库ID>`；取用动作/代码包后检查项目 `animation_references[]`，再沿用工作台版本包与 uses，复制后当前镜头重新审查；作者范围仍按作者档案约束。安装/发现方法见 `docs/media-assets-integration.md`。
 
 导演稿前先调用资产策展能力，按视觉锚点、叙事用途和拟承担动作查库，查看装配/事件小样。先决定观众需要看到的因果，再选择可用部件；组合不固定构图、台词、节奏或故事。人物接触与器官局部揭示先试一个真实镜头，区分视图切换、局部放大与真实可配准的分层剖开。声音按旁白空间和接触事件选择，审听未完成不写成通过。
 

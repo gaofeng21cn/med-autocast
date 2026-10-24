@@ -11,7 +11,7 @@ description: 保管、检索和策展医学代码动画的可复用纸件、环�
 
 复杂对象按总览、解释近景和小尺寸简化版分别策展，沿用精确版本记录实际内容 bounds、用途、关系与不能读取的细节；只登记真实存在且看过的版本，近景图不能缩成简化版充数。试装检查人物、椅面、投影与手持物的共同关系，以及手机宽预览和动作极值；判断方法见[尺寸、复杂度与占比](../../../runtime/workbench/docs/44_人物素材与画面尺度契约.md#尺寸复杂度与占比的统一原则)。
 
-人物准备先运行 `media_asset_library character-coverage`，再用 `query --character-role <角色> --pose <姿态>` 定位精确版本并看原件。覆盖表只说明登记候选，发型/服装不同的姿态不能冒充同一角色。新版本先真实 `use` 到小样项目，回读 `registration_readback` 和 manifest 的 bounds/anchors，再交导演试装；版本号遵循含载荷描述的原记录合同。锚点只登记真实部位和可见手，坐面在臀部承托边缘。完整方法见人物与尺度契约。
+人物准备先运行 `media_asset_library character-coverage`，再用 `query --character-role <角色> --pose <姿态>` 定位精确版本并看原件。覆盖表只说明登记候选，发型/服装不同的姿态不能冒充同一角色。新版本先真实 `use` 到小样项目，回读 `registration_readback` 和 manifest 的 bounds/anchors，再交导演试装；版本号遵循含载荷描述的原记录合同。锚点只登记真实部位和可见手，坐面在臀部承托边缘。进入初稿前运行 `scripts/first_draft_preflight.py --project <单集工程> --pretty`，把缺标定、程序拼片和小尺寸复杂对象保留为待审定位。完整方法见人物与尺度契约。
 
 作者档案启用 `default_for_clinician` 时，所有医生身份、`generic` 查询、精确外库医生 ID 与自定义医生别名均解析到作者私有身份；本机当前作者为 Dr.咩 时直接使用 Dr.咩，缺姿态沿作者母版补齐，不退回公共医生。历史工程修订时建立独立版本，查询并真实取用作者精确姿态，更新源码和逐镜清单，再回读实际图像、锚点和身份；作者人物不进入公共 MAC 资产库。
 
@@ -48,7 +48,7 @@ description: 保管、检索和策展医学代码动画的可复用纸件、环�
 跨工作区资产通过工作台 `workbench.yaml.asset_library.root` 指向外挂仓库。准备新集时先查询并实际查看载荷，交付后同步有复用价值的纸件、动作源码、BGM 分轨和失败原因；精确版本写入本集 manifest/uses。查询或同步不是启动门，外部库不可用时继续 Progress First。初稿前置动作见 `runtime/workbench/docs/29_医学视频资产库与初稿前置质量SOP.md`。
 
 
-独立 `mac-media-assets` 是默认发现入口。先用 `media_asset_library query --query <视觉锚点>` 或 native `assets --library external` 检索，再实际查看 `resolved_payloads` 的原图/动作与本库 Skill。按本集故事决定复用、适配、另找合法素材或 ImageGen 新创，不设复用率，不让已有素材决定故事、构图、风格或镜头数。库缺失、无匹配或旧素材不合适时继续新创与其他工作，质量债随交接保留。实际取用用 `media_asset_library use --project <单集路径> --id <精确外库ID>`，沿用工作台版本包与 uses，复制后当前镜头重新审查；作者范围仍按作者档案约束。安装/发现方法见 `docs/media-assets-integration.md`。
+独立 `mac-media-assets` 是默认发现入口。动画制作先用 native `assets --library external --animation-reference --query <动作或视觉锚点>` 得到按可运行动作、代码组件、分层部件和环境排序的候选，再实际查看 `resolved_payloads` 的原图/动作与本库 Skill。它只提供可复用下限，`creative_ceiling=open`；按本集故事决定复用、适配、另找合法素材或 ImageGen 新创，不设复用率，也不让已有素材决定故事、构图、风格、镜头数或新效果。库缺失、无匹配或旧素材不合适时继续新创与其他工作，质量债随交接保留。实际取用用 `media_asset_library use --project <单集路径> --id <精确外库ID>`；取用动作/代码包后检查项目 `animation_references[]`，再沿用工作台版本包与 uses，复制后当前镜头重新审查；作者范围仍按作者档案约束。安装/发现方法见 `docs/media-assets-integration.md`。
 
 公共同步只接收通用或选题范围的无品牌素材。作者专属形象、授权声线、品牌参数、签名音乐及带品牌的样片保管在私有作者工作区；公开前查看全部附带媒体，不以“不默认推荐”代替公开授权。外挂库发现优先使用当前受管理载体，避免回到已淘汰的旧缓存。
 

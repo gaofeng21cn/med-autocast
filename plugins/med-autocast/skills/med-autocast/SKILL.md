@@ -86,7 +86,7 @@ Stage 返回尽量引用真实产物与版本/来源信息，给出质量债务�
 
 提高初版质量优先在 story-directing 交接按语境注音的配音稿（正文与 tts_text 分离），用首句/术语整段和代表镜头小样尽早发现问题。后端按真实模型词表转换 model_text；返修用 paper_project revise 保存独立文件，retime 保留语义断句。audit_pronunciation 已登记为随包工具，按系列当前项目逐词定位覆盖，不能批准发音。具体方法见 `runtime/workbench/docs/28_初版质量与高效返修流程.md`。
 
-初稿质量的默认做法见 `runtime/workbench/docs/28_初版质量与高效返修流程.md`：患者任务与可见事件先行，先验证代表镜头及完整代表集，再扩展同类制作；复用技法而非统一构图。实际检查单件 alpha、多底色边缘、内容比例和按语境注音的首句/术语整段小样。源码或素材改变后统一 paper_project build/preview/render 并回读真实帧及当前母版，成功退出可能仅保存诊断。初始化/增量升级会补 `work/first-draft-review.md`，已有记录不覆盖；它是工作记录而非状态权威或启动门。经验回到最早 Stage 提示、专业 Skill 与复用库，病例、品牌和声线参数留目标工作区。尚未完成的连续动态、实际听感和医学复核不因批量编码升级。
+初稿质量的默认做法见 `runtime/workbench/docs/28_初版质量与高效返修流程.md` 和 `runtime/workbench/docs/45_初稿质量经验与前置检查.md`：患者任务与可见事件先行，先运行 `scripts/first_draft_preflight.py --project <单集工程> --pretty` 定位人物完整性、姿态标尺、复杂对象阅读面积和动画参考接线，再验证代表镜头及完整代表集，最后扩展同类制作；复用技法而非统一构图。实际检查单件 alpha、多底色边缘、内容比例和按语境注音的首句/术语整段小样。源码或素材改变后统一 paper_project build/preview/render 并回读真实帧及当前母版，成功退出可能只保存诊断。初始化/增量升级会补 `work/first-draft-review.md`，已有记录不覆盖；它是工作记录而非状态权威或启动门。经验回到最早 Stage 提示、专业 Skill 与复用库，病例、品牌和声线参数留目标工作区。尚未完成的连续动态、实际听感和医学复核不因批量编码升级。
 
 ## 跨工作区医学视频资产库
 
@@ -96,12 +96,13 @@ Stage 返回尽量引用真实产物与版本/来源信息，给出质量债务�
 
 ```sh
 python3 runtime/native_helpers/med_autocast.py assets --workspace <workspace> --library external --query 纸景
+python3 runtime/native_helpers/med_autocast.py assets --workspace <workspace> --library external --animation-reference --query <动作或视觉锚点>
 ```
 
 外挂库缺失、同步失败或记录不完整时保留诊断和质量债，继续本地候选、故事、动画和声音工作；资产库只提供稳定起点，不替代当前镜头的比例、动作、连续动态、听感或医学 Review。
 
+动画制作优先消费 `animation-reference` 的动作/代码组件候选，按精确版本和真实载荷建立 `baseline_reference`；它只抬高初稿下限，`creative_ceiling=open`，MAC 仍可自由改写动作、换媒介、做新素材和新动画效果。取用可运行动作包后，渲染前由 `check_animation_assets` 回读项目 `animation_references[]` 的入口与记录哈希，避免候选只复制到目录却没有进入可追踪调用链。
 
-独立 `mac-media-assets` 是默认发现入口。先用 `media_asset_library query --query <视觉锚点>` 或 native `assets --library external` 检索，再实际查看 `resolved_payloads` 的原图/动作与本库 Skill。按本集故事决定复用、适配、另找合法素材或 ImageGen 新创，不设复用率，不让已有素材决定故事、构图、风格或镜头数。库缺失、无匹配或旧素材不合适时继续新创与其他工作，质量债随交接保留。实际取用用 `media_asset_library use --project <单集路径> --id <精确外库ID>`，沿用工作台版本包与 uses，复制后当前镜头重新审查；作者范围仍按作者档案约束。安装/发现方法见 `docs/media-assets-integration.md`。
 
 ## 按主题和集名找交付
 

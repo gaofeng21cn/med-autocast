@@ -2,6 +2,8 @@
 
 依据观看任务安排主焦点、支持组和背景；复杂核心用近景或拆解，小图采用简单轮廓或已解释归档图。完整人物替换后共同重排椅面、投影、接触层与道具，不沿用旧纸偶原点或残留手片；在原尺寸、手机宽预览、动作极值与邻镜中复核。方法见 `runtime/workbench/docs/44_人物素材与画面尺度契约.md`。
 
+正式写动画前运行 `scripts/first_draft_preflight.py --project <单集工程> --pretty`，读取人物/姿态标尺、复杂对象尺寸和动画参考接线的定位报告；报告只生成候选与质量债，不把机器检查当视觉、听感、医学或发布通过。
+
 纯视觉或说明返修可用 `mix --reuse-from-project <来源工程>` 核对真实声音依赖后保留原混音字节；保留来源工程或仅含明确音频输入的快照。声音依赖变化时重新混音，不由说明文字变化推断声音需要重做。
 
 人物 `use` 后回读 `registration_readback` 与本集manifest的bounds/anchors，再按实际可见手、坐面和地面基准试装。精确修订必须能按含载荷描述的原记录合同重建；复制成功不批准姿态与接触。复杂结构小到读不清时换近景、拆解或简化资产。
@@ -54,7 +56,7 @@
 可运动单件检查真实 alpha 与多底色边缘，区分假棋盘、全不透明背景、破洞及光晕；环境板可以不透明。源码、素材、Score/品牌变更后调用 paper_project build，再 preview 受影响窗口及邻镜，最后 render。回读本次 preview.json/实际帧和 out/current.json 指向的媒体及回执，退出码不证明画面或MP4已产生。模型词表先在首句/高风险整段小样验证，保留 tts_text/model_text；听辨仍单列。过期构建先修复，其他可消费工作继续，不沿用旧 bundle、不静默换声线。逐集看当前画面与同期旁白，代码统计只定位，不按分数决定合格或重写，代表集不替代其他集。每集保留问题时码、真实改变、修后候选和实际复核范围；已知表意或声音缺陷继续返修，不标 passed/ready 或混入用户最新版。方法见 `runtime/workbench/docs/39_逐集表意与段首完整性验收.md`。
 
 
-独立 `mac-media-assets` 是默认发现入口。先用 `media_asset_library query --query <视觉锚点>` 或 native `assets --library external` 检索，再实际查看 `resolved_payloads` 的原图/动作与本库 Skill。按本集故事决定复用、适配、另找合法素材或 ImageGen 新创，不设复用率，不让已有素材决定故事、构图、风格或镜头数。库缺失、无匹配或旧素材不合适时继续新创与其他工作，质量债随交接保留。实际取用用 `media_asset_library use --project <单集路径> --id <精确外库ID>`，沿用工作台版本包与 uses，复制后当前镜头重新审查；作者范围仍按作者档案约束。安装/发现方法见 `docs/media-assets-integration.md`。
+独立 `mac-media-assets` 是默认发现入口。动画制作先用 native `assets --library external --animation-reference --query <动作或视觉锚点>` 得到按可运行动作、代码组件、分层部件和环境排序的候选，再实际查看 `resolved_payloads` 的原图/动作与本库 Skill。它只提供可复用下限，`creative_ceiling=open`；按本集故事决定复用、适配、另找合法素材或 ImageGen 新创，不设复用率，也不让已有素材决定故事、构图、风格、镜头数或新效果。库缺失、无匹配或旧素材不合适时继续新创与其他工作，质量债随交接保留。实际取用用 `media_asset_library use --project <单集路径> --id <精确外库ID>`；取用动作/代码包后检查项目 `animation_references[]`，再沿用工作台版本包与 uses，复制后当前镜头重新审查；作者范围仍按作者档案约束。安装/发现方法见 `docs/media-assets-integration.md`。
 
 按中文对象、动作和叙事用途检索外库，使用 `collections` 查看装配与事件关系，查看真实小样后决定是否 `use-collection`。集合不固定故事与构图，欠项保留债务继续新创。部件bounds分别使用，不把单层总览当可配准分层。完整方法由资产策展Skill与随包 docs/32_资产发现与可重组事件SOP.md 提供。
 

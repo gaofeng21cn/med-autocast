@@ -18,6 +18,7 @@
 python3 runtime/native_helpers/workbench_tool.py --workspace <目录> --name media_asset_library -- status
 python3 runtime/native_helpers/workbench_tool.py --workspace <目录> --name media_asset_library -- ensure
 python3 runtime/native_helpers/med_autocast.py assets --workspace <目录> --library external --query 纸景
+python3 runtime/native_helpers/med_autocast.py assets --workspace <目录> --library external --animation-reference --query <动作或视觉锚点>
 python3 runtime/native_helpers/med_autocast.py assets --workspace <目录> --library external --character-role 老年男性 --pose walk
 python3 runtime/native_helpers/workbench_tool.py --workspace <目录> --name media_asset_library -- character-coverage
 python3 runtime/native_helpers/workbench_tool.py --workspace <目录> --name media_asset_library -- use --project productions/<系列>/<单集>/<版本> --id 'paper:<ID>@<REV>'
@@ -25,7 +26,11 @@ python3 runtime/native_helpers/workbench_tool.py --workspace <目录> --name med
 
 `status/query` 只读，不隐式下载或更新。查询返回真实原件绝对路径、动作样例和本库 Skill 入口；导演需看原件，判断其动作职责、比例、媒介与医学含义。查询为空也可继续导演工作和新创。
 
+`--animation-reference` 是动画制作的快捷入口：按“可运行动作/代码组件 -> 可拆分部件 -> 人物/医学层 -> 环境”排序，返回精确版本 ID、`resolved_payloads`、动作样例与限制，并明确 `baseline_only=true`、`creative_ceiling=open`。它提高初稿下限和检索效率，不锁定故事、构图、风格或运动上限。MAC 可以直接适配候选，也可以跳过候选创作新素材、新动作和新渲染方法。
+
 `use` 校验精确 ID、原记录、每个载荷哈希及作者范围；再接到已有 `animation_library.archive/reuse`，独立保管本地版本包、复制到项目并记录 uses 和 external-source。当前视觉/医学审核重新 pending，静态 `reference_only` 不导入运动素材清单。品牌、人物和声线不写死进通用 Skill。遇到不合适或缺证据的条目换材，不把拒用变成整个 Stage 的停止。
+
+取用 `motion_recipe` 或 `code_component` 后，项目 `asset_manifest.json.animation_references[]` 会保存外部精确 ID、revision、本地入口、记录哈希、`mode=baseline_reference`、`creative_ceiling=open` 和当前镜头待审状态。`check_animation_assets` 会在渲染前回读这些入口和字节；这只证明调用链完整，不替代当前镜头的视觉、连续动态、医学或听感审查。
 
 精选新创由策展阶段同步进独立库，保留源文件、许可/生成回执、内容边界、接触点、可看动作、适用与失败条件。库更新不自动替换旧片，文件校验不批准医学、艺术、动态或听感。
 

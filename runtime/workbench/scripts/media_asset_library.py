@@ -2,6 +2,7 @@
 """MAC companion discovery, non-blocking installation and exact-version reuse."""
 from __future__ import annotations
 import argparse
+import hashlib
 import json
 import os
 from pathlib import Path
@@ -15,6 +16,7 @@ import yaml
 
 REPOSITORY = 'https://github.com/gaofeng21cn/mac-media-assets.git'
 NOTE = '资产库提供可选起点；按当前故事适配、替换或新创，未完成当前镜头审查。'
+ANIMATION_REFERENCE_NOTE = '动作库只提供可复用下限；当前镜头、风格、节奏和新效果仍由 MAC 自主设计。'
 
 
 def native_companion_roots(carrier_home: Path):
@@ -350,6 +352,78 @@ def query(workspace, *, explicit=None, text=None, kind=None, scope=None, series=
     return result
 
 
+def animation_reference(workspace, *, explicit=None, text=None, series=None, action=None,
+                        story_role=None, medium=None, collection=None, limit=None):
+    """Return ranked animation starting points without narrowing creative choice.
+
+    This is deliberately a read-only convenience layer over the exact external
+    query. It prioritizes executable motion/code packages, then usable layered
+    parts and environments, while retaining the normal exact-version IDs and
+    resolved payload paths for inspection before ``use``.
+    """
+    if limit is None:
+        limit = 12
+    status = report(workspace, explicit)
+    result = {
+        **status,
+        'schema': 'med_autocast_animation_reference/v1',
+        'library': 'external',
+        'status': 'unavailable' if status.get('status') != 'available' else 'available',
+        'baseline_only': True,
+        'creative_ceiling': 'open',
+        'note': ANIMATION_REFERENCE_NOTE,
+        'query': {'text': text, 'series': series, 'action': action,
+                  'story_role': story_role, 'medium': medium, 'collection': collection},
+        'candidates': [], 'quality_debt': [], 'next_steps': [
+            '查看候选的 resolved_payloads、动作样例和当前限制',
+            '需要复用时用精确 ID 执行 media_asset_library use',
+            '把候选当作 baseline_reference；可适配、替换或新创，不设复用率和效果上限',
+        ],
+    }
+    if status.get('status') != 'available':
+        result['quality_debt'] = ['资产库不可用；继续本地素材或新创，不阻断动画制作']
+        return result
+    # Keep executable recipes first. The remaining kinds are useful only when
+    # the story needs their concrete layers or scene support.
+    requests = [
+        ('motion_recipe', 100, 'motion_baseline'),
+        ('code_component', 95, 'motion_baseline'),
+        ('component', 85, 'layered_part'),
+        ('transparent_subject', 75, 'character_or_subject'),
+        ('medical_cutout', 70, 'medical_layer'),
+        ('environment', 60, 'environment'),
+        ('environment_plate', 55, 'environment'),
+    ]
+    selected = {}
+    for kind, priority, role in requests:
+        found = query(workspace, explicit=explicit, text=text, kind=kind, series=series,
+                      action=action, story_role=story_role, medium=medium,
+                      collection=collection)
+        if found.get('status') != 'available':
+            result['quality_debt'].append({'kind': kind, 'diagnostic': found.get('diagnostic', found.get('status'))})
+            continue
+        for row in found.get('assets', []):
+            identity = row.get('id')
+            if not identity:
+                continue
+            score = (row.get('search_match') or {}).get('score', 0)
+            candidate = dict(row)
+            candidate['reference_role'] = role
+            candidate['reference_priority'] = priority
+            candidate['reference_score'] = priority * 1000 + score
+            candidate['reference_mode'] = 'baseline_reference'
+            selected[identity] = candidate
+    candidates = sorted(selected.values(), key=lambda item: (-item['reference_score'], item.get('display_title', item.get('title', ''))))
+    if limit is not None:
+        candidates = candidates[:limit]
+    result['candidates'] = candidates
+    result['count'] = len(candidates)
+    result['matched_count'] = len(selected)
+    if not candidates:
+        result['quality_debt'].append('没有匹配的动画基线；继续导演和新创，不阻断制作')
+    return result
+
+
 def collections(workspace, explicit=None):
     status = report(workspace, explicit)
     result = {**status, 'assemblies': [], 'event_kits': [], 'audio': [], 'blocks_production': False}
@@ -437,6 +511,53 @@ def motion_registration_readback(record, directory):
                                       'status': status, 'current_shot': 'pending'}}
 
 
+def register_animation_reference(project, selected, row, record, imported):
+    """Bind an imported executable package to the project without approving it."""
+    if record.get('kind') not in {'motion_recipe', 'code_component'}:
+        return None
+    project = Path(project).resolve()
+    manifest_path = project / selected.get('assets', 'asset_manifest.json')
+    if not manifest_path.is_file():
+        imported.setdefault('quality_debt', []).append('animation_reference_manifest_missing')
+        return None
+    manifest = json.loads(manifest_path.read_text())
+    references = manifest.setdefault('animation_references', [])
+    directory = Path(imported['directory']).resolve()
+    try:
+        entry = (directory / record.get('entry', 'index.html')).resolve()
+        local_record = (directory / 'library-record.json').resolve()
+        entry_ref = str(entry.relative_to(project))
+        record_ref = str(local_record.relative_to(project))
+    except ValueError as error:
+        raise ValueError('动画动作包入口越出当前项目') from error
+    if not entry.is_file() or not local_record.is_file():
+        raise ValueError('动画动作包缺少复制后的入口或本地记录')
+    reference = {
+        'package': 'mac-media-assets',
+        'external_asset_id': row['id'],
+        'source_id': row.get('source_id'),
+        'revision': row.get('revision'),
+        'kind': record.get('kind'),
+        'library_record': record_ref,
+        'library_record_sha256': hashlib.sha256(local_record.read_bytes()).hexdigest(),
+        'entry': entry_ref,
+        'mode': 'baseline_reference',
+        'creative_ceiling': 'open',
+        'shots': [],
+        'current_shot_review': 'pending',
+        'dependencies': record.get('dependencies', []),
+        'discovery': row.get('discovery', {}),
+        'note': ANIMATION_REFERENCE_NOTE,
+    }
+    same = [item for item in references if item.get('external_asset_id') == row['id']]
+    if same and same[0] != reference:
+        raise ValueError('当前项目已有不同入口的同一动画基线，请使用新 ID 或显式更新')
+    if not same:
+        references.append(reference)
+        manifest_path.write_text(json.dumps(manifest, ensure_ascii=False, indent=2) + '\n')
+    return reference
+
+
 def use(workspace, project, identifier, explicit=None, asset_id=None):
     workspace = workspace.resolve()
     from animation_library import archive, read, reuse, digest
@@ -480,7 +601,8 @@ def use(workspace, project, identifier, explicit=None, asset_id=None):
     if row.get('portable_record_sha256') and digest(record_path) != row['portable_record_sha256']:
         raise ValueError('资产原记录字节已变化')
     record = read(record_path)
-    selected = read(confined(workspace, project) / 'project.json')
+    project_path = confined(workspace, project)
+    selected = read(project_path / 'project.json')
     if clinician_role(record) and clinician_author_policy(workspace, selected.get('series_id')):
         profile = clinician_author_policy(workspace, selected.get('series_id'))[0]
         return {'status':'not_imported','blocks_production':False,'external_asset_id':identifier,
@@ -506,6 +628,10 @@ def use(workspace, project, identifier, explicit=None, asset_id=None):
     if archived['revision'] != record['revision']:
         raise ValueError('独立原记录无法重建原版本，不冒充原资产')
     imported = reuse(workspace, local, project, record['id'], record['revision'], asset_id)
+    if imported.get('status') == 'copied_and_verified':
+        imported_reference = register_animation_reference(project_path, selected, row, record, imported)
+        if imported_reference:
+            imported['animation_reference'] = imported_reference
     # Preserve external lineage next to the project's copied original record.
     if imported['status'] == 'copied_and_verified':
         source_assets = record.get('asset_bundle') or [record.get('asset') or record]
@@ -564,7 +690,7 @@ def use(workspace, project, identifier, explicit=None, asset_id=None):
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument('action', choices=['status', 'ensure', 'query', 'use', 'collections',
+    parser.add_argument('action', choices=['status', 'ensure', 'query', 'animation-reference', 'use', 'collections',
                                            'character-coverage', 'use-collection'])
     parser.add_argument('--workspace', type=Path, default=Path(os.environ.get('MED_AUTOCAST_WORKSPACE_ROOT', '.')))
     parser.add_argument('--root', type=Path)
@@ -592,6 +718,11 @@ def main():
                            character_role=getattr(args, 'character_role'), pose=args.pose,
                            asset_id=args.id, all_versions=args.all_versions,
                            character_context=getattr(args, 'character_context', None))
+        elif args.action == 'animation-reference':
+            result = animation_reference(workspace, explicit=args.root, text=args.query,
+                                         series=args.series, action=args.motion_action,
+                                         story_role=args.story_role, medium=args.medium,
+                                         collection=args.collection, limit=args.limit)
         elif args.action == 'collections':
             result = collections(workspace, args.root)
         elif args.action == 'character-coverage':

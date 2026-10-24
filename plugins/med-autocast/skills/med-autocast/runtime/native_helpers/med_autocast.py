@@ -131,6 +131,14 @@ def query_external_assets(root: Path, query=None, kind=None, scope=None, series=
     return external_query(root, text=query, kind=kind, scope=scope, series=series, **facets)
 
 
+def query_animation_reference(root: Path, query=None, series=None, **facets) -> dict:
+    """Return ranked executable animation starting points as a read-only brief."""
+    bundle = Path(__file__).resolve().parents[1] / 'workbench/scripts'
+    sys.path.insert(0, str(bundle))
+    from media_asset_library import animation_reference
+    return animation_reference(root, text=query, series=series, **facets)
+
+
 def interval(value) -> tuple[float,float]:
     if not isinstance(value,list) or len(value)!=2:
         raise ContractError('区间必须为 [start,end]')
@@ -229,6 +237,8 @@ def main():
             for flag in ('motion-action','story-role','medium','collection','maturity','character-role','pose'):
                 p.add_argument('--'+flag)
             p.add_argument('--limit',type=int)
+            p.add_argument('--animation-reference', action='store_true',
+                           help='返回动作/代码/分层素材的优先参考清单；只提供下限，保持开放创作')
         if name=='preflight':
             p.add_argument('--delivery',required=True);p.add_argument('--current',required=True);p.add_argument('--source-review',required=True)
         if name=='preflight-workbench':
@@ -243,10 +253,13 @@ def main():
         if a.command=='inspect':result=inspect_workspace(root)
         elif a.command=='assets':
             result = (query_animation_assets(root, a.query, a.kind, a.scope) if a.library == 'animation'
-                      else query_external_assets(root, a.query, a.kind, a.scope, a.series,
+                      else (query_animation_reference(root, a.query, a.series,
+                           action=a.motion_action, story_role=a.story_role, medium=a.medium,
+                           collection=a.collection, limit=a.limit)
+                           if a.animation_reference else query_external_assets(root, a.query, a.kind, a.scope, a.series,
                            category=a.category, action=a.motion_action, story_role=a.story_role,
                            medium=a.medium, collection=a.collection, maturity=a.maturity, limit=a.limit,
-                           character_role=a.character_role, pose=a.pose) if a.library == 'external'
+                           character_role=a.character_role, pose=a.pose)) if a.library == 'external'
                       else query_assets(root, a.category, a.series))
         elif a.command=='preflight':result=preflight(root,a.delivery,a.current,a.source_review)
         else:

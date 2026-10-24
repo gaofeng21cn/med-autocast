@@ -33,7 +33,7 @@ description: 把医学视频导演稿落实为可控的本地代码动画，选�
 
 先把一个最有解释力的镜头做成真实风格帧与短动作，现场看原尺寸，再逐镜扩展。路径绘制用 `kit/paths.ts` 的 measurePath/trace/pointAt，镜头/物件轨道用 `kit/tracks.ts`；接触后的 settle 衰减到静止。纸材、透明叠色、网点和固定件用 `kit/materials.ts`，或直接自定义 Canvas。对象可以 on-twos，镜头和声音保留主时钟；不为风格感持续抖动所有层。
 
-每集扩展完整镜头前，确认 Score 登记了 `signature_shot` 或 `representative_shot`，并先看该镜头的真实风格帧与短动作。制作或预览时调用 `scripts/audit_motion.py`；它只报告动作阶段缺口、事件死区、配方/事件重复、方向多样性和跨镜承接质量债，所有发现均保持 `blocks_stage_progress=false`。正式预览和渲染还应回读 `medical_animation_runtime_receipt/v1`，确认本次实际读取的 Score、bundle、素材、声音和工具版本。
+每集扩展完整镜头前，先运行 `scripts/first_draft_preflight.py --project <单集工程> --pretty`，确认人物完整性、姿态标尺、复杂对象阅读面积和动画参考接线已经进入可读质量债；再确认 Score 登记了 `signature_shot` 或 `representative_shot`，并先看该镜头的真实风格帧与短动作。制作或预览时调用 `scripts/audit_motion.py`；它只报告动作阶段缺口、事件死区、配方/事件重复、方向多样性和跨镜承接质量债，所有发现均保持 `blocks_stage_progress=false`。正式预览和渲染还应回读 `medical_animation_runtime_receipt/v1`，确认本次实际读取的 Score、bundle、素材、声音和工具版本。
 
 构图由实际物件内容、认知主次与空间关系控制。PNG 透明外框和 bounds 帮助排除留白，不能自动决定物件大小。图层遮挡由容器/舞台局部层控制，接触点由素材登记或审定路径给出；医学生物结构不可由通用植物样例或自动生成路径代替。
 

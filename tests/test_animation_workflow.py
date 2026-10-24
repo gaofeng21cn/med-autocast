@@ -57,13 +57,48 @@ class AnimationWorkflowTests(unittest.TestCase):
     def check(self, ids=None):
         path = self.root / 'assets.json'
         path.write_text(json.dumps({'schema': 'medical_animation_assets/v1', 'assets': [self.asset],
-            'shots': [{'shot_id': 'B01', 'asset_ids': ids or ['pituitary']}]}))
+            'shots': [{'shot_id': 'B01', 'asset_ids': ['pituitary'] if ids is None else ids}]}))
         return check_assets(path)
 
     def test_complete_declared_references_do_not_mint_medical_approval(self):
         report = self.check()
         self.assertEqual(report['status'], 'passed')
         self.assertFalse(report['domain_quality_approved'])
+
+    def test_explicit_zero_asset_dependencies_do_not_require_inventory_candidates(self):
+        self.asset['status'] = 'pending_review'
+        report = self.check(ids=[])
+        self.assertEqual(report['status'], 'passed')
+        self.assertEqual(report['used_asset_ids'], [])
+        self.assertEqual(report['unused_asset_ids'], ['pituitary'])
+        self.assertEqual(report['pending'], [])
+        self.assertFalse(report['domain_quality_approved'])
+        path = self.root / 'assets.json'
+        path.write_text(json.dumps({'schema': 'medical_animation_assets/v1', 'assets': [],
+            'shots': [{'shot_id': 'B01', 'asset_ids': []}]}))
+        report = check_assets(path)
+        self.assertEqual(report['status'], 'passed')
+        self.assertEqual(report['assets'], 0)
+        self.assertFalse(report['domain_quality_approved'])
+
+    def test_shot_asset_declarations_distinguish_missing_type_and_unknown_id(self):
+        path = self.root / 'assets.json'
+        for coverage, message in [
+            ({'shot_id': 'B01'}, 'B01: missing asset_ids declaration'),
+            *[({'shot_id': 'B01', 'asset_ids': value}, 'B01: asset_ids must be an array')
+              for value in (None, 'pituitary', {}, [1], [{}], [''], [' '])],
+            ({'shot_id': 'B01', 'asset_ids': ['unknown']}, 'B01: unknown shot assets: unknown'),
+        ]:
+            with self.subTest(coverage=coverage):
+                path.write_text(json.dumps({'schema': 'medical_animation_assets/v1',
+                    'assets': [self.asset], 'shots': [coverage]}))
+                with self.assertRaisesRegex(ValueError, message):
+                    check_assets(path)
+        (self.root / 'anatomy.png').unlink()
+        path.write_text(json.dumps({'schema': 'medical_animation_assets/v1',
+            'assets': [self.asset], 'shots': [{'shot_id': 'B01', 'asset_ids': ['pituitary']}]}))
+        with self.assertRaisesRegex(ValueError, 'Missing asset or evidence: anatomy.png'):
+            check_assets(path)
 
     def test_missing_nested_review_evidence_is_downgraded(self):
         evidence = json.loads((self.root / 'review.json').read_text())

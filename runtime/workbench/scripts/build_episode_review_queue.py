@@ -51,6 +51,7 @@ def inspect_episode(workspace: Path, series_id: str, episode_id: str, spec: dict
     else:
         score = _first_existing(project / "score.json", project / "score.yaml")
         directions = _first_existing(
+            project / "src/scene_directions.json",
             project / "scene_directions.json",
             project / "preproduction/scene_directions.json",
             project / "preproduction/DIRECTOR.md",

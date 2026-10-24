@@ -18,10 +18,10 @@
 ## 新系列与新集顺序
 
 1. 读取作者/医生与声线基线，再明确患者任务、事实边界和系列故事线。
-2. 查询资产库并实际看图，登记候选的用途、content bounds、透明度、连接点、来源/许可、复用范围和质量债。
+2. 查询资产库并实际看图，人物先查 `character-coverage` 与角色/姿态，登记用途、content bounds、透明度、连接点、来源/许可、复用范围和质量债；缺姿态先补同一母版的完整人物。具体见[人物与尺度契约](44_人物素材与画面尺度契约.md)。
 3. 先写视觉处理稿和每镜事件链，再做一张代表风格帧、一段连续动作和一集完整 animatic；代表镜头解决技法，代表集解决叙事、节奏和声音。
 4. 按认知比例和画面重量安排纸件，不按图片外框统一缩放。环境是纸景，透明主体承担事件，固定件、接触阴影和前景遮挡承担纸剧场的物理关系。
-5. 旁白稿保存正文、`tts_text`、语境多音字/术语读音、数字单位和停顿。先试听首句和高风险术语完整声段，再批量制作；有授权声线优先本地 IndexTTS，Edge TTS 只作备用。
+5. 旁白稿保存正文、`tts_text`、语境多音字/术语读音、数字单位和停顿。先试听首句和高风险术语完整声段，再批量制作；有授权声线优先本地 VoxCPM2，Edge TTS 只作备用。
 6. 在真实纸景上排字幕，做去文字审片；隐藏文字后主要对象、关系变化和结果仍应成立。删除只服务文字的大色块、色带和线段。
 7. 用同一套 `paper_project build -> preview -> render` 生成预览和正式视频，检查精确零秒、切入、接触、停留、切出、字幕、BGM 和拟音；变更后重新生成受影响证据。
 8. 交付后把有复用价值的纸件、组件、动作源码、BGM 原声/分轨/工程和失败原因同步到外挂库，保留旧 revision 与 SHA-256。
@@ -46,6 +46,8 @@
 
 ```sh
 python3 /path/to/mac-media-assets/tools/query_assets.py --query 纸景
+python3 scripts/media_asset_library.py character-coverage --workspace .
+python3 scripts/media_asset_library.py query --workspace . --character-role 老年男性 --pose walk
 python3 /path/to/mac-media-assets/tools/sync_from_workbench.py \
   --workspace /path/to/workbench \
   --root /path/to/mac-media-assets
@@ -53,6 +55,8 @@ python3 /path/to/mac-media-assets/tools/verify_catalog.py
 ```
 
 校验只证明登记、文件存在和 SHA-256 一致；资产库不可用时继续 Progress First，记录诊断和质量债，不静默声称资产或成片通过。
+
+新素材入库后真实 `use` 到独立小样工程，回读本集 manifest 的 bounds 与 registration，以及取用回执 `registration_readback`。版本能重建、实际载荷可读、连接点已复制三项都成立后，才说明管理与调用链可用；原件、组合、连续动作、声音和当前镜头分别复核。更新公开包前重建内容锁并校验，避免新增素材只在源码目录可见。
 
 
 独立公开资产库随标准 MAC 软件包安装自动安装；工作台 setup 优先发现已安装库，已有本地库不覆盖，离线或无合适素材时保留诊断并继续新创。导演先 query 并看原件，制作 use 复制精确版本后重新审查当前镜头；不设复用率。实际命令及载体安装边界见 [独立库接入](../../../docs/media-assets-integration.md)。

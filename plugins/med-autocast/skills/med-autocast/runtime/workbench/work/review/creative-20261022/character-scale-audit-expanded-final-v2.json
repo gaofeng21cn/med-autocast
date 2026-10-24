@@ -1,0 +1,808 @@
+{
+  "schema": "paper_theatre_character_scale_audit/v1",
+  "workspace": "/Users/gaofeng/workspace/科普视频",
+  "episodes_scanned": 89,
+  "episodes_with_locators": 0,
+  "programmatic_character_helpers": 0,
+  "small_explicit_assets": 0,
+  "rows": [
+    {
+      "series_id": "pituitary_paper_theatre",
+      "episode_id": "01_report_next_steps",
+      "project": "productions/pituitary_paper_theatre/01_report_next_steps/v25",
+      "sources": [],
+      "review_locators": []
+    },
+    {
+      "series_id": "pituitary_paper_theatre",
+      "episode_id": "e00_urgent_change",
+      "project": "productions/pituitary_paper_theatre/e00_urgent_change/v8",
+      "sources": [
+        "productions/pituitary_paper_theatre/e00_urgent_change/v8/src/episodeshots.ts"
+      ],
+      "review_locators": []
+    },
+    {
+      "series_id": "pituitary_paper_theatre",
+      "episode_id": "02_three_ways_it_matters",
+      "project": "productions/pituitary_paper_theatre/02_three_ways_it_matters/v9",
+      "sources": [
+        "productions/pituitary_paper_theatre/02_three_ways_it_matters/v9/src/episodeshots.ts"
+      ],
+      "review_locators": []
+    },
+    {
+      "series_id": "pituitary_paper_theatre",
+      "episode_id": "03_hormone_questions",
+      "project": "productions/pituitary_paper_theatre/03_hormone_questions/v8",
+      "sources": [
+        "productions/pituitary_paper_theatre/03_hormone_questions/v8/src/episodeshots.ts"
+      ],
+      "review_locators": []
+    },
+    {
+      "series_id": "pituitary_paper_theatre",
+      "episode_id": "04_mri_and_visual_field",
+      "project": "productions/pituitary_paper_theatre/04_mri_and_visual_field/v8",
+      "sources": [
+        "productions/pituitary_paper_theatre/04_mri_and_visual_field/v8/src/episodeshots.ts"
+      ],
+      "review_locators": []
+    },
+    {
+      "series_id": "pituitary_paper_theatre",
+      "episode_id": "05_choose_the_goal",
+      "project": "productions/pituitary_paper_theatre/05_choose_the_goal/v8",
+      "sources": [
+        "productions/pituitary_paper_theatre/05_choose_the_goal/v8/src/episodeshots.ts"
+      ],
+      "review_locators": []
+    },
+    {
+      "series_id": "pituitary_paper_theatre",
+      "episode_id": "06_prolactin_not_one_number",
+      "project": "productions/pituitary_paper_theatre/06_prolactin_not_one_number/v8",
+      "sources": [
+        "productions/pituitary_paper_theatre/06_prolactin_not_one_number/v8/src/episodeshots.ts"
+      ],
+      "review_locators": []
+    },
+    {
+      "series_id": "pituitary_paper_theatre",
+      "episode_id": "07_small_changes_over_years",
+      "project": "productions/pituitary_paper_theatre/07_small_changes_over_years/v8",
+      "sources": [
+        "productions/pituitary_paper_theatre/07_small_changes_over_years/v8/src/episodeshots.ts"
+      ],
+      "review_locators": []
+    },
+    {
+      "series_id": "pituitary_paper_theatre",
+      "episode_id": "08_cortisol_find_the_source",
+      "project": "productions/pituitary_paper_theatre/08_cortisol_find_the_source/v9",
+      "sources": [
+        "productions/pituitary_paper_theatre/08_cortisol_find_the_source/v9/src/episodeshots.ts"
+      ],
+      "review_locators": []
+    },
+    {
+      "series_id": "pituitary_paper_theatre",
+      "episode_id": "09_the_transnasal_route",
+      "project": "productions/pituitary_paper_theatre/09_the_transnasal_route/v9",
+      "sources": [
+        "productions/pituitary_paper_theatre/09_the_transnasal_route/v9/src/episodeshots.ts"
+      ],
+      "review_locators": []
+    },
+    {
+      "series_id": "pituitary_paper_theatre",
+      "episode_id": "10_first_days_after_surgery",
+      "project": "productions/pituitary_paper_theatre/10_first_days_after_surgery/v8",
+      "sources": [
+        "productions/pituitary_paper_theatre/10_first_days_after_surgery/v8/src/episodeshots.ts"
+      ],
+      "review_locators": []
+    },
+    {
+      "series_id": "pituitary_paper_theatre",
+      "episode_id": "11_the_followup_notebook",
+      "project": "productions/pituitary_paper_theatre/11_the_followup_notebook/v8",
+      "sources": [
+        "productions/pituitary_paper_theatre/11_the_followup_notebook/v8/src/episodeshots.ts"
+      ],
+      "review_locators": []
+    },
+    {
+      "series_id": "diabetes_paper_theatre",
+      "episode_id": "04_the_meal_stays",
+      "project": "productions/diabetes_paper_theatre/04_the_meal_stays/v1",
+      "sources": [],
+      "review_locators": []
+    },
+    {
+      "series_id": "diabetes_paper_theatre",
+      "episode_id": "01_after_the_reading",
+      "project": "productions/diabetes_paper_theatre/01_after_the_reading/v1",
+      "sources": [
+        "productions/diabetes_paper_theatre/01_after_the_reading/v1/src/episodeshots.ts"
+      ],
+      "review_locators": []
+    },
+    {
+      "series_id": "diabetes_paper_theatre",
+      "episode_id": "02_three_time_windows",
+      "project": "productions/diabetes_paper_theatre/02_three_time_windows/v1",
+      "sources": [
+        "productions/diabetes_paper_theatre/02_three_time_windows/v1/src/episodeshots.ts"
+      ],
+      "review_locators": []
+    },
+    {
+      "series_id": "diabetes_paper_theatre",
+      "episode_id": "03_type_is_not_appearance",
+      "project": "productions/diabetes_paper_theatre/03_type_is_not_appearance/v1",
+      "sources": [
+        "productions/diabetes_paper_theatre/03_type_is_not_appearance/v1/src/episodeshots.ts"
+      ],
+      "review_locators": []
+    },
+    {
+      "series_id": "diabetes_paper_theatre",
+      "episode_id": "05_turn_the_package",
+      "project": "productions/diabetes_paper_theatre/05_turn_the_package/v1",
+      "sources": [
+        "productions/diabetes_paper_theatre/05_turn_the_package/v1/src/episodeshots.ts"
+      ],
+      "review_locators": []
+    },
+    {
+      "series_id": "diabetes_paper_theatre",
+      "episode_id": "06_move_with_a_plan",
+      "project": "productions/diabetes_paper_theatre/06_move_with_a_plan/v1",
+      "sources": [
+        "productions/diabetes_paper_theatre/06_move_with_a_plan/v1/src/episodeshots.ts"
+      ],
+      "review_locators": []
+    },
+    {
+      "series_id": "diabetes_paper_theatre",
+      "episode_id": "07_choose_for_the_person",
+      "project": "productions/diabetes_paper_theatre/07_choose_for_the_person/v1",
+      "sources": [
+        "productions/diabetes_paper_theatre/07_choose_for_the_person/v1/src/episodeshots.ts"
+      ],
+      "review_locators": []
+    },
+    {
+      "series_id": "diabetes_paper_theatre",
+      "episode_id": "08_insulin_without_labels",
+      "project": "productions/diabetes_paper_theatre/08_insulin_without_labels/v1",
+      "sources": [
+        "productions/diabetes_paper_theatre/08_insulin_without_labels/v1/src/episodeshots.ts"
+      ],
+      "review_locators": []
+    },
+    {
+      "series_id": "diabetes_paper_theatre",
+      "episode_id": "09_read_the_day",
+      "project": "productions/diabetes_paper_theatre/09_read_the_day/v1",
+      "sources": [
+        "productions/diabetes_paper_theatre/09_read_the_day/v1/src/episodeshots.ts"
+      ],
+      "review_locators": []
+    },
+    {
+      "series_id": "diabetes_paper_theatre",
+      "episode_id": "10_more_than_glucose",
+      "project": "productions/diabetes_paper_theatre/10_more_than_glucose/v1",
+      "sources": [
+        "productions/diabetes_paper_theatre/10_more_than_glucose/v1/src/episodeshots.ts"
+      ],
+      "review_locators": []
+    },
+    {
+      "series_id": "diabetes_paper_theatre",
+      "episode_id": "e00_low_glucose",
+      "project": "productions/diabetes_paper_theatre/e00_low_glucose/v1",
+      "sources": [
+        "productions/diabetes_paper_theatre/e00_low_glucose/v1/src/episodeshots.ts"
+      ],
+      "review_locators": []
+    },
+    {
+      "series_id": "hypertension_paper_theatre",
+      "episode_id": "01_not_one_number",
+      "project": "productions/hypertension_paper_theatre/01_not_one_number/v1",
+      "sources": [
+        "productions/hypertension_paper_theatre/01_not_one_number/v1/src/episodeshots.ts"
+      ],
+      "review_locators": []
+    },
+    {
+      "series_id": "hypertension_paper_theatre",
+      "episode_id": "02_sit_and_measure",
+      "project": "productions/hypertension_paper_theatre/02_sit_and_measure/v1",
+      "sources": [
+        "productions/hypertension_paper_theatre/02_sit_and_measure/v1/src/episodeshots.ts"
+      ],
+      "review_locators": []
+    },
+    {
+      "series_id": "hypertension_paper_theatre",
+      "episode_id": "03_two_places",
+      "project": "productions/hypertension_paper_theatre/03_two_places/v1",
+      "sources": [
+        "productions/hypertension_paper_theatre/03_two_places/v1/src/episodeshots.ts"
+      ],
+      "review_locators": []
+    },
+    {
+      "series_id": "hypertension_paper_theatre",
+      "episode_id": "04_feeling_is_not_control",
+      "project": "productions/hypertension_paper_theatre/04_feeling_is_not_control/v1",
+      "sources": [
+        "productions/hypertension_paper_theatre/04_feeling_is_not_control/v1/src/episodeshots.ts"
+      ],
+      "review_locators": []
+    },
+    {
+      "series_id": "hypertension_paper_theatre",
+      "episode_id": "05_where_the_salt_hides",
+      "project": "productions/hypertension_paper_theatre/05_where_the_salt_hides/v1",
+      "sources": [
+        "productions/hypertension_paper_theatre/05_where_the_salt_hides/v1/src/episodeshots.ts"
+      ],
+      "review_locators": []
+    },
+    {
+      "series_id": "hypertension_paper_theatre",
+      "episode_id": "06_move_and_rest",
+      "project": "productions/hypertension_paper_theatre/06_move_and_rest/v1",
+      "sources": [
+        "productions/hypertension_paper_theatre/06_move_and_rest/v1/src/episodeshots.ts"
+      ],
+      "review_locators": []
+    },
+    {
+      "series_id": "hypertension_paper_theatre",
+      "episode_id": "07_keep_the_medicine",
+      "project": "productions/hypertension_paper_theatre/07_keep_the_medicine/v1",
+      "sources": [
+        "productions/hypertension_paper_theatre/07_keep_the_medicine/v1/src/episodeshots.ts"
+      ],
+      "review_locators": []
+    },
+    {
+      "series_id": "hypertension_paper_theatre",
+      "episode_id": "08_bring_the_whole_day",
+      "project": "productions/hypertension_paper_theatre/08_bring_the_whole_day/v1",
+      "sources": [
+        "productions/hypertension_paper_theatre/08_bring_the_whole_day/v1/src/episodeshots.ts"
+      ],
+      "review_locators": []
+    },
+    {
+      "series_id": "hypertension_paper_theatre",
+      "episode_id": "e00_when_pressure_is_high",
+      "project": "productions/hypertension_paper_theatre/e00_when_pressure_is_high/v1",
+      "sources": [
+        "productions/hypertension_paper_theatre/e00_when_pressure_is_high/v1/src/episodeshots.ts"
+      ],
+      "review_locators": []
+    },
+    {
+      "series_id": "weight_management_paper_theatre",
+      "episode_id": "01_more_than_the_scale",
+      "project": "productions/weight_management_paper_theatre/01_more_than_the_scale/v1",
+      "sources": [
+        "productions/weight_management_paper_theatre/01_more_than_the_scale/v1/src/episodeshots.ts"
+      ],
+      "review_locators": []
+    },
+    {
+      "series_id": "weight_management_paper_theatre",
+      "episode_id": "02_changes_that_stay",
+      "project": "productions/weight_management_paper_theatre/02_changes_that_stay/v1",
+      "sources": [
+        "productions/weight_management_paper_theatre/02_changes_that_stay/v1/src/episodeshots.ts"
+      ],
+      "review_locators": []
+    },
+    {
+      "series_id": "weight_management_paper_theatre",
+      "episode_id": "03_keep_a_real_meal",
+      "project": "productions/weight_management_paper_theatre/03_keep_a_real_meal/v1",
+      "sources": [
+        "productions/weight_management_paper_theatre/03_keep_a_real_meal/v1/src/episodeshots.ts"
+      ],
+      "review_locators": []
+    },
+    {
+      "series_id": "weight_management_paper_theatre",
+      "episode_id": "04_a_drink_in_the_day",
+      "project": "productions/weight_management_paper_theatre/04_a_drink_in_the_day/v1",
+      "sources": [
+        "productions/weight_management_paper_theatre/04_a_drink_in_the_day/v1/src/episodeshots.ts"
+      ],
+      "review_locators": []
+    },
+    {
+      "series_id": "weight_management_paper_theatre",
+      "episode_id": "05_move_and_recover",
+      "project": "productions/weight_management_paper_theatre/05_move_and_recover/v1",
+      "sources": [
+        "productions/weight_management_paper_theatre/05_move_and_recover/v1/src/episodeshots.ts"
+      ],
+      "review_locators": []
+    },
+    {
+      "series_id": "weight_management_paper_theatre",
+      "episode_id": "06_the_evening_matters",
+      "project": "productions/weight_management_paper_theatre/06_the_evening_matters/v1",
+      "sources": [
+        "productions/weight_management_paper_theatre/06_the_evening_matters/v1/src/episodeshots.ts"
+      ],
+      "review_locators": []
+    },
+    {
+      "series_id": "weight_management_paper_theatre",
+      "episode_id": "07_read_the_plateau",
+      "project": "productions/weight_management_paper_theatre/07_read_the_plateau/v1",
+      "sources": [
+        "productions/weight_management_paper_theatre/07_read_the_plateau/v1/src/episodeshots.ts"
+      ],
+      "review_locators": []
+    },
+    {
+      "series_id": "weight_management_paper_theatre",
+      "episode_id": "08_treatment_continues_the_story",
+      "project": "productions/weight_management_paper_theatre/08_treatment_continues_the_story/v1",
+      "sources": [
+        "productions/weight_management_paper_theatre/08_treatment_continues_the_story/v1/src/episodeshots.ts"
+      ],
+      "review_locators": []
+    },
+    {
+      "series_id": "lipids_paper_theatre",
+      "episode_id": "01_read_the_report",
+      "project": "productions/lipids_paper_theatre/01_read_the_report/v1",
+      "sources": [
+        "productions/lipids_paper_theatre/01_read_the_report/v1/src/episodeshots.ts"
+      ],
+      "review_locators": []
+    },
+    {
+      "series_id": "lipids_paper_theatre",
+      "episode_id": "02_inside_the_artery_wall",
+      "project": "productions/lipids_paper_theatre/02_inside_the_artery_wall/v1",
+      "sources": [
+        "productions/lipids_paper_theatre/02_inside_the_artery_wall/v1/src/episodeshots.ts"
+      ],
+      "review_locators": []
+    },
+    {
+      "series_id": "lipids_paper_theatre",
+      "episode_id": "03_one_number_two_people",
+      "project": "productions/lipids_paper_theatre/03_one_number_two_people/v1",
+      "sources": [
+        "productions/lipids_paper_theatre/03_one_number_two_people/v1/src/episodeshots.ts"
+      ],
+      "review_locators": []
+    },
+    {
+      "series_id": "lipids_paper_theatre",
+      "episode_id": "04_triglyceride_clues",
+      "project": "productions/lipids_paper_theatre/04_triglyceride_clues/v1",
+      "sources": [
+        "productions/lipids_paper_theatre/04_triglyceride_clues/v1/src/episodeshots.ts"
+      ],
+      "review_locators": []
+    },
+    {
+      "series_id": "lipids_paper_theatre",
+      "episode_id": "05_change_the_meal_structure",
+      "project": "productions/lipids_paper_theatre/05_change_the_meal_structure/v1",
+      "sources": [
+        "productions/lipids_paper_theatre/05_change_the_meal_structure/v1/src/episodeshots.ts"
+      ],
+      "review_locators": []
+    },
+    {
+      "series_id": "lipids_paper_theatre",
+      "episode_id": "06_statins_have_a_long_job",
+      "project": "productions/lipids_paper_theatre/06_statins_have_a_long_job/v1",
+      "sources": [
+        "productions/lipids_paper_theatre/06_statins_have_a_long_job/v1/src/episodeshots.ts"
+      ],
+      "review_locators": []
+    },
+    {
+      "series_id": "lipids_paper_theatre",
+      "episode_id": "07_review_targets_and_symptoms",
+      "project": "productions/lipids_paper_theatre/07_review_targets_and_symptoms/v1",
+      "sources": [
+        "productions/lipids_paper_theatre/07_review_targets_and_symptoms/v1/src/episodeshots.ts"
+      ],
+      "review_locators": []
+    },
+    {
+      "series_id": "lipids_paper_theatre",
+      "episode_id": "08_a_family_clue",
+      "project": "productions/lipids_paper_theatre/08_a_family_clue/v1",
+      "sources": [
+        "productions/lipids_paper_theatre/08_a_family_clue/v1/src/episodeshots.ts"
+      ],
+      "review_locators": []
+    },
+    {
+      "series_id": "gout_paper_theatre",
+      "episode_id": "01_the_night_joint",
+      "project": "productions/gout_paper_theatre/01_the_night_joint/v1",
+      "sources": [
+        "productions/gout_paper_theatre/01_the_night_joint/v1/src/episodeshots.ts"
+      ],
+      "review_locators": []
+    },
+    {
+      "series_id": "gout_paper_theatre",
+      "episode_id": "02_two_jobs",
+      "project": "productions/gout_paper_theatre/02_two_jobs/v1",
+      "sources": [
+        "productions/gout_paper_theatre/02_two_jobs/v1/src/episodeshots.ts"
+      ],
+      "review_locators": []
+    },
+    {
+      "series_id": "gout_paper_theatre",
+      "episode_id": "03_the_quiet_crystals",
+      "project": "productions/gout_paper_theatre/03_the_quiet_crystals/v1",
+      "sources": [
+        "productions/gout_paper_theatre/03_the_quiet_crystals/v1/src/episodeshots.ts"
+      ],
+      "review_locators": []
+    },
+    {
+      "series_id": "gout_paper_theatre",
+      "episode_id": "04_a_real_table",
+      "project": "productions/gout_paper_theatre/04_a_real_table/v1",
+      "sources": [
+        "productions/gout_paper_theatre/04_a_real_table/v1/src/episodeshots.ts"
+      ],
+      "review_locators": []
+    },
+    {
+      "series_id": "gout_paper_theatre",
+      "episode_id": "05_turn_the_drink",
+      "project": "productions/gout_paper_theatre/05_turn_the_drink/v1",
+      "sources": [
+        "productions/gout_paper_theatre/05_turn_the_drink/v1/src/episodeshots.ts"
+      ],
+      "review_locators": []
+    },
+    {
+      "series_id": "gout_paper_theatre",
+      "episode_id": "06_high_urate_not_gout",
+      "project": "productions/gout_paper_theatre/06_high_urate_not_gout/v1",
+      "sources": [
+        "productions/gout_paper_theatre/06_high_urate_not_gout/v1/src/episodeshots.ts"
+      ],
+      "review_locators": []
+    },
+    {
+      "series_id": "gout_paper_theatre",
+      "episode_id": "07_the_medicine_review",
+      "project": "productions/gout_paper_theatre/07_the_medicine_review/v1",
+      "sources": [
+        "productions/gout_paper_theatre/07_the_medicine_review/v1/src/episodeshots.ts"
+      ],
+      "review_locators": []
+    },
+    {
+      "series_id": "gout_paper_theatre",
+      "episode_id": "08_after_the_pain",
+      "project": "productions/gout_paper_theatre/08_after_the_pain/v1",
+      "sources": [
+        "productions/gout_paper_theatre/08_after_the_pain/v1/src/episodeshots.ts"
+      ],
+      "review_locators": []
+    },
+    {
+      "series_id": "graves_paper_theatre",
+      "episode_id": "01_not_just_a_fast_heart",
+      "project": "productions/graves_paper_theatre/01_not_just_a_fast_heart/v2",
+      "sources": [
+        "productions/graves_paper_theatre/01_not_just_a_fast_heart/v2/src/episodeshots.ts"
+      ],
+      "review_locators": []
+    },
+    {
+      "series_id": "graves_paper_theatre",
+      "episode_id": "02_treatment_has_a_goal",
+      "project": "productions/graves_paper_theatre/02_treatment_has_a_goal/v2",
+      "sources": [
+        "productions/graves_paper_theatre/02_treatment_has_a_goal/v2/src/episodeshots.ts"
+      ],
+      "review_locators": []
+    },
+    {
+      "series_id": "graves_paper_theatre",
+      "episode_id": "03_when_to_call",
+      "project": "productions/graves_paper_theatre/03_when_to_call/v2",
+      "sources": [
+        "productions/graves_paper_theatre/03_when_to_call/v2/src/episodeshots.ts"
+      ],
+      "review_locators": []
+    },
+    {
+      "series_id": "graves_paper_theatre",
+      "episode_id": "04_the_eyes_have_a_story",
+      "project": "productions/graves_paper_theatre/04_the_eyes_have_a_story/v3",
+      "sources": [
+        "productions/graves_paper_theatre/04_the_eyes_have_a_story/v3/src/episodeshots.ts"
+      ],
+      "review_locators": []
+    },
+    {
+      "series_id": "graves_paper_theatre",
+      "episode_id": "05_the_life_between_visits",
+      "project": "productions/graves_paper_theatre/05_the_life_between_visits/v2",
+      "sources": [
+        "productions/graves_paper_theatre/05_the_life_between_visits/v2/src/episodeshots.ts"
+      ],
+      "review_locators": []
+    },
+    {
+      "series_id": "graves_paper_theatre",
+      "episode_id": "06_a_pregnancy_plan",
+      "project": "productions/graves_paper_theatre/06_a_pregnancy_plan/v2",
+      "sources": [
+        "productions/graves_paper_theatre/06_a_pregnancy_plan/v2/src/episodeshots.ts"
+      ],
+      "review_locators": []
+    },
+    {
+      "series_id": "graves_paper_theatre",
+      "episode_id": "07_after_the_numbers_improve",
+      "project": "productions/graves_paper_theatre/07_after_the_numbers_improve/v2",
+      "sources": [
+        "productions/graves_paper_theatre/07_after_the_numbers_improve/v2/src/episodeshots.ts"
+      ],
+      "review_locators": []
+    },
+    {
+      "series_id": "hashimoto_paper_theatre",
+      "episode_id": "01_two_different_results",
+      "project": "productions/hashimoto_paper_theatre/01_two_different_results/v2",
+      "sources": [
+        "productions/hashimoto_paper_theatre/01_two_different_results/v2/src/episodeshots.ts"
+      ],
+      "review_locators": []
+    },
+    {
+      "series_id": "hashimoto_paper_theatre",
+      "episode_id": "02_not_chasing_antibodies",
+      "project": "productions/hashimoto_paper_theatre/02_not_chasing_antibodies/v2",
+      "sources": [
+        "productions/hashimoto_paper_theatre/02_not_chasing_antibodies/v2/src/episodeshots.ts"
+      ],
+      "review_locators": []
+    },
+    {
+      "series_id": "hashimoto_paper_theatre",
+      "episode_id": "03_the_breakfast_arrangement",
+      "project": "productions/hashimoto_paper_theatre/03_the_breakfast_arrangement/v2",
+      "sources": [
+        "productions/hashimoto_paper_theatre/03_the_breakfast_arrangement/v2/src/episodeshots.ts"
+      ],
+      "review_locators": []
+    },
+    {
+      "series_id": "hashimoto_paper_theatre",
+      "episode_id": "04_the_tired_day",
+      "project": "productions/hashimoto_paper_theatre/04_the_tired_day/v2",
+      "sources": [
+        "productions/hashimoto_paper_theatre/04_the_tired_day/v2/src/episodeshots.ts"
+      ],
+      "review_locators": []
+    },
+    {
+      "series_id": "hashimoto_paper_theatre",
+      "episode_id": "05_plan_before_pregnancy",
+      "project": "productions/hashimoto_paper_theatre/05_plan_before_pregnancy/v2",
+      "sources": [
+        "productions/hashimoto_paper_theatre/05_plan_before_pregnancy/v2/src/episodeshots.ts"
+      ],
+      "review_locators": []
+    },
+    {
+      "series_id": "hashimoto_paper_theatre",
+      "episode_id": "06_living_with_followup",
+      "project": "productions/hashimoto_paper_theatre/06_living_with_followup/v2",
+      "sources": [
+        "productions/hashimoto_paper_theatre/06_living_with_followup/v2/src/episodeshots.ts"
+      ],
+      "review_locators": []
+    },
+    {
+      "series_id": "breast_nodules_paper_theatre",
+      "episode_id": "01_a_word_on_the_report",
+      "project": "productions/breast_nodules_paper_theatre/01_a_word_on_the_report/v2",
+      "sources": [
+        "productions/breast_nodules_paper_theatre/01_a_word_on_the_report/v2/src/episodeshots.ts"
+      ],
+      "review_locators": []
+    },
+    {
+      "series_id": "breast_nodules_paper_theatre",
+      "episode_id": "02_categories_are_not_steps",
+      "project": "productions/breast_nodules_paper_theatre/02_categories_are_not_steps/v2",
+      "sources": [
+        "productions/breast_nodules_paper_theatre/02_categories_are_not_steps/v2/src/episodeshots.ts"
+      ],
+      "review_locators": []
+    },
+    {
+      "series_id": "breast_nodules_paper_theatre",
+      "episode_id": "03_why_another_image",
+      "project": "productions/breast_nodules_paper_theatre/03_why_another_image/v2",
+      "sources": [
+        "productions/breast_nodules_paper_theatre/03_why_another_image/v2/src/episodeshots.ts"
+      ],
+      "review_locators": []
+    },
+    {
+      "series_id": "breast_nodules_paper_theatre",
+      "episode_id": "04_the_sample_has_a_job",
+      "project": "productions/breast_nodules_paper_theatre/04_the_sample_has_a_job/v3",
+      "sources": [
+        "productions/breast_nodules_paper_theatre/04_the_sample_has_a_job/v3/src/episodeshots.ts"
+      ],
+      "review_locators": []
+    },
+    {
+      "series_id": "breast_nodules_paper_theatre",
+      "episode_id": "05_followup_is_active",
+      "project": "productions/breast_nodules_paper_theatre/05_followup_is_active/v2",
+      "sources": [
+        "productions/breast_nodules_paper_theatre/05_followup_is_active/v2/src/episodeshots.ts"
+      ],
+      "review_locators": []
+    },
+    {
+      "series_id": "breast_nodules_paper_theatre",
+      "episode_id": "06_treatment_is_not_one_word",
+      "project": "productions/breast_nodules_paper_theatre/06_treatment_is_not_one_word/v2",
+      "sources": [
+        "productions/breast_nodules_paper_theatre/06_treatment_is_not_one_word/v2/src/episodeshots.ts"
+      ],
+      "review_locators": []
+    },
+    {
+      "series_id": "pcos_paper_theatre",
+      "episode_id": "01_more_than_an_ultrasound",
+      "project": "productions/pcos_paper_theatre/01_more_than_an_ultrasound/v2",
+      "sources": [
+        "productions/pcos_paper_theatre/01_more_than_an_ultrasound/v2/src/episodeshots.ts"
+      ],
+      "review_locators": []
+    },
+    {
+      "series_id": "pcos_paper_theatre",
+      "episode_id": "02_the_calendar_is_not_empty",
+      "project": "productions/pcos_paper_theatre/02_the_calendar_is_not_empty/v2",
+      "sources": [
+        "productions/pcos_paper_theatre/02_the_calendar_is_not_empty/v2/src/episodeshots.ts"
+      ],
+      "review_locators": []
+    },
+    {
+      "series_id": "pcos_paper_theatre",
+      "episode_id": "03_skin_is_part_of_the_story",
+      "project": "productions/pcos_paper_theatre/03_skin_is_part_of_the_story/v3",
+      "sources": [
+        "productions/pcos_paper_theatre/03_skin_is_part_of_the_story/v3/src/episodeshots.ts"
+      ],
+      "review_locators": []
+    },
+    {
+      "series_id": "pcos_paper_theatre",
+      "episode_id": "04_not_only_a_weight_problem",
+      "project": "productions/pcos_paper_theatre/04_not_only_a_weight_problem/v2",
+      "sources": [
+        "productions/pcos_paper_theatre/04_not_only_a_weight_problem/v2/src/episodeshots.ts"
+      ],
+      "review_locators": []
+    },
+    {
+      "series_id": "pcos_paper_theatre",
+      "episode_id": "05_a_fertility_plan",
+      "project": "productions/pcos_paper_theatre/05_a_fertility_plan/v2",
+      "sources": [
+        "productions/pcos_paper_theatre/05_a_fertility_plan/v2/src/episodeshots.ts"
+      ],
+      "review_locators": []
+    },
+    {
+      "series_id": "pcos_paper_theatre",
+      "episode_id": "06_treatment_for_my_goal",
+      "project": "productions/pcos_paper_theatre/06_treatment_for_my_goal/v2",
+      "sources": [
+        "productions/pcos_paper_theatre/06_treatment_for_my_goal/v2/src/episodeshots.ts"
+      ],
+      "review_locators": []
+    },
+    {
+      "series_id": "pcos_paper_theatre",
+      "episode_id": "07_life_without_labels",
+      "project": "productions/pcos_paper_theatre/07_life_without_labels/v2",
+      "sources": [
+        "productions/pcos_paper_theatre/07_life_without_labels/v2/src/episodeshots.ts"
+      ],
+      "review_locators": []
+    },
+    {
+      "series_id": "ckd_paper_theatre",
+      "episode_id": "01_one_result_is_not_a_season",
+      "project": "productions/ckd_paper_theatre/01_one_result_is_not_a_season/v2",
+      "sources": [
+        "productions/ckd_paper_theatre/01_one_result_is_not_a_season/v2/src/episodeshots.ts"
+      ],
+      "review_locators": []
+    },
+    {
+      "series_id": "ckd_paper_theatre",
+      "episode_id": "02_two_checks_one_kidney",
+      "project": "productions/ckd_paper_theatre/02_two_checks_one_kidney/v2",
+      "sources": [
+        "productions/ckd_paper_theatre/02_two_checks_one_kidney/v2/src/episodeshots.ts"
+      ],
+      "review_locators": []
+    },
+    {
+      "series_id": "ckd_paper_theatre",
+      "episode_id": "03_the_stage_is_not_the_future",
+      "project": "productions/ckd_paper_theatre/03_the_stage_is_not_the_future/v2",
+      "sources": [
+        "productions/ckd_paper_theatre/03_the_stage_is_not_the_future/v2/src/episodeshots.ts"
+      ],
+      "review_locators": []
+    },
+    {
+      "series_id": "ckd_paper_theatre",
+      "episode_id": "04_the_medicine_bag",
+      "project": "productions/ckd_paper_theatre/04_the_medicine_bag/v2",
+      "sources": [
+        "productions/ckd_paper_theatre/04_the_medicine_bag/v2/src/episodeshots.ts"
+      ],
+      "review_locators": []
+    },
+    {
+      "series_id": "ckd_paper_theatre",
+      "episode_id": "05_a_table_for_my_results",
+      "project": "productions/ckd_paper_theatre/05_a_table_for_my_results/v3",
+      "sources": [
+        "productions/ckd_paper_theatre/05_a_table_for_my_results/v3/src/episodeshots.ts"
+      ],
+      "review_locators": []
+    },
+    {
+      "series_id": "ckd_paper_theatre",
+      "episode_id": "06_the_changes_between_visits",
+      "project": "productions/ckd_paper_theatre/06_the_changes_between_visits/v2",
+      "sources": [
+        "productions/ckd_paper_theatre/06_the_changes_between_visits/v2/src/episodeshots.ts"
+      ],
+      "review_locators": []
+    },
+    {
+      "series_id": "ckd_paper_theatre",
+      "episode_id": "07_a_longer_view",
+      "project": "productions/ckd_paper_theatre/07_a_longer_view/v2",
+      "sources": [
+        "productions/ckd_paper_theatre/07_a_longer_view/v2/src/episodeshots.ts"
+      ],
+      "review_locators": []
+    }
+  ],
+  "note": "定位材料不是质量结论。程序绘制的小型附件可能成立；显式宽度也可能处在远景。必须回到当前成片判断人物身份、动作、复杂度和叙事重量。"
+}

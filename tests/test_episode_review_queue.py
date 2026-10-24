@@ -21,7 +21,10 @@ class EpisodeReviewQueueTests(unittest.TestCase):
             (project / "audio").mkdir()
             (project / "src").mkdir()
             (project / "score.json").write_text('{"shots": []}', encoding="utf-8")
-            (project / "scene_directions.json").write_text("{}", encoding="utf-8")
+            directions = project / "src/scene_directions.json"
+            directions.write_text("{}", encoding="utf-8")
+            (project / 'preproduction').mkdir()
+            (project / 'preproduction/DIRECTOR.md').write_text('old director draft', encoding='utf-8')
             (project / "audio/narration_beats.json").write_text('{"beats": []}', encoding="utf-8")
             (project / "audio/narration-normalized.wav").write_bytes(b"placeholder")
             (project / "audio.wav").write_bytes(b"placeholder")
@@ -36,6 +39,7 @@ class EpisodeReviewQueueTests(unittest.TestCase):
 
         self.assertEqual(row["status"], "candidate_ready_needs_episode_review")
         self.assertEqual(row["evidence"]["current_media"], str(current_media))
+        self.assertEqual(row['evidence']['directions'], str(directions))
         self.assertEqual(row["semantic_review"], "pending")
         self.assertFalse(row["release_eligible"])
 

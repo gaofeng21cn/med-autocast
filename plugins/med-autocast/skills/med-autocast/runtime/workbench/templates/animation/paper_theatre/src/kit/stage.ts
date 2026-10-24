@@ -1,6 +1,7 @@
 import type { Asset, Camera, Layout, Point, Pose, Rect } from "./types";
 import { textBox, type CardTitleOptions } from "./labels";
 import { hash } from "./motion";
+import { humanImageWidth } from './humanScale';
 export class Stage {
   readonly images: Record<string, HTMLImageElement> = {};
   readonly assets: Record<string, Asset> = {};
@@ -175,6 +176,13 @@ export class Stage {
         name: id,
       });
     });
+  }
+  humanImage(id: string, p: Pose & { pixelsPerCm: number; anchor?: Point; lift?: number }) {
+    const im = this.images[id];
+    if (!im) throw Error(`未登记素材 ${id}`);
+    const w = humanImageWidth(this.assets[id], im.width, im.height, p.pixelsPerCm);
+    const { pixelsPerCm: _pixelsPerCm, ...pose } = p;
+    this.image(id, { ...pose, w });
   }
   anchor(id: string, w: number, name: string): Point {
     const a = this.assets[id].registration?.anchors?.[name];

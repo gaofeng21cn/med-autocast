@@ -3,13 +3,16 @@
 from __future__ import annotations
 
 import copy
+import fcntl
 import hashlib
 import html
 import json
+import os
 from pathlib import Path
 import re
 import shutil
 import tempfile
+import threading
 
 import yaml
 
@@ -27,7 +30,7 @@ def read(path):
 def write(path, value):
     path = Path(path)
     path.parent.mkdir(parents=True, exist_ok=True)
-    temporary = path.with_suffix(path.suffix + ".tmp")
+    temporary = path.with_name(f".{path.name}.{os.getpid()}.{threading.get_ident()}.tmp")
     temporary.write_text(json.dumps(value, ensure_ascii=False, indent=2) + "\n")
     temporary.replace(path)
 
@@ -73,7 +76,7 @@ def map_references(value, mapper):
     return value
 
 
-def archive(root, metadata, files):
+def _archive_unlocked(root, metadata, files):
     identifier = token(metadata["id"])
     descriptors = []
     sources = []
@@ -128,6 +131,23 @@ def archive(root, metadata, files):
         catalog["items"].append({"id": identifier, "revision": revision, "record": relative})
         write(catalog_path, catalog)
     return {"id": identifier, "revision": revision, "record": relative, "status": "archived_and_verified"}
+
+
+def archive(root, metadata, files):
+    """Archive under one cross-process lock.
+
+    Batch preparation commonly imports several assets in parallel. The package
+    revision is deterministic, so two writers can otherwise race while
+    renaming the same content-addressed directory.
+    """
+    root = Path(root).resolve()
+    root.mkdir(parents=True, exist_ok=True)
+    with (root / ".library.lock").open("a+") as lock:
+        fcntl.flock(lock.fileno(), fcntl.LOCK_EX)
+        try:
+            return _archive_unlocked(root, metadata, files)
+        finally:
+            fcntl.flock(lock.fileno(), fcntl.LOCK_UN)
 
 
 def ingest_project(workspace, root, project, selected=None, notes=None):
@@ -257,6 +277,17 @@ def scan_projects(workspace):
 
 
 def reuse(workspace, root, project, identifier, revision=None, asset_id=None):
+    project = within(workspace, project)
+    lock_path = project / ".library-use.lock"
+    with lock_path.open("a+") as lock:
+        fcntl.flock(lock.fileno(), fcntl.LOCK_EX)
+        try:
+            return _reuse_unlocked(workspace, root, project, identifier, revision, asset_id)
+        finally:
+            fcntl.flock(lock.fileno(), fcntl.LOCK_UN)
+
+
+def _reuse_unlocked(workspace, root, project, identifier, revision=None, asset_id=None):
     identifier = token(identifier)
     records, _ = managed_records(root)
     record = next((item for item in records if item["id"] == identifier), None)
@@ -272,7 +303,6 @@ def reuse(workspace, root, project, identifier, revision=None, asset_id=None):
     if assessment.get("status") in {"needs_rebuild", "superseded"} or record.get("status") == "reference_only":
         return {"status": "not_imported", "quality_debt": [assessment.get("reason", "该原件仅作参考，请选替代部件或新创")]}
     scope = record.get("reuse_scope", {})
-    project = within(workspace, project)
     config = read(project / "project.json")
     if scope.get("kind") == "author":
         from workbench_config import load_author_profile
@@ -297,9 +327,12 @@ def reuse(workspace, root, project, identifier, revision=None, asset_id=None):
                  'content_bounds': record.get('content_bounds'),
                  'content_bounds_format': record.get('content_bounds_format'),
                  'registration': record.get('registration'),
+                 'human_scale': record.get('human_scale'),
                  'medical': record.get('medical_review') not in (None, 'not_applicable'),
                  'visual_review': {'status': 'source_scope_only',
                                    'original_review': copy.deepcopy(record.get('review', {}))}}
+    if asset and record.get('human_scale'):
+        asset.setdefault('human_scale', copy.deepcopy(record['human_scale']))
     assets = bundle or ([asset] if asset else [])
     manifest_path = project / config.get("assets", "asset_manifest.json")
     manifest = read(manifest_path) if assets else None
@@ -342,6 +375,12 @@ def reuse(workspace, root, project, identifier, revision=None, asset_id=None):
                       "original_source_type": part["asset"].get("source_type"),
                       "source_review": copy.deepcopy(asset.get("visual_review", {})),
                       "status": "pending_review", "visual_review": {"status": "pending"}})
+        asset.setdefault("visual_meaning", record.get("title", identifier))
+        asset.setdefault(
+            "must_not_imply",
+            "资产原件只用于当前画面中的普通纸件或人物；不是真实患者影像、诊断或作者医生，"
+            "当前镜头仍需复核语义、尺度、接触和遮挡。",
+        )
         if asset.get("medical"):
             asset["medical_review"] = {"status": "pending"}
         manifest["assets"].append(asset)
@@ -356,7 +395,12 @@ def reuse(workspace, root, project, identifier, revision=None, asset_id=None):
     if use not in usage["uses"]:
         usage["uses"].append(use)
         write(usage_path, usage)
+    scale_expected = {part['asset_id']: part['asset']['human_scale'] for part in planned
+                      if part['asset'].get('human_scale')}
+    scale_actual = {part['asset_id']: part.get('human_scale') for part in read(manifest_path).get('assets', [])} if scale_expected else {}
     return {"status": "copied_and_verified", "id": identifier, "revision": record["revision"],
+            "human_scale_readback": {"status": ("preserved" if all(scale_actual.get(key) == value for key, value in scale_expected.items()) else "diagnostic") if scale_expected else "not_applicable",
+                                     "checked_assets": sorted(scale_expected)},
             "directory": str(destination), "entry": str(destination / record.get("entry", record["files"][0]["path"])),
             "asset_id": new_id, "review": "evaluate_in_current_shot",
             "imported_assets": [{"asset_id": part["asset_id"], "path": str(relative / part["path"])} for part in planned],
@@ -434,8 +478,15 @@ def run(args):
                and (not scope or item.get("reuse_scope", {}).get("kind") == scope)
                and item.get("curation", {}).get("status") not in {"needs_rebuild", "superseded"}
                and item.get("status") != "reference_only"]
+    matched_count = len(matches)
+    mutating = bool(getattr(args, "ingest_project", False) or getattr(args, "register", None) or getattr(args, "use", None))
+    if mutating and not query:
+        touched = {(item.get("id"), item.get("revision")) for item in actions}
+        matches = [item for item in matches if (item.get("id"), item.get("revision")) in touched]
     action_debts = [debt for action in actions for debt in action.get("quality_debt", [])]
     return {"status": "completed_with_quality_debt" if debts or managed_debts or live_debts or action_debts else "completed",
-            "count": len(matches), "managed_count": len(managed), "assets": matches, "actions": actions,
+            "count": len(matches), "matched_count": matched_count,
+            "response_scope": "current_actions" if mutating and not query else "query",
+            "managed_count": len(managed), "assets": matches, "actions": actions,
             "catalog": str(root / "catalog.json"), "index": str(root / "index.json"),
             "board": str(root / "index.html"), "quality_debt": debts + managed_debts + live_debts + action_debts}

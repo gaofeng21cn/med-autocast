@@ -10,6 +10,7 @@ authorities:
   first_draft_quality: docs/28_初版质量与高效返修流程.md
   pronunciation: docs/27_中文配音发音控制与听辨SOP.md
   asset_library_sop: docs/29_医学视频资产库与初稿前置质量SOP.md
+  character_and_scale_contract: docs/44_人物素材与画面尺度契约.md
 asset_library:
   mode: auto_install_optional_repo
   auto_install: true

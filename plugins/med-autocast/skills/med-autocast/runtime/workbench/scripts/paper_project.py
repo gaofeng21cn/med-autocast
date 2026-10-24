@@ -762,9 +762,176 @@ def preview(a):
     }
 
 
+def audio_score_inputs(project, config):
+    """Only inputs consumed by mix_audio; visual recipes do not change sound."""
+    if (project / config["score"]).resolve() != (project / "score.json").resolve():
+        raise ValueError("当前 mixer 读取 score.json，不能复用其他 Score 路径的混音")
+    score = read(project / config["score"])
+    assets = read(project / "asset_manifest.json")["assets"]
+    sound_assets = {}
+    for cue in score.get("sounds", []):
+        if cue.get("asset_id"):
+            asset = next(row for row in assets if row["asset_id"] == cue["asset_id"])
+            sound_assets[cue["asset_id"]] = sha(project / asset["path"])
+    return {
+        "duration": score["duration"],
+        "sounds": score.get("sounds", []),
+        "shots": [
+            {"id": shot["id"], "start": shot["start"], "events": shot.get("events", {})}
+            for shot in score["shots"]
+        ],
+        "sound_assets_sha256": sound_assets,
+    }
+
+
+def consumed_audio_inputs(snapshot):
+    """Compare only events read by the mixer; retain full snapshots for provenance."""
+    used = {}
+    for cue in snapshot["sounds"]:
+        used.setdefault(cue["shot"], set()).add(cue.get("event"))
+    return {
+        **snapshot,
+        "shots": [
+            {**shot, "events": {key: value for key, value in shot["events"].items()
+                                 if key in used[shot["id"]]}}
+            for shot in snapshot["shots"] if shot["id"] in used
+        ],
+    }
+
+
+def attach_mix(project, config):
+    entry = project / config["entry"]
+    markup = entry.read_text()
+    if 'id="voice"' not in markup:
+        entry.write_text(
+            markup.replace(
+                "<script ",
+                '<audio id="voice" src="' + config["audio"]
+                + '" preload="metadata"></audio><script ',
+                1,
+            )
+        )
+    (project / "audio/needs-remix.json").unlink(missing_ok=True)
+
+
+def preserve_mix(project, config):
+    """Keep exact prior audio and honest input snapshots before any overwrite."""
+    audio = project / config["audio"]
+    receipt_path = project / "audio/mix-receipt.json"
+    if not audio.is_file() and not receipt_path.is_file():
+        return None
+    history = project / "audio/mix-history" / stamp()
+    history.mkdir(parents=True, exist_ok=False)
+    files = {}
+    sources = {
+        "project.json": project / "project.json",
+        "score.json": project / config["score"],
+        "mix-receipt.json": receipt_path,
+        "timing-receipt.json": project / "audio/timing-receipt.json",
+        "current-render.json": project / "out/current.json",
+        "audio" + audio.suffix: audio,
+    }
+    for name, source in sources.items():
+        if source.is_file():
+            shutil.copyfile(source, history / name)
+            files[name] = {"source": str(source), "sha256": sha(history / name)}
+            if files[name]["sha256"] != sha(source):
+                raise ValueError("旧混音保全校验失败：" + str(source))
+    receipt = read(receipt_path) if receipt_path.is_file() else {}
+    matches = {}
+    for key, field in (("audio_sha256", "audio"), ("score_sha256", "score"), ("voice_sha256", "voice")):
+        source = project / config[field]
+        matches[key] = (receipt.get(key) == sha(source)) if source.is_file() and receipt.get(key) else None
+    save(history / "snapshot.json", {
+        "purpose": "prior_mix_recovery", "files": files,
+        "receipt_matches_current_inputs": matches,
+        "limits": "保存的是覆盖前实际文件；false或null不证明原混音输入，不能据此伪造历史绑定或批准听感。",
+    })
+    return str(history)
+
+
+def reuse_mix(a, project, config):
+    source = a.reuse_from_project.resolve()
+    if source == project:
+        raise ValueError("复用混音需要独立的原工程，不能以当前工程自证")
+    source_config = read(source / "project.json")
+    if source_config.get("schema") != "paper_project/v1":
+        raise ValueError("混音来源不是已登记的纸剧场项目")
+    if any(source_config.get(key) != config.get(key) for key in ("series_id", "episode_id")):
+        raise ValueError("只能从同一系列、同一集的原工程复用混音")
+    receipt_path = source / "audio/mix-receipt.json"
+    receipt = read(receipt_path)
+    for key, field in (
+        ("voice_sha256", "voice"), ("score_sha256", "score"), ("audio_sha256", "audio")
+    ):
+        if receipt.get(key) != sha(source / source_config[field]):
+            raise ValueError("原混音回执已过期：" + key)
+    voice_sha = sha(project / config["voice"])
+    if voice_sha != receipt["voice_sha256"]:
+        raise ValueError("旁白已变化，不能复用原混音")
+    old_inputs = audio_score_inputs(source, source_config)
+    new_inputs = audio_score_inputs(project, config)
+    recorded_inputs = receipt.get("audio_score_inputs")
+    if recorded_inputs is not None and recorded_inputs != old_inputs:
+        raise ValueError("原混音的声音输入记录已过期")
+    if recorded_inputs is None and old_inputs["sound_assets_sha256"]:
+        raise ValueError("原混音未记录音效载荷字节，不能验证注册音效的复用")
+    if consumed_audio_inputs(old_inputs) != consumed_audio_inputs(new_inputs):
+        raise ValueError("声音时长、事件或音效素材已变化，不能复用原混音")
+    source_receipt_sha = sha(receipt_path)
+    previous_mix = preserve_mix(project, config)
+    target_audio = project / config["audio"]
+    target_audio.parent.mkdir(parents=True, exist_ok=True)
+    with tempfile.TemporaryDirectory(dir=target_audio.parent, prefix=".reuse-mix-") as temp:
+        copied = Path(temp) / "audio"
+        shutil.copyfile(source / source_config["audio"], copied)
+        if sha(copied) != receipt["audio_sha256"]:
+            raise ValueError("原混音复制校验失败")
+        os.replace(copied, target_audio)
+    record = dict(receipt)
+    record.update(
+        voice_source=str(project / config["voice"]),
+        voice_sha256=voice_sha,
+        score=config["score"],
+        score_sha256=sha(project / config["score"]),
+        audio_sha256=sha(target_audio),
+        audio_score_inputs=new_inputs,
+        previous_mix_snapshot=previous_mix,
+        full_listening="pending",
+        tone_consistency="unchanged_source_not_reapproved",
+        reused_mix={
+            "reason": "audio_inputs_unchanged_visual_revision",
+            "source_project": str(source),
+            "source_receipt": str(receipt_path),
+            "source_receipt_sha256": source_receipt_sha,
+            "source_score_sha256": receipt["score_sha256"],
+            "source_audio_sha256": receipt["audio_sha256"],
+            "audio_inputs_sha256": hashlib.sha256(
+                json.dumps(new_inputs, sort_keys=True, ensure_ascii=False).encode()
+            ).hexdigest(),
+            "sound_assets_sha256": new_inputs["sound_assets_sha256"],
+            "source_review": {
+                "full_listening": receipt.get("full_listening"),
+                "tone_consistency": receipt.get("tone_consistency"),
+            },
+        },
+    )
+    save(project / "audio/mix-receipt.json", record)
+    attach_mix(project, config)
+    return {"status": "mixed_reused", "audio": str(target_audio),
+            "audio_sha256": record["audio_sha256"], "reused_mix": record["reused_mix"]}
+
+
 def mix(a):
     p, c = get_project(a)
     assert_narration(p, c)
+    timing = read(p / "audio/timing-receipt.json")
+    if timing.get("voice_sha256") != sha(p / c["voice"]):
+        raise ValueError("旁白已变化，请先 retime 并校准字幕")
+    if getattr(a, "reuse_from_project", None):
+        if getattr(a, "music", None) or getattr(a, "music_plan", None):
+            raise ValueError("复用原混音不能同时指定新的音乐")
+        return reuse_mix(a, p, c)
     music = a.music
     music_plan = getattr(a, "music_plan", None)
     if music is None and music_plan is None:
@@ -782,34 +949,23 @@ def mix(a):
         "--output",
         p / c["audio"],
     ]
-    timing = read(p / "audio/timing-receipt.json")
-    if timing.get("voice_sha256") != sha(p / c["voice"]):
-        raise ValueError("旁白已变化，请先 retime 并校准字幕")
     if music:
         cmd += ["--music", Path(music).resolve()]
     if music_plan:
         cmd += ["--music-plan", music_plan.resolve()]
+    audio_inputs = audio_score_inputs(p, c)
+    previous_mix = preserve_mix(p, c)
     run(cmd, p, a.workspace)
     r = read(p / "audio/mix-receipt.json")
     r.update(
         voice_sha256=sha(p / c["voice"]),
         score_sha256=sha(p / c["score"]),
         audio_sha256=sha(p / c["audio"]),
+        audio_score_inputs=audio_inputs,
+        previous_mix_snapshot=previous_mix,
     )
     save(p / "audio/mix-receipt.json", r)
-    entry = p / c["entry"]
-    markup = entry.read_text()
-    if 'id="voice"' not in markup:
-        entry.write_text(
-            markup.replace(
-                "<script ",
-                '<audio id="voice" src="'
-                + c["audio"]
-                + '" preload="metadata"></audio><script ',
-                1,
-            )
-        )
-    (p / "audio/needs-remix.json").unlink(missing_ok=True)
+    attach_mix(p, c)
     return {"status": "mixed", "audio": str(p / c["audio"])}
 
 
@@ -912,8 +1068,8 @@ def assets(a):
         if any(r["asset_id"] == a.asset_id for r in data["assets"]):
             raise ValueError("素材 ID 已存在；新版本使用独立 ID，保留旧图")
         dest = p / "assets/imported" / (a.asset_id + a.asset.suffix.lower())
-        dest.parent.mkdir(parents=True, exist_ok=True)
-        shutil.copy2(a.asset, dest)
+        if not a.asset.is_file():
+            raise ValueError(f"素材文件不存在：{a.asset}")
         entry = {
             "asset_id": a.asset_id,
             "path": str(dest.relative_to(p)),
@@ -925,6 +1081,7 @@ def assets(a):
             "medical": False,
             "registration": {"pivot": {"x": 0.5, "y": 0.5}, "anchors": {}},
         }
+        evidence_copies = []
         if a.metadata:
             meta = read(a.metadata)
             for k in [
@@ -946,12 +1103,21 @@ def assets(a):
             ]:
                 if entry.get(k):
                     evidence = (a.metadata.parent / entry[k]).resolve()
+                    if not evidence.is_file():
+                        raise ValueError(
+                            f"素材证据 {k} 不存在：{evidence}；相对路径以 metadata 所在目录 {a.metadata.parent.resolve()} 为基准，尚未导入"
+                        )
                     dst = (
                         p / "assets/evidence" / (a.asset_id + "-" + k + evidence.suffix)
                     )
-                    dst.parent.mkdir(exist_ok=True)
-                    shutil.copy2(evidence, dst)
+                    evidence_copies.append((evidence, dst))
                     entry[k] = str(dst.relative_to(p))
+        # Validate every evidence reference before touching imported files.
+        dest.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copy2(a.asset, dest)
+        for evidence, dst in evidence_copies:
+            dst.parent.mkdir(exist_ok=True)
+            shutil.copy2(evidence, dst)
         data["assets"].append(entry)
         save(p / c["assets"], data)
     if a.registration:
@@ -1127,6 +1293,12 @@ def package(a):
                 shutil.copy2(p / src, record / name)
                 attachments[key] = name
         preview_ref = evidence.get('review_scope', {}).get('preview')
+        render_receipt = Path(r.get('render_receipt', '_missing_'))
+        if not render_receipt.is_absolute():
+            render_receipt = p / render_receipt
+        if render_receipt.is_file():
+            shutil.copy2(render_receipt, record / 'render-receipt.json')
+            attachments['render_receipt'] = 'render-receipt.json'
         if preview_ref and Path(preview_ref).is_file():
             preview = Path(preview_ref)
             shutil.copy2(preview, record / 'preview.json')
@@ -1134,7 +1306,11 @@ def package(a):
             if (preview.parent / 'contact.jpg').is_file():
                 shutil.copy2(preview.parent / 'contact.jpg', record / 'contact.jpg')
                 attachments['contact_sheet'] = 'contact.jpg'
-        final_record = target if internal_export else loc['record']
+        # Human-facing latest-only publish folders contain the media and copy.
+        # Review evidence lives in deliveries; never write relative links to
+        # files that exist only in that internal record from the public folder.
+        final_record = target
+        artifact_record = target if internal_export else loc['record']
         relative = lambda file: os.path.relpath(file, final_record)
         result = {**r, 'schema': 'paper_review_delivery/v1', 'series_id': c['series_id'],
                   'episode_id': c['episode_id'], 'project': str(p),
@@ -1143,7 +1319,8 @@ def package(a):
                   'reviews': review, 'quality_debt': debt, 'release_eligible': False, 'uploaded': False,
                   'artifacts': {'video': relative(target / 'video.mp4'),
                                 'subtitles': relative(target / 'subtitles.srt'),
-                                'score': 'score.json', 'narration_script': 'narration.json',
+                                'score': str(artifact_record / 'score.json'),
+                                'narration_script': str(artifact_record / 'narration.json'),
                                 'source_project': str(p), **attachments},
                   'review_scope': evidence.get('review_scope', {}),
                   'review_evidence': str(a.review.resolve()) if a.review else None}
@@ -1246,6 +1423,8 @@ def main():
     music_options = s.add_mutually_exclusive_group()
     music_options.add_argument("--music", type=Path)
     music_options.add_argument("--music-plan", type=Path)
+    music_options.add_argument("--reuse-from-project", type=Path,
+                               help="Reuse unchanged audio bytes from the same episode before visual revision")
     s = sub.add_parser("render")
     s.add_argument("--output", type=Path)
     s = sub.add_parser("package")
@@ -1257,6 +1436,22 @@ def main():
         p.error("需要 --project")
     try:
         result = globals()[{"init": "initialize"}.get(a.command, a.command)](a)
+        if a.command == "preview":
+            # Full locators remain in preview.json; do not replay the entire
+            # frame-by-frame report into a long-running conversation.
+            debts = result.get("quality_debt", [])
+            groups = {}
+            for debt in debts:
+                key = (debt.get("code") or debt.get("kind") or "unspecified",
+                       debt.get("owner_stage"), debt.get("blocks_quality_export", False))
+                if key not in groups:
+                    groups[key] = {k: debt[k] for k in (
+                        "code", "kind", "owner_stage", "blocks_stage_progress",
+                        "blocks_quality_export", "semantic_review_required") if k in debt}
+                    groups[key].update(count=0, evidence_ref=result.get("preview_receipt"))
+                groups[key]["count"] += 1
+            result = {**result, "quality_debt": list(groups.values()),
+                      "quality_debt_count": len(debts), "diagnostic_scope": "summary_full_report_in_receipt"}
         print(json.dumps(result, ensure_ascii=False))
     except (ValueError, OSError, KeyError, StopIteration) as e:
         p.exit(1, f"{e}\n")

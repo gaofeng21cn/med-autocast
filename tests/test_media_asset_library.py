@@ -169,6 +169,57 @@ class MediaCompanionTests(unittest.TestCase):
         self.assertNotIn('asset',original)
         self.assertEqual(original['revision'],archived['revision'])
 
+    def test_character_use_preserves_contact_anchors_and_resets_current_review(self):
+        registration = {
+            'pivot': {'x': .5, 'y': .5},
+            'anchors': {'head': {'x': .5, 'y': .1},
+                        'feet': {'x': .5, 'y': .95},
+                        'hand_right': {'x': .7, 'y': .55}},
+        }
+        for wrapped in (False, True):
+            with self.subTest(project_asset_wrapper=wrapped):
+                identifier = 'character_wrapped' if wrapped else 'character_standalone'
+                metadata = {'id': identifier, 'kind': 'transparent_subject',
+                            'title': '完整人物站姿', 'entry': 'files/person.png',
+                            'reuse_scope': {'kind': 'general'},
+                            'registration': registration,
+                            'review': {'static_alpha': 'passed'},
+                            'medical_review': 'not_applicable'}
+                if wrapped:
+                    metadata['asset'] = {
+                        'asset_id': identifier, 'path': 'files/person.png',
+                        'registration': registration, 'medical': False,
+                        'status': 'approved_direct_use',
+                        'visual_review': {'status': 'passed'},
+                    }
+                archived = local.archive(self.repo, metadata, [
+                    {'source': str(self.base/'original.png'), 'path': 'files/person.png'},
+                ])
+                original_path = self.repo / archived['record']
+                original_bytes = original_path.read_bytes()
+                record = local.read(original_path)
+                row = {'id': f"paper:{identifier}@{record['revision']}",
+                       'source_id': identifier, 'revision': record['revision'],
+                       'kind': record['kind'], 'portable_record': archived['record'],
+                       'portable_record_sha256': local.digest(original_path),
+                       'reuse_scope': record['reuse_scope'],
+                       'payload': [{**item, 'path': str(original_path.parent.relative_to(self.repo)/item['path'])}
+                                   for item in record['files']]}
+                (self.repo/'catalog/assets.jsonl').write_text(json.dumps(row)+'\n')
+                result = companion.use(self.workspace, 'productions/s/e', row['id'],
+                                       explicit=self.repo)
+                self.assertEqual(result['status'], 'copied_and_verified')
+                asset = next(item for item in local.read(self.project/'asset_manifest.json')['assets']
+                             if item['asset_id'] == identifier)
+                self.assertEqual(asset['registration'], registration)
+                self.assertEqual(asset['status'], 'pending_review')
+                self.assertEqual(asset['visual_review']['status'], 'pending')
+                self.assertEqual((self.project/asset['path']).read_bytes(), b'actual paper bytes')
+                self.assertEqual(original_path.read_bytes(), original_bytes)
+                lineage = local.read(Path(result['directory'])/'external-source.json')
+                self.assertEqual(lineage['asset_id'], row['id'])
+                self.assertEqual(lineage['current_shot_review'], 'pending')
+
     def test_author_scope_filtered_and_not_importable_for_other_author(self):
         companion.ensure(self.workspace, repository=str(self.repo))
         row = dict(self.row, reuse_scope={'kind':'author','id':'another_author'})
@@ -183,6 +234,130 @@ class MediaCompanionTests(unittest.TestCase):
             result = companion.use(self.workspace,'productions/s/e',row['id'])
         self.assertEqual(result['status'],'not_imported')
         self.assertFalse((self.project/'assets/library').exists())
+
+    def test_current_author_clinician_overrides_gender_alias_and_blocks_generic_import(self):
+        profile_dir = self.workspace / 'profiles/authors'
+        profile_dir.mkdir(parents=True)
+        (profile_dir / 'dr_mie.yaml').write_text(
+            'schema: medical_video_author_profile/v1\n'
+            'profile_id: dr_mie\n'
+            'display_name: Dr.咩\n'
+            'visual_identity:\n'
+            '  enabled: true\n'
+            '  character_reference: assets/authors/dr_mie/reference.png\n'
+            '  character_library:\n'
+            '    root: assets/authors/dr_mie/library\n'
+            '    poses: poses.json\n'
+            '    default_for_clinician: true\n'
+            '    request_aliases: [医生, 女性医生]\n'
+        )
+        record_dir = self.workspace / 'assets/authors/dr_mie/library/entries/dr_mie_stand/v1'
+        record_dir.mkdir(parents=True)
+        (record_dir / 'person.png').write_bytes(b'dr mie bytes')
+        local.write(record_dir / 'record.json', {
+            'id': 'dr_mie_stand', 'revision': 'v1', 'title': 'Dr.咩站姿',
+            'kind': 'transparent_subject', 'reuse_scope': {'kind': 'author', 'id': 'dr_mie'},
+            'registration': {'pivot': {'x': .5, 'y': .5}}, 'content_bounds': [1, 2, 30, 80],
+            'review': {'identity': 'compared_with_named_master'},
+            'files': [{'path': 'person.png', 'role': 'payload'}],
+        })
+        local.write(self.workspace / 'assets/authors/dr_mie/library/poses.json', {
+            'poses': {'stand_explain': {'id': 'dr_mie_stand', 'revision': 'v1',
+                                        'record': 'entries/dr_mie_stand/v1/record.json'}}
+        })
+        (self.workspace / 'assets/authors/dr_mie/reference.png').write_bytes(b'reference')
+        (self.workspace / 'workbench.yaml').write_text(
+            'active_profiles:\n  author: profiles/authors/dr_mie.yaml\n'
+            'series:\n  s:\n    author_profile: profiles/authors/dr_mie.yaml\n'
+        )
+        queried = companion.query(self.workspace, series='s', character_role='男医生', pose='站立讲解')
+        self.assertEqual(queried['library'], 'author_private')
+        self.assertEqual(queried['assets'][0]['title'], 'Dr.咩站姿')
+        queries = {
+            'explicit_generic': companion.query(self.workspace, series='s', character_role='男性医生', pose='站立讲解',
+                                                character_context='generic', explicit=self.repo),
+            'generic_without_role': companion.query(self.workspace, series='s', character_context='generic', explicit=self.repo),
+            'exact_external_id': companion.query(self.workspace, series='s', asset_id='paper:clinician@v1', explicit=self.repo),
+            'physician_alias': companion.query(self.workspace, series='s', character_role='physician', explicit=self.repo),
+            'include_author_assets': companion.query(self.workspace, series='s', asset_id='paper:clinician@v1',
+                                                     include_author_assets=True, explicit=self.repo),
+        }
+        for name, result in queries.items():
+            with self.subTest(query=name):
+                self.assertEqual(result['library'], 'author_private')
+                self.assertEqual(result['assets'][0]['source_id'], 'dr_mie_stand')
+
+        generic = self.base / 'generic.png'
+        generic.write_bytes(b'generic clinician bytes')
+        archive = local.archive(self.repo, {
+            'id': 'character_clinician_woman_stand_v1', 'kind': 'transparent_subject',
+            'title': '女性医生完整讲解站姿', 'entry': 'files/person.png',
+            'reuse_scope': {'kind': 'general'},
+            'discovery': {'character_role': 'clinician_woman'},
+        }, [{'source': str(generic), 'path': 'files/person.png'}])
+        record = local.read(self.repo / archive['record'])
+        row = {'id': 'paper:portrait_7_stand@v1', 'source_id': record['id'], 'revision': record['revision'],
+               'kind': record['kind'], 'portable_record': archive['record'],
+               'reuse_scope': record['reuse_scope'],
+               'payload': [{**record['files'][0],
+                            'path': str(Path(archive['record']).parent / 'files/person.png')}]}
+        (self.repo / 'catalog/assets.jsonl').write_text(json.dumps(row) + '\n')
+        legacy_woman = companion.query(self.workspace, series='s', asset_id=row['id'],
+                                       include_author_assets=True, explicit=self.repo)
+        self.assertEqual(legacy_woman['library'], 'author_private')
+        self.assertEqual(legacy_woman['assets'][0]['source_id'], 'dr_mie_stand')
+        broad_with_author_assets = companion.query(self.workspace, series='s', include_author_assets=True,
+                                                   explicit=self.repo)
+        self.assertEqual(broad_with_author_assets['count'], 0)
+        denied = companion.use(self.workspace, 'productions/s/e', row['id'], explicit=self.repo)
+        self.assertEqual(denied['status'], 'not_imported')
+        self.assertEqual(denied['replacement']['library'], 'author_private')
+        self.assertEqual(local.read(self.project / 'asset_manifest.json')['assets'], [])
+
+        # The private query result is also usable without a public-library path.
+        private = self.workspace / 'assets/authors/dr_mie/library'
+        human_scale = {'nominal_height_cm': 165, 'pose': 'stand_explain',
+                       'calibration': {'status': 'pending'}}
+        archived = local.archive(private, {'id':'scaled_author', 'kind':'transparent_subject',
+            'entry':'files/person.png', 'reuse_scope':{'kind':'author','id':'dr_mie'},
+            'human_scale':human_scale}, [{'source': record_dir / 'person.png', 'path':'files/person.png'}])
+        identifier = f"author:dr_mie/scaled_author@{archived['revision']}"
+        imported = companion.use(self.workspace, 'productions/s/e', identifier)
+        self.assertEqual(imported['library'], 'author_private')
+        self.assertEqual(imported['status'], 'copied_and_verified')
+        self.assertEqual(local.read(self.project / 'asset_manifest.json')['assets'][0]['human_scale'], human_scale)
+
+    def test_author_motion_aliases_and_copied_sequence_registration(self):
+        profile = self.workspace / 'author.yaml'
+        profile.write_text('profile_id: example_author\nvisual_identity:\n  enabled: true\n'
+                           '  character_reference: reference.png\n  character_library:\n'
+                           '    root: private\n    default_for_clinician: true\n')
+        (self.workspace / 'workbench.yaml').write_text('active_profiles:\n  author: author.yaml\n'
+                                                       'series:\n  s:\n    author_profile: author.yaml\n')
+        sequence = self.base / 'sequence.json'
+        sequence.write_text('{"frames":[],"events":[]}')
+        registration = {'coordinate_space': 'frame_local_pixels', 'frames_ref': 'sequence.json'}
+        poses = {}
+        for pose in ['walk_cycle', 'sit_cycle', 'handoff_action']:
+            archived = local.archive(self.workspace / 'private', {
+                'id': pose, 'kind': 'motion_recipe', 'title': pose, 'entry': 'sequence.json',
+                'registration': registration, 'reuse_scope': {'kind': 'author', 'id': 'example_author'},
+            }, [{'source': sequence, 'path': 'sequence.json'}])
+            poses[pose] = {'id': pose, 'revision': archived['revision'], 'record': archived['record']}
+        local.write(self.workspace / 'private/poses.json', {'poses': poses})
+        for alias, pose in [('走上前', 'walk_cycle'), ('坐站过渡', 'sit_cycle'), ('连续递接报告', 'handoff_action')]:
+            result = companion.query(self.workspace, character_role='医生', pose=alias)
+            self.assertEqual([a['pose'] for a in result['assets']], [pose])
+            inferred = companion.query(self.workspace, text='医生' + alias)
+            self.assertEqual([a['pose'] for a in inferred['assets']], [pose])
+        imported = companion.use(self.workspace, 'productions/s/e', result['assets'][0]['id'])
+        self.assertEqual(imported['registration_readback']['status'], 'preserved')
+        self.assertEqual(imported['registration_readback']['checked_files'], ['sequence.json'])
+        self.assertEqual(Path(imported['motion_recipe_readback']['sequence']).read_bytes(), sequence.read_bytes())
+        copied = Path(imported['directory'])
+        (copied / 'sequence.json').unlink()
+        record = local.read(copied / 'library-record.json')
+        self.assertEqual(companion.motion_registration_readback(record, copied)['registration_readback']['status'], 'diagnostic')
 
     def test_corrupt_payload_and_static_reference_do_not_enter_motion_manifest(self):
         companion.ensure(self.workspace, repository=str(self.repo))

@@ -14,7 +14,10 @@ const fps = Number(config.fps || 24), width = Number(config.width || 1280), heig
 if (![fps,width,height].every(Number.isInteger) || fps<1 || fps>60 || width<64 || height<64 || width%2 || height%2) throw Error('帧率或画布尺寸无效（宽高须为偶数）');
 const voice = path.resolve(config.audio);
 const probe = JSON.parse(execFileSync('ffprobe',['-v','error','-show_format','-show_streams','-of','json',voice],{encoding:'utf8'}));
-if (!probe.streams.some(s=>s.codec_type==='audio')) throw Error('旁白没有音频流');
+const audioStream=probe.streams.find(s=>s.codec_type==='audio');
+if (!audioStream) throw Error('旁白没有音频流');
+// Retained AAC mixes already match MP4: preserve their encoded packets.
+const audioMode=audioStream.codec_name==='aac'?'copy':'encode_aac';
 const duration = Number(probe.format.duration);
 if (!(duration>0) || !Number.isFinite(duration)) throw Error('旁白时长无效');
 try { await fs.access(target); throw Error('目标已存在，请使用新修订输出路径'); } catch(e) { if(e.code!=='ENOENT') throw e; }
@@ -58,7 +61,8 @@ try {
       style_id: window.__styleId || null,
     };
   });
-  const args=['-v','error','-f','image2pipe','-vcodec','png','-framerate',String(fps),'-i','pipe:0','-i',voice,'-map','0:v','-map','1:a','-t',String(duration),'-c:v','libx264','-crf','18','-preset','medium','-pix_fmt','yuv420p','-c:a','aac','-b:a','192k','-movflags','+faststart',path.join(temp,'video.mp4')];
+  const audioArgs=audioMode==='copy'?['-c:a','copy']:['-c:a','aac','-b:a','192k'];
+  const args=['-v','error','-f','image2pipe','-vcodec','png','-framerate',String(fps),'-i','pipe:0','-i',voice,'-map','0:v','-map','1:a','-t',String(duration),'-c:v','libx264','-crf','18','-preset','medium','-pix_fmt','yuv420p',...audioArgs,'-movflags','+faststart',path.join(temp,'video.mp4')];
   encoder = spawn('ffmpeg',args,{stdio:['pipe','ignore','pipe']});
   let fferror=''; encoder.stderr.on('data',chunk=>{fferror=(fferror+chunk).slice(-4000);});
   const done=once(encoder,'close');
@@ -92,7 +96,7 @@ try {
     audio: voice,
     config: { fps, width, height },
   });
-  const receipt={status:'rendered',output:target,frames,duration,fps,width,height,evidence_directory:temp,renderer_runtime:rendererRuntime,style_sequence:styleSequence,runtime_receipt:runtimeReceipt,release_eligible:false};
+  const receipt={status:'rendered',output:target,frames,duration,fps,width,height,audio_encoding:{source_codec:audioStream.codec_name,mode:audioMode},evidence_directory:temp,renderer_runtime:rendererRuntime,style_sequence:styleSequence,runtime_receipt:runtimeReceipt,release_eligible:false};
   await fs.writeFile(path.join(temp,'render.json'),JSON.stringify(receipt,null,2)+'\n');
   console.log(JSON.stringify(receipt));
 } finally {

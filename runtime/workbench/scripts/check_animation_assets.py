@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 from pathlib import Path
 
@@ -23,14 +24,18 @@ def check_assets(manifest: Path) -> dict:
 
     assets, pending = {}, []
     evidence_integrity = []
-    if not isinstance(data.get("assets"), list) or not data["assets"]:
-        raise ValueError("No declared animation assets")
+    if not isinstance(data.get("assets"), list):
+        raise ValueError("Missing or invalid assets array")
     for asset in data["assets"]:
         aid = asset.get("asset_id")
         if not isinstance(aid, str) or not aid or aid in assets:
             raise ValueError("Missing or duplicate asset ID")
         assets[aid] = asset
         source = file(asset.get("path"))
+        calibration = (asset.get('human_scale') or {}).get('calibration') or {}
+        if calibration.get('status') == 'calibrated':
+            if hashlib.sha256(source.read_bytes()).hexdigest() != calibration.get('source_sha256'):
+                raise ValueError(f'{aid}: 人物尺度标定与实际载荷不一致')
         source_type = asset.get("source_type")
         if source_type not in ("reviewed_library", "imagegen", "licensed_web", "authored_graphic"):
             raise ValueError(f"{aid}: unsupported asset source")
@@ -57,9 +62,18 @@ def check_assets(manifest: Path) -> dict:
         if not isinstance(sid, str) or not sid or sid in seen:
             raise ValueError("Missing or duplicate shot ID")
         seen.add(sid)
-        used = shot.get("asset_ids")
-        if not isinstance(used, list) or not used or any(aid not in assets for aid in used):
-            raise ValueError(f"{sid}: missing or unknown shot assets")
+        if "asset_ids" not in shot:
+            raise ValueError(f"{sid}: missing asset_ids declaration")
+        used = shot["asset_ids"]
+        if not isinstance(used, list) or any(
+            not isinstance(aid, str) or not aid.strip() for aid in used
+        ):
+            raise ValueError(f"{sid}: asset_ids must be an array of non-empty strings")
+        unknown = sorted(set(used) - set(assets))
+        if unknown:
+            raise ValueError(f"{sid}: unknown shot assets: {', '.join(unknown)}")
+        # An explicit [] declares zero file dependencies. Procedural drawing
+        # remains a scene-review responsibility, never an invented file asset.
         used_ids.update(used)
     # A manifest is also an inventory. Review debt belongs to the assets that
     # the current shot coverage actually uses; unused candidates remain visible

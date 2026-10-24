@@ -18,6 +18,8 @@
 python3 runtime/native_helpers/workbench_tool.py --workspace <目录> --name media_asset_library -- status
 python3 runtime/native_helpers/workbench_tool.py --workspace <目录> --name media_asset_library -- ensure
 python3 runtime/native_helpers/med_autocast.py assets --workspace <目录> --library external --query 纸景
+python3 runtime/native_helpers/med_autocast.py assets --workspace <目录> --library external --character-role 老年男性 --pose walk
+python3 runtime/native_helpers/workbench_tool.py --workspace <目录> --name media_asset_library -- character-coverage
 python3 runtime/native_helpers/workbench_tool.py --workspace <目录> --name media_asset_library -- use --project productions/<系列>/<单集>/<版本> --id 'paper:<ID>@<REV>'
 ```
 
@@ -26,3 +28,13 @@ python3 runtime/native_helpers/workbench_tool.py --workspace <目录> --name med
 `use` 校验精确 ID、原记录、每个载荷哈希及作者范围；再接到已有 `animation_library.archive/reuse`，独立保管本地版本包、复制到项目并记录 uses 和 external-source。当前视觉/医学审核重新 pending，静态 `reference_only` 不导入运动素材清单。品牌、人物和声线不写死进通用 Skill。遇到不合适或缺证据的条目换材，不把拒用变成整个 Stage 的停止。
 
 精选新创由策展阶段同步进独立库，保留源文件、许可/生成回执、内容边界、接触点、可看动作、适用与失败条件。库更新不自动替换旧片，文件校验不批准医学、艺术、动态或听感。
+
+## 人物与批量写入边界
+
+人物、椅面、投影和接触道具作为关系组试装；换完整人物、裁切或改变相机后共同调整落点。按本镜观看任务分主焦点、支持组与背景，复杂核心用近景或拆解，小图只保留简单轮廓或已解释归档内容。总览、解释近景与简化版分别查询和看原件；尚无审定版本时准备缺口。原尺寸、手机宽预览及动作极值/邻镜的判断方法见[人物素材与画面尺度契约](../runtime/workbench/docs/44_人物素材与画面尺度契约.md)。
+
+人物覆盖表保存精确版本，默认检索每个身份返回一个当前候选；缺姿态先准备完整人物。`use` 成功后回读 `registration_readback` 与本集manifest的bounds/anchors，再在代表镜头中验证实际接触。锚点字段和复制成功不能代替原件部位与动作试装；版本号按包含实际载荷描述的原记录合同重建，旧修订保留恢复。
+
+主要患者、家属、医生及儿童、老人、孕妇按[人物素材与画面尺度契约](../runtime/workbench/docs/44_人物素材与画面尺度契约.md)在剧本与分镜前准备完整人物或姿态，不能用圆头、梯形身体和独立四肢临时拼人。查询先用“青少年/儿童/老人/孕妇/医生/坐姿/步行/接取”等角色与动作同义词，再查看实际载荷和内容 bounds；导入后当前镜头仍需重审尺度、遮挡和接触。
+
+`animation_library` 的资产包归档与项目取用分别使用跨进程锁和唯一临时文件。多个项目并行 `use` 同一素材时，不能共享固定的 `uses.json.tmp`，也不能竞争同一个 content-addressed 目标目录。批量完成后仍回读项目 manifest、实际载荷和 `uses.json`；锁只保护写入完整性，不批准素材或镜头质量。

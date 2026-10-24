@@ -70,6 +70,20 @@ class LibraryTests(unittest.TestCase):
         self.assertEqual((self.root / "index.json").read_bytes(), original)
         self.assertNotIn("autoplay", (self.root / "index.html").read_text())
 
+    def test_single_asset_ingest_returns_only_current_action_and_keeps_complete_index(self):
+        self.ingest()
+        (self.project / 'other.png').write_bytes(b'other candidate')
+        library.write(self.project / 'asset_manifest.json', {'assets': [
+            self.asset, {'asset_id': 'other', 'path': 'other.png'}]})
+        result = library.run(argparse.Namespace(workspace=self.workspace,
+            project=self.project, ingest_project=True, asset_id=['other']))
+        self.assertEqual(result['response_scope'], 'current_actions')
+        self.assertEqual(result['count'], 1)
+        self.assertEqual(result['managed_count'], 2)
+        self.assertEqual(result['assets'][0]['id'], 's_other')
+        index = library.read(self.root / 'index.json')
+        self.assertEqual({item['id'] for item in index['assets']}, {'s_paper', 's_other'})
+
     def test_missing_payload_does_not_discard_other_entries(self):
         manifest = library.read(self.project / "asset_manifest.json")
         manifest["assets"].append({"asset_id": "missing", "path": "missing.png"})
@@ -90,6 +104,8 @@ class LibraryTests(unittest.TestCase):
         self.assertEqual(row["status"], "pending_review")
         self.assertEqual(row["source_review"]["status"], "passed")
         self.assertEqual(row["medical_review"]["status"], "pending")
+        self.assertEqual(row["visual_meaning"], "paper")
+        self.assertIn("不是真实患者影像", row["must_not_imply"])
         self.assertTrue((target / row["prompt_ref"]).is_file())
         Path(imported["entry"]).write_bytes(b"local edit")
         with self.assertRaisesRegex(ValueError, "不覆盖"):

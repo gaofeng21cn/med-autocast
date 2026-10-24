@@ -15,6 +15,22 @@ export type Asset = {
     anchors?: Record<string, Point>;
     front?: number[][];
   };
+  human_scale?: {
+    nominal_height_cm: number;
+    scale_family?: string;
+    pose?: string;
+    measurement?: string;
+    subject?: string;
+    calibration?: {
+      status: 'calibrated' | 'pending';
+      source_sha256: string;
+      source_size: { width: number; height: number };
+      from: Point;
+      to: Point;
+      span_cm: number;
+      basis: string;
+    };
+  };
 };
 export type Beat = {
   id: string;

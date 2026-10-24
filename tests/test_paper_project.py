@@ -2,7 +2,9 @@
 
 import argparse
 import hashlib
+import io
 import json
+from contextlib import redirect_stdout
 from pathlib import Path
 import subprocess
 import sys
@@ -26,6 +28,46 @@ class ProjectTests(unittest.TestCase):
         self.tmp = tempfile.TemporaryDirectory()
         self.addCleanup(self.tmp.cleanup)
         self.root = Path(self.tmp.name).resolve()
+
+    def test_preview_cli_keeps_locator_counts_and_reference_without_replaying_every_frame(self):
+        full = {'status': 'previewed', 'preview_receipt': '/review/preview.json',
+                'quality_debt': [{'kind': 'text_subject_intersection', 'element': 'label',
+                                 'rect': {'x': i, 'y': 20, 'w': 100, 'h': 30},
+                                 'blocks_stage_progress': False,
+                                 'semantic_review_required': True} for i in range(500)]}
+        output = io.StringIO()
+        with patch.object(pp, 'preview', return_value=full), patch.object(sys, 'argv', [
+                'paper_project', '--workspace', str(self.root), '--project', str(self.root), 'preview']), redirect_stdout(output):
+            pp.main()
+        compact = json.loads(output.getvalue())
+        self.assertEqual(compact['quality_debt_count'], 500)
+        self.assertEqual(len(compact['quality_debt']), 1)
+        self.assertEqual(compact['quality_debt'][0]['count'], 500)
+        self.assertEqual(compact['quality_debt'][0]['evidence_ref'], '/review/preview.json')
+        self.assertTrue(compact['quality_debt'][0]['semantic_review_required'])
+        self.assertEqual(len(full['quality_debt']), 500)
+        self.assertLess(len(output.getvalue()), 1000)
+
+    def test_missing_asset_evidence_preserves_manifest_and_existing_unregistered_file(self):
+        source = self.root / 'new.png'
+        source.write_bytes(b'new candidate')
+        dest = self.root / 'assets/imported/cuff.png'
+        dest.parent.mkdir(parents=True)
+        dest.write_bytes(b'prior recoverable candidate')
+        manifest = self.root / 'asset_manifest.json'
+        pp.save(manifest, {'assets': [], 'shots': []})
+        manifest_before = manifest.read_bytes()
+        meta = self.root / 'preproduction/meta.json'
+        pp.save(meta, {'prompt_ref': 'missing-receipt.json'})
+        args = SimpleNamespace(asset=source, asset_id='cuff', source='test',
+            usage='fitted cuff', kind='imagegen', limits='candidate', metadata=meta,
+            registration=None)
+        with patch.object(pp, 'get_project', return_value=(self.root, {'assets': 'asset_manifest.json'})):
+            with self.assertRaisesRegex(ValueError, 'prompt_ref.*尚未导入'):
+                pp.assets(args)
+        self.assertEqual(dest.read_bytes(), b'prior recoverable candidate')
+        self.assertEqual(manifest.read_bytes(), manifest_before)
+        self.assertFalse((self.root / 'assets/evidence').exists())
 
     def test_renderer_and_inventory_share_canonical_entry_and_venv(self):
         (self.root / "scripts").mkdir()
@@ -62,6 +104,26 @@ class ProjectTests(unittest.TestCase):
         (p / "src/new.ts").write_text("new")
         with self.assertRaisesRegex(ValueError, "文件列表"):
             pp.assert_built(p)
+
+    def test_mix_snapshot_survives_failed_remix_and_marks_stale_score(self):
+        p = self.root
+        config = {"audio": "audio.wav", "score": "score.json", "voice": "voice.wav"}
+        pp.save(p / "project.json", config)
+        pp.save(p / "score.json", {"shots": []})
+        (p / "voice.wav").write_bytes(b"voice")
+        (p / "audio.wav").write_bytes(b"accepted original mix")
+        pp.save(p / "audio/mix-receipt.json", {
+            "audio_sha256": pp.sha(p / "audio.wav"),
+            "score_sha256": "older-score-not-present",
+            "voice_sha256": pp.sha(p / "voice.wav"),
+        })
+        history = Path(pp.preserve_mix(p, config))
+        (p / "audio.wav").write_bytes(b"failed partial overwrite")
+        snapshot = pp.read(history / "snapshot.json")
+        self.assertEqual((history / "audio.wav").read_bytes(), b"accepted original mix")
+        self.assertFalse(snapshot["receipt_matches_current_inputs"]["score_sha256"])
+        self.assertTrue(snapshot["receipt_matches_current_inputs"]["audio_sha256"])
+        self.assertEqual(pp.read(history / "mix-receipt.json")["score_sha256"], "older-score-not-present")
 
     def test_init_outside_workspace_does_not_create_directory(self):
         target = self.root.parent / (self.root.name + "-outside")
@@ -201,6 +263,202 @@ class ProjectTests(unittest.TestCase):
         self.assertIsNone(result["path"])
         self.assertEqual(result["quality_debt"][0]["code"], "asset_admission_unresolved")
         self.assertEqual(pp.read(project / "out/current.json")["path"], "prior-review.mp4")
+
+    def test_package_source_documents_resolve_after_install_and_internal_export(self):
+        import yaml
+
+        project = self.root / "productions/s/e"
+        for folder in ("audio", "dist", "out", "src", "scripts"):
+            (project / folder).mkdir(parents=True)
+        (project / "out/review.mp4").write_bytes(b"encoded video")
+        (project / "dist/film.js").write_text("bundle")
+        (project / "audio/narration-normalized.wav").write_bytes(b"voice")
+        (project / "audio.wav").write_bytes(b"mixed audio")
+        pp.save(project / "project.json", {
+            "schema": "paper_project/v1", "series_id": "s", "episode_id": "e", "title": "本集",
+            "score": "score.json", "narration": "narration.json",
+            "voice": "audio/narration-normalized.wav", "audio": "audio.wav", "entry": "index.html",
+        })
+        pp.save(project / "score.json", {"duration": 10, "shots": [], "cues": []})
+        pp.save(project / "narration.json", {"beats": [{"id": "b1", "text": "本集旁白"}]})
+        pp.save(project / "dist/build-receipt.json", {
+            "inputs": {}, "bundle_sha256": pp.sha(project / "dist/film.js"),
+        })
+        pp.save(project / "audio/mix-receipt.json", {
+            "voice_sha256": pp.sha(project / "audio/narration-normalized.wav"),
+        })
+        pp.save(project / "out/current.json", {
+            "status": "rendered", "path": str(project / "out/review.mp4"),
+            "sha256": pp.sha(project / "out/review.mp4"),
+            "bundle_sha256": pp.sha(project / "dist/film.js"),
+            "score_sha256": pp.sha(project / "score.json"),
+            "audio_sha256": pp.sha(project / "audio.wav"),
+        })
+        (self.root / "workbench.yaml").write_text(yaml.safe_dump({
+            "series": {"s": {"title": "系列", "publish_root": "publish/s", "episodes": {"e": {}}}},
+        }))
+
+        for internal in (False, True):
+            with self.subTest(internal_export=internal):
+                target = self.root / "work/export" if internal else None
+                args = argparse.Namespace(project=project, workspace=self.root, output=target, review=None)
+                with patch.object(pp.subprocess, "run", side_effect=OSError("cover unavailable")):
+                    result = pp.package(args)
+                manifest_path = target / "manifest.json" if internal else Path(result["manifest"])
+                manifest = pp.read(manifest_path)
+                expected_record = target if internal else self.root / "deliveries/s/e"
+                for key, name in (("score", "score.json"), ("narration_script", "narration.json")):
+                    reference = Path(manifest["artifacts"][key])
+                    self.assertEqual(reference, expected_record / name)
+                    self.assertTrue(reference.is_file())
+                    self.assertEqual(reference.read_bytes(), (project / name).read_bytes())
+                self.assertEqual(manifest["artifacts"]["video"], "video.mp4")
+                self.assertEqual(manifest["artifacts"]["subtitles"], "subtitles.srt")
+                self.assertFalse(list((self.root / "tmp").glob("delivery-*")))
+
+    def frozen_mix_pair(self, name="reuse", *, registered_sound=False, captured=True):
+        source, target = self.root / name / "before", self.root / name / "after"
+        config = {
+            "schema": "paper_project/v1", "series_id": "s", "episode_id": "e",
+            "score": "score.json", "voice": "audio/voice.wav", "audio": "audio.wav",
+            "assets": "asset_manifest.json", "entry": "index.html",
+        }
+        cue = {"shot": "s1", "event": "touch", "kind": "paper", "gain": 0.3}
+        if registered_sound:
+            cue["asset_id"] = "paper-sound"
+        score = {
+            "duration": 10, "fps": 24, "sounds": [cue],
+            "shots": [{"id": "s1", "start": 0, "end": 10,
+                       "events": {"touch": 3, "visual_only": 5}, "shot_recipe": "原动作说明"}],
+        }
+        for project in (source, target):
+            (project / "audio").mkdir(parents=True)
+            (project / "audio/voice.wav").write_bytes(b"frozen voice")
+            (project / "audio/paper.wav").write_bytes(b"frozen foley")
+            (project / "audio.wav").write_bytes(b"frozen mix" if project == source else b"prior target")
+            (project / "index.html").write_text('<script src="film.js"></script>')
+            pp.save(project / "project.json", config)
+            pp.save(project / "score.json", score)
+            pp.save(project / "asset_manifest.json", {"assets": [
+                {"asset_id": "paper-sound", "path": "audio/paper.wav"},
+                {"asset_id": "image", "path": "unused-image.png"},
+            ]})
+            pp.save(project / "audio/timing-receipt.json", {
+                "voice_sha256": pp.sha(project / "audio/voice.wav"),
+            })
+        receipt = {
+            "voice_sha256": pp.sha(source / config["voice"]),
+            "score_sha256": pp.sha(source / config["score"]),
+            "audio_sha256": pp.sha(source / config["audio"]),
+            "full_listening": "passed", "tone_consistency": "passed",
+        }
+        if captured:
+            receipt["audio_score_inputs"] = pp.audio_score_inputs(source, config)
+        pp.save(source / "audio/mix-receipt.json", receipt)
+        args = argparse.Namespace(project=target, workspace=self.root,
+                                  reuse_from_project=source, music=None, music_plan=None)
+        return source, target, config, args
+
+    def test_visual_score_revision_reuses_audio_bytes_and_keeps_source(self):
+        source, target, config, args = self.frozen_mix_pair(registered_sound=True)
+        source_receipt = (source / "audio/mix-receipt.json").read_bytes()
+        score = pp.read(target / "score.json")
+        score["shots"][0]["shot_recipe"] = "修正人物坐姿，原声音事件不变"
+        score["shots"][0]["camera"] = {"x": 20, "scale": 1.1}
+        pp.save(target / "score.json", score)
+        with patch.object(pp, "run") as runner:
+            result = pp.mix(args)
+        runner.assert_not_called()
+        self.assertEqual(result["status"], "mixed_reused")
+        self.assertEqual((target / "audio.wav").read_bytes(), b"frozen mix")
+        self.assertEqual((source / "audio/mix-receipt.json").read_bytes(), source_receipt)
+        receipt = pp.read(target / "audio/mix-receipt.json")
+        self.assertEqual(receipt["score_sha256"], pp.sha(target / "score.json"))
+        self.assertNotEqual(receipt["score_sha256"], receipt["reused_mix"]["source_score_sha256"])
+        self.assertEqual(receipt["audio_sha256"], pp.sha(source / "audio.wav"))
+        self.assertEqual(receipt["full_listening"], "pending")
+        self.assertEqual(receipt["reused_mix"]["source_receipt_sha256"], pp.sha(source / "audio/mix-receipt.json"))
+        self.assertIn('id="voice"', (target / "index.html").read_text())
+
+    def test_unused_visual_events_and_silent_shots_do_not_require_remix(self):
+        source, target, config, args = self.frozen_mix_pair("visual-events", registered_sound=True)
+        score = pp.read(target / "score.json")
+        del score["shots"][0]["events"]["visual_only"]
+        score["shots"][0]["events"]["new_visual_landing"] = 6
+        score["shots"].append({"id": "silent_insert", "start": 7, "events": {"reveal": 1}})
+        pp.save(target / "score.json", score)
+        with patch.object(pp, "run") as runner:
+            self.assertEqual(pp.mix(args)["status"], "mixed_reused")
+        runner.assert_not_called()
+        self.assertEqual((target / "audio.wav").read_bytes(), (source / "audio.wav").read_bytes())
+        receipt = pp.read(target / "audio/mix-receipt.json")
+        self.assertIn("new_visual_landing", receipt["audio_score_inputs"]["shots"][0]["events"])
+
+    def test_reuse_rejects_changed_audio_inputs_before_replacing_target(self):
+        for change in ("duration", "event", "removed_event", "removed_shot", "shot_start", "cue", "voice", "foley", "timing"):
+            with self.subTest(change=change):
+                source, target, config, args = self.frozen_mix_pair(change, registered_sound=True)
+                score = pp.read(target / "score.json")
+                if change == "duration":
+                    score["duration"] += 1
+                elif change == "event":
+                    score["shots"][0]["events"]["touch"] += 1
+                elif change == "removed_event":
+                    del score["shots"][0]["events"]["touch"]
+                elif change == "removed_shot":
+                    score["shots"] = []
+                elif change == "shot_start":
+                    score["shots"][0]["start"] += 1
+                elif change == "cue":
+                    score["sounds"][0]["gain"] += 0.1
+                elif change == "voice":
+                    (target / config["voice"]).write_bytes(b"changed voice")
+                    pp.save(target / "audio/timing-receipt.json", {
+                        "voice_sha256": pp.sha(target / config["voice"]),
+                    })
+                elif change == "foley":
+                    (target / "audio/paper.wav").write_bytes(b"changed sound")
+                elif change == "timing":
+                    pp.save(target / "audio/timing-receipt.json", {"voice_sha256": "stale"})
+                pp.save(target / "score.json", score)
+                with self.assertRaises(ValueError), patch.object(pp, "run") as runner:
+                    pp.mix(args)
+                runner.assert_not_called()
+                self.assertEqual((target / "audio.wav").read_bytes(), b"prior target")
+                self.assertFalse((target / "audio/mix-receipt.json").exists())
+
+    def test_reuse_checks_source_receipt_and_episode_identity(self):
+        for change in ("score", "voice", "audio", "sound_snapshot", "episode", "same_project", "score_path"):
+            with self.subTest(change=change):
+                source, target, config, args = self.frozen_mix_pair("source-" + change, registered_sound=True)
+                if change in ("score", "voice", "audio"):
+                    (source / config[change]).write_bytes(b"changed source")
+                elif change == "sound_snapshot":
+                    for project in (source, target):
+                        (project / "audio/paper.wav").write_bytes(b"same new bytes, absent from original mix")
+                elif change == "episode":
+                    source_config = pp.read(source / "project.json")
+                    source_config["episode_id"] = "other"
+                    pp.save(source / "project.json", source_config)
+                elif change == "same_project":
+                    args.reuse_from_project = target
+                elif change == "score_path":
+                    target_config = pp.read(target / "project.json")
+                    target_config["score"] = "alternate-score.json"
+                    pp.save(target / "alternate-score.json", pp.read(target / "score.json"))
+                    pp.save(target / "project.json", target_config)
+                with self.assertRaises(ValueError), patch.object(pp, "run") as runner:
+                    pp.mix(args)
+                runner.assert_not_called()
+                self.assertEqual((target / "audio.wav").read_bytes(), b"prior target")
+
+    def test_legacy_mix_reuse_requires_historical_registered_sound_bytes(self):
+        source, target, config, args = self.frozen_mix_pair("legacy-procedural", captured=False)
+        self.assertEqual(pp.mix(args)["status"], "mixed_reused")
+        source, target, config, args = self.frozen_mix_pair("legacy-registered", registered_sound=True, captured=False)
+        with self.assertRaisesRegex(ValueError, "未记录音效载荷字节"):
+            pp.mix(args)
+        self.assertEqual((target / "audio.wav").read_bytes(), b"prior target")
 
     def test_failed_force_keeps_successful_take_and_virtualenv_path(self):
         root = self.root

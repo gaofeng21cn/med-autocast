@@ -31,8 +31,13 @@ def normalize(source, output, rate, target=-16, peak=-1.2):
         ).format(**data)
     else:
         filter_text = "anull"
+    # A retained mix may intentionally use `.m4a`; raw PCM in that container
+    # truncates the target before FFmpeg reports an error. Keep the codec
+    # compatible with the registered output path.
+    suffix = output.suffix.lower()
+    codec = ["-c:a", "pcm_s24le"] if suffix == ".wav" else ["-c:a", "aac", "-b:a", "256k"]
     run(["ffmpeg", "-y", "-v", "error", "-i", str(source), "-af", filter_text,
-         "-ar", str(rate), "-ac", "2", "-c:a", "pcm_s24le", str(output)])
+         "-ar", str(rate), "-ac", "2", *codec, str(output)])
     return data
 
 

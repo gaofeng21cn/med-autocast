@@ -320,8 +320,9 @@ def query(workspace, *, explicit=None, text=None, kind=None, scope=None, series=
         if completed.returncode:
             raise ValueError('query_failed')
         rows = json.loads(completed.stdout)
-        if not isinstance(rows, list):
+        if not isinstance(rows, list) or any(not isinstance(row, dict) for row in rows):
             raise ValueError('invalid_query_output')
+        rows = [effective_asset_row(root, row) for row in rows]
         policy = clinician_author_policy(workspace, series)
         clinician_rows = [row for row in rows if clinician_role(row)] if policy else []
         if clinician_rows and (asset_id or character_role or text or character_context == 'generic'):
@@ -558,6 +559,19 @@ def register_animation_reference(project, selected, row, record, imported):
     return reference
 
 
+def effective_asset_row(root, row):
+    """Read current exact-version curation even if a catalog projection is stale."""
+    path = root / 'collections/curation.json'
+    curation = json.loads(path.read_text()) if path.exists() else {'assets': {}}
+    if not isinstance(curation, dict) or not isinstance(curation.get('assets'), dict):
+        raise ValueError('策展登记不可读，不能判断该版本是否已撤回')
+    decision = curation['assets'].get(row['id'], row.get('curation', {}))
+    if not isinstance(decision, dict) or not isinstance(decision.get('review_boundary', {}), dict):
+        raise ValueError('策展决定必须是对象')
+    return {**row, 'curation': decision,
+            'review_boundary': {**row.get('review_boundary', {}), **decision.get('review_boundary', {})}}
+
+
 def use(workspace, project, identifier, explicit=None, asset_id=None):
     workspace = workspace.resolve()
     from animation_library import archive, read, reuse, digest
@@ -590,6 +604,11 @@ def use(workspace, project, identifier, explicit=None, asset_id=None):
     row = next((item for item in rows if item['id'] == identifier), None)
     if not row:
         return {**result, 'quality_debt': ['未找到所选精确资产 ID，可重新检索或新创']}
+    original_review_boundary = row.get('review_boundary')
+    try:
+        row = effective_asset_row(root, row)
+    except (ValueError, OSError) as error:
+        return {**result, 'quality_debt': ['无法读取当前策展决定：' + type(error).__name__]}
     if row.get('kind') == 'reference_frame' or row.get('review_boundary', {}).get('admission') == 'reference_only':
         return {**result, 'quality_debt': ['静态参考只能参考构图，不能作为可运动纸件导入'], 'asset': row}
     if row.get('curation', {}).get('status') in {'needs_rebuild', 'superseded'}:
@@ -627,6 +646,13 @@ def use(workspace, project, identifier, explicit=None, asset_id=None):
     archived = archive(local, record, files)
     if archived['revision'] != record['revision']:
         raise ValueError('独立原记录无法重建原版本，不冒充原资产')
+    # Keep the exact current decision with the local cache as well as the project.
+    # Original package bytes and their revision remain unchanged.
+    decision = {**row.get('curation', {}), 'review_boundary': row.get('review_boundary', {})}
+    if (root / 'collections/curation.json').is_file():
+        decision['external_library_root'] = str(root)
+    from animation_library import save_curation
+    save_curation(local, identifier, decision)
     imported = reuse(workspace, local, project, record['id'], record['revision'], asset_id)
     if imported.get('status') == 'copied_and_verified':
         imported_reference = register_animation_reference(project_path, selected, row, record, imported)
@@ -681,11 +707,15 @@ def use(workspace, project, identifier, explicit=None, asset_id=None):
         provenance = Path(imported['directory']) / 'external-source.json'
         provenance.write_text(json.dumps({'package_id': 'mac-media-assets', 'asset_id': row['id'],
                                           'revision': row['revision'], 'repository': REPOSITORY,
-                                          'original_review_boundary': row.get('review_boundary'),
+                                          'original_review_boundary': original_review_boundary,
+                                          'effective_review_boundary': row.get('review_boundary'),
+                                          'curation': row.get('curation'),
+                                          'review_note': '原包审看记录仅作历史证据；当前有效结论以 effective_review_boundary 和 curation 为准。',
                                           'discovery': row.get('discovery'),
                                           'human_scale': scale,
                                           'current_shot_review': 'pending'}, ensure_ascii=False, indent=2) + '\n')
-    return {**imported, 'external_asset_id': identifier, 'blocks_production': False}
+    return {**imported, 'external_asset_id': identifier, 'effective_review_boundary': row.get('review_boundary'), 'curation': row.get('curation'),
+            'blocks_production': False}
 
 
 def main():

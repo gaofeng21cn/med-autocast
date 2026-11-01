@@ -43,3 +43,9 @@ python3 runtime/native_helpers/workbench_tool.py --workspace <目录> --name med
 主要患者、家属、医生及儿童、老人、孕妇按[人物素材与画面尺度契约](../runtime/workbench/docs/44_人物素材与画面尺度契约.md)在剧本与分镜前准备完整人物或姿态，不能用圆头、梯形身体和独立四肢临时拼人。查询先用“青少年/儿童/老人/孕妇/医生/坐姿/步行/接取”等角色与动作同义词，再查看实际载荷和内容 bounds；导入后当前镜头仍需重审尺度、遮挡和接触。
 
 `animation_library` 的资产包归档与项目取用分别使用跨进程锁和唯一临时文件。多个项目并行 `use` 同一素材时，不能共享固定的 `uses.json.tmp`，也不能竞争同一个 content-addressed 目标目录。批量完成后仍回读项目 manifest、实际载荷和 `uses.json`；锁只保护写入完整性，不批准素材或镜头质量。
+
+## 精确版本撤回与审核修正
+
+外挂库的 `collections/curation.json` 覆盖目录和原包的历史审核声明。查询、精确 ID 导入和组合取用均应用当前决定；`needs_rebuild` / `superseded` 不可导入，损坏的策展记录不静默回退。
+
+导入保留原记录与原载荷，并在 `external-source.json` 保存 `effective_review_boundary`、当次策展和当前镜头 pending。本地缓存保存精确版本注解及外库来源根；直接重用时重新读取中央决定，防止导入后被撤回的包继续从缓存进入新项目。旧工程保持原版本，后续修订按受影响范围重新审查。

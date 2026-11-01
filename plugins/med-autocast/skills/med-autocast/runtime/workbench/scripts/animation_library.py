@@ -225,10 +225,48 @@ def register_records(root, path):
     return results, debts
 
 
+def current_curation(root):
+    """Refresh external exact-version decisions for cached public packages."""
+    path = root / "curation.json"
+    decisions = read(path).get("assets", {}) if path.exists() else {}
+    external = {}
+    for identifier, decision in list(decisions.items()):
+        source_root = decision.get("external_library_root")
+        if not source_root:
+            continue
+        if source_root not in external:
+            try:
+                source = read(Path(source_root) / "collections/curation.json")
+                if not isinstance(source, dict) or not isinstance(source.get("assets"), dict):
+                    raise ValueError("策展登记格式无效")
+                external[source_root] = source["assets"]
+            except (OSError, ValueError):
+                external[source_root] = None
+        latest = external[source_root].get(identifier, decision) if external[source_root] is not None else None
+        if not isinstance(latest, dict) or not isinstance(latest.get("review_boundary", {}), dict):
+            # Only this cached source becomes unavailable; unrelated local assets remain usable.
+            latest = {"status": "needs_rebuild", "reason": "无法读取外库当前策展决定，恢复库后重新取用",
+                      "review_boundary": {"motion": "pending", "static": "pending"}}
+        decisions[identifier] = {**latest, "external_library_root": source_root}
+    return decisions
+
+
+def save_curation(root, identifier, decision):
+    """Merge one cache annotation under a lock shared by concurrent imports."""
+    with (root / ".curation.lock").open("a+") as lock:
+        fcntl.flock(lock.fileno(), fcntl.LOCK_EX)
+        try:
+            path = root / "curation.json"
+            current = read(path) if path.exists() else {"assets": {}}
+            current.setdefault("assets", {})[identifier] = decision
+            write(path, current)
+        finally:
+            fcntl.flock(lock.fileno(), fcntl.LOCK_UN)
+
+
 def managed_records(root):
     catalog = root / "catalog.json"
-    curation_path = root / "curation.json"
-    curation = read(curation_path).get("assets", {}) if curation_path.exists() else {}
+    curation = current_curation(root)
     latest, debts = {}, []
     if catalog.exists():
         for row in read(catalog).get("items", []):
@@ -238,7 +276,7 @@ def managed_records(root):
                 if record["id"] != row["id"] or record["revision"] != row["revision"]:
                     raise ValueError("目录与包身份不一致")
                 assessment = curation.get(f"paper:{record['id']}@{record['revision']}", {})
-                latest[record["id"]] = {**record, "curation": assessment, "record": row["record"], "managed": True,
+                latest[record["id"]] = {**record, "curation": assessment, "effective_review_boundary": assessment.get("review_boundary", {}), "record": row["record"], "managed": True,
                     "resolved_path": str(within(record_path.parent, record.get("entry", record["files"][0]["path"]))) }
             except (OSError, json.JSONDecodeError, KeyError, IndexError, ValueError) as error:
                 debts.append({"record": row["record"], "detail": str(error)})
@@ -298,8 +336,7 @@ def _reuse_unlocked(workspace, root, project, identifier, revision=None, asset_i
         record = {**read(record_path), "record": str(record_path.relative_to(root))}
     if not record:
         return {"status": "not_imported", "quality_debt": ["找不到持久素材条目"]}
-    curation_path = root / "curation.json"
-    assessment = read(curation_path).get("assets", {}).get(f"paper:{record['id']}@{record['revision']}", {}) if curation_path.exists() else {}
+    assessment = current_curation(root).get(f"paper:{record['id']}@{record['revision']}", {})
     if assessment.get("status") in {"needs_rebuild", "superseded"} or record.get("status") == "reference_only":
         return {"status": "not_imported", "quality_debt": [assessment.get("reason", "该原件仅作参考，请选替代部件或新创")]}
     scope = record.get("reuse_scope", {})
@@ -403,6 +440,7 @@ def _reuse_unlocked(workspace, root, project, identifier, revision=None, asset_i
                                      "checked_assets": sorted(scale_expected)},
             "directory": str(destination), "entry": str(destination / record.get("entry", record["files"][0]["path"])),
             "asset_id": new_id, "review": "evaluate_in_current_shot",
+            "curation": assessment, "effective_review_boundary": assessment.get("review_boundary", {}),
             "imported_assets": [{"asset_id": part["asset_id"], "path": str(relative / part["path"])} for part in planned],
             "assembly": record.get("assembly"),
             "quality_debt": record.get("quality_debt", []),

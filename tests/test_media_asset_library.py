@@ -76,6 +76,57 @@ class MediaCompanionTests(unittest.TestCase):
         self.assertEqual(companion.use(self.workspace,'productions/s/e', self.row['id'])['status'], 'copied_and_verified')
         self.assertEqual(len(local.read(self.workspace/'assets/paper-theatre/uses.json')['uses']), 1)
 
+    def test_central_curation_blocks_stale_catalog_exact_and_collection_imports(self):
+        companion.ensure(self.workspace, repository=str(self.repo))
+        (self.target / 'collections/curation.json').write_text(json.dumps({'assets': {
+            self.row['id']: {'status': 'needs_rebuild', 'reason': 'invalid seat contact'}}}))
+        self.assertEqual(companion.query(self.workspace)['count'], 0)
+        self.assertEqual(companion.use(self.workspace, 'productions/s/e', self.row['id'])['status'], 'not_imported')
+        (self.target / 'collections/assemblies.json').write_text(json.dumps({'assemblies': [
+            {'id': 'seat', 'parts': [{'asset_id': self.row['id']}]}]}))
+        result = companion.use_collection(self.workspace, 'productions/s/e', 'seat')
+        self.assertEqual(result['imports'][0]['status'], 'not_imported')
+        self.assertEqual(local.read(self.project / 'asset_manifest.json')['assets'], [])
+
+    def test_corrupt_curation_does_not_fall_back_to_catalog(self):
+        companion.ensure(self.workspace, repository=str(self.repo))
+        for value in ('{', '[]', '{"assets":[]}', '{"assets":{"' + self.row['id'] + '":null}}'):
+            (self.target / 'collections/curation.json').write_text(value)
+            self.assertEqual(companion.query(self.workspace)['count'], 0)
+            self.assertEqual(companion.use(self.workspace, 'productions/s/e', self.row['id'])['status'], 'not_imported')
+
+    def test_import_preserves_current_review_correction_separately_from_source(self):
+        companion.ensure(self.workspace, repository=str(self.repo))
+        decision = {'status': 'active', 'review_boundary': {'motion': 'pending', 'static': 'pending'}}
+        (self.target / 'collections/curation.json').write_text(json.dumps({'assets': {self.row['id']: decision}}))
+        result = companion.use(self.workspace, 'productions/s/e', self.row['id'])
+        self.assertEqual(result['status'], 'copied_and_verified')
+        provenance = local.read(Path(result['directory']) / 'external-source.json')
+        self.assertEqual(provenance['effective_review_boundary']['motion'], 'pending')
+        self.assertEqual(provenance['curation'], decision)
+        self.assertEqual(provenance['current_shot_review'], 'pending')
+        copied = local.read(Path(result['directory']) / 'library-record.json')
+        copied.pop('record', None)
+        self.assertEqual(copied, self.record)
+        cached, _ = local.managed_records(self.workspace / 'assets/paper-theatre')
+        self.assertEqual(cached[0]['effective_review_boundary']['motion'], 'pending')
+        reused = local.reuse(self.workspace.resolve(), (self.workspace / 'assets/paper-theatre').resolve(), 'productions/s/e', 'paper', self.record['revision'])
+        self.assertEqual(reused['effective_review_boundary']['motion'], 'pending')
+
+    def test_cached_exact_reuse_obeys_a_later_external_withdrawal(self):
+        companion.ensure(self.workspace, repository=str(self.repo))
+        (self.target / 'collections/curation.json').write_text('{"assets":{}}')
+        companion.use(self.workspace, 'productions/s/e', self.row['id'])
+        (self.target / 'collections/curation.json').write_text(json.dumps({'assets': {
+            self.row['id']: {'status': 'needs_rebuild', 'reason': 'withdrawn after import'}}}))
+        cache = (self.workspace / 'assets/paper-theatre').resolve()
+        result = local.reuse(self.workspace.resolve(), cache, 'productions/s/e', 'paper', self.record['revision'])
+        self.assertEqual(result['status'], 'not_imported')
+        self.assertEqual(local.managed_records(cache)[0][0]['curation']['status'], 'needs_rebuild')
+        (self.target / 'collections/curation.json').write_text('{')
+        result = local.reuse(self.workspace.resolve(), cache, 'productions/s/e', 'paper', self.record['revision'])
+        self.assertEqual(result['status'], 'not_imported')
+
     def test_animation_reference_brief_prioritizes_executable_motion_and_keeps_ceiling_open(self):
         companion.ensure(self.workspace, repository=str(self.repo))
         motion = {

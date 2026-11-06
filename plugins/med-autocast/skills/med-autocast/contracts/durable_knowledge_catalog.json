@@ -1,0 +1,43 @@
+{
+  "surface_kind": "opl_durable_knowledge_catalog",
+  "version": "durable-knowledge-catalog.v1",
+  "owner": "one-person-lab",
+  "domain_id": "medical_video",
+  "items": [
+    {
+      "surface_kind": "opl_durable_knowledge_item",
+      "version": "durable-knowledge-item.v1",
+      "knowledge_id": "medical_video.domain_boundary",
+      "title": "domain boundary",
+      "layer": "agent_pack",
+      "owner": "medical_video",
+      "body_ref": {
+        "kind": "repo_path",
+        "ref": "agent/knowledge/domain_boundary.md",
+        "sha256": "sha256:6c2c00b6f57f4f30c5b3a23975ba62507a5c9d71890a5585ce4dec73eff6981d"
+      },
+      "applicability": {
+        "domains": [
+          "medical_video"
+        ],
+        "stages": [
+          "evidence-plan",
+          "story-directing",
+          "media-production",
+          "visual-review",
+          "meta-review",
+          "review-handoff",
+          "asset-curation"
+        ]
+      },
+      "status": "active",
+      "reviewed_at": "2026-11-06T00:00:00Z",
+      "next_review_at": "2027-11-06T00:00:00Z",
+      "authority_boundary": {
+        "semantic_body_owner": "medical_video",
+        "opl_role": "catalog_recall_and_receipt_projection_only"
+      },
+      "freshness_policy": "review_when_sources_or_applicability_change; exclude_after_next_review_at"
+    }
+  ]
+}

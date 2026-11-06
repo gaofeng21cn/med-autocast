@@ -18,6 +18,6 @@
 - `agent/professional_skills/medical-video-content-planner/SKILL.md`
 - `agent/professional_skills/medical-video-director/SKILL.md`
 
-先读 `docs/production-sop.md` 的阶段映射；按 `docs/workspace-adapter.md` 选择实际工具和原输入合同。后续补充或返修从受影响职责继续，不为六阶段顺序重复制作。
+先读 `agent/policies/production-policy.md` 的阶段映射；按 `docs/workspace-adapter.md` 选择实际工具和原输入合同。后续补充或返修从受影响职责继续，不为六阶段顺序重复制作。
 
 初稿先把每集患者任务、误解、核心判断/行动、事实引用、排除边界及可见事件交给导演；旧系列重制复用事实库，故事和分集按新目标重设计。选择代表集说明覆盖的表达方式与风险，欠项保留可消费草稿并继续独立研究，不继承旧集数或已批准状态。

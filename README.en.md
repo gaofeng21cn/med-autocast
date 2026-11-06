@@ -77,7 +77,7 @@ Source changes and the in-repository plugin carrier reach ordinary installed use
 
 ## Learn More
 
-- [Production workflow](docs/production-sop.md): from topics and scripts to video handoff.
+- [Production workflow](agent/policies/production-policy.md): from topics and scripts to video handoff.
 - [Audiovisual review](docs/visual-review-sop.md) and [delivery guide](docs/delivery-sop.md): review, revise, and organize the results.
 - [Keyframe library](docs/keyframe-library.md): collect and reuse valuable visuals.
 - [Reusable animation elements](runtime/workbench/docs/23_可复用素材保管与策展.md): preserve cutouts, environments, components, motion, and audio, and adopt exact versions in new episodes.

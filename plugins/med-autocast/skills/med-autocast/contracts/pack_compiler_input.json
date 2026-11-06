@@ -54,7 +54,7 @@
     "docs/installation.md",
     "docs/invariants.md",
     "docs/keyframe-library.md",
-    "docs/production-sop.md",
+    "agent/policies/production-policy.md",
     "docs/project.md",
     "docs/provenance.md",
     "docs/recovery-sop.md",

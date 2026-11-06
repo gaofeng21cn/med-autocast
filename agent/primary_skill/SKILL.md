@@ -22,7 +22,7 @@ description: 使用 Med Auto Cast 规划、制作、修订和审查医学科普�
 
 新视频先执行作者/医生基线：确定作者档案、医生形象是否露脸、参考声线、表达方向和医疗身份边界，再进入内容和导演阶段。默认视频走本地 JS 动画与叙事性手绘拼贴，视频模型为显式备选；先用 `check_animation_assets` 检查正确且可分层的素材，再通过 `render_javascript_animation` 预览和渲染。有授权参考声线时使用作者档案登记的本地 VoxCPM2；无专用声线或用户明确跳过时，才使用 Edge TTS `zh-CN-XiaoyiNeural` 保底。ImageGen 素材由当前会话的 ImageGen Skill 生成并登记，网上素材须保留来源许可；`audio_baseline` 的响度结果不能代替完整语气审听。具体输入见 `runtime/workbench/docs/13_素材准入与配音基线.md`。
 
-专业 Skill 及 SOP 可按当前任务选择加载，不要求用户重复批准已授权的本地工作。部署、生产媒体生成与发布须符合当前请求范围。详见 `docs/production-sop.md`、`docs/workspace-adapter.md`。
+专业 Skill 及 SOP 可按当前任务选择加载，不要求用户重复批准已授权的本地工作。部署、生产媒体生成与发布须符合当前请求范围。详见 `agent/policies/production-policy.md`、`docs/workspace-adapter.md`。
 
 默认纸剧场先把医学素材转为患者问题地图，再规划系列故事圣经和每集 `episode_blueprint`。blueprint 是创意交接，不是机器表单：推荐先写视觉处理稿、风格帧和带声音事件的分镜，再做完整粗动态分镜；低保真代码预览、独立镜头、声音准备和安全替代可以并行推进。这个顺序提高初稿质量，不是阶段启动门；信息不足或质量检查未通过时，保留可消费候选/诊断与质量债，继续不依赖该缺口的工作。被拒绝的医学素材不得进入渲染；没有安全替代时省略受影响镜头，不臆造解剖。新系列使用 `content/<topic>/` 与 `productions/<series>/<episode>/` 的分层结构；`work/`、`output/`、`deliveries/` 和 `archive/` 分别承担运行态、批量输出、交接记录和历史只读用途，不能互相充当制作权威。预览联系表和按关键状态取样的 strip 是导演的定位材料，不是机器质量门；透明素材出现图册残片时应回到单件生成或合法素材准入，不能靠遮挡卡片掩盖。可用 HyperFrames storyboard/Studio 或本地 HTML 预览做导演审片面；静帧、联系表和代码检查只辅助定位故障，不定义视频质量。方法见 `runtime/workbench/docs/15_纸剧场系列策划与制作.md`、`runtime/workbench/docs/16_纸剧场前置策划与质量门.md`、`runtime/workbench/docs/17_工作台目录结构与资产生命周期.md`。
 
@@ -30,7 +30,7 @@ description: 使用 Med Auto Cast 规划、制作、修订和审查医学科普�
 
 八个交接点的推荐顺序和返修优先级见 `runtime/workbench/docs/18_纸剧场导演流程与质量框架.md`：通常先收敛患者任务、故事卡、处理稿和 animatic，再准入透明单件并写逐镜 JS；Stage 可以按用户目标与已有产物跳转、并行或回退。去文字审片、视觉负担预算和线段/色带物理来源用于判断候选成熟度；未达标时继续返修或交接质量债，不阻止其他可消费进度。不能用脚本复杂度、标签堆叠或随机抖动补足没有视觉事件的镜头，也不能把欠项候选称为通过或 ready。
 
-六阶段与原十阶段职责映射见 `docs/production-sop.md`。完整专业方法、模板和通用工具随包存于 `runtime/workbench/`；旧制作单保留原入口；纸剧场统一使用随包 paper_project，避免预览和正式渲染调用不同版本。默认交付预检使用 `med_autocast.py preflight-workbench`，直接读取原制作单和交付清单，不另外维护 Med Auto Cast 制作状态。
+六阶段与原十阶段职责映射见 `agent/policies/production-policy.md`。完整专业方法、模板和通用工具随包存于 `runtime/workbench/`；旧制作单保留原入口；纸剧场统一使用随包 paper_project，避免预览和正式渲染调用不同版本。默认交付预检使用 `med_autocast.py preflight-workbench`，直接读取原制作单和交付清单，不另外维护 Med Auto Cast 制作状态。
 
 新用户只需提供主题、受众与大致时长；其余由智能体完成。初始化后的入口以 `WORKSPACE.md` 和 `workspace.manifest.json` 为目录导航，以 `workbench.yaml` 为配置权威；目录缺项可增量修复，不能据此声称成片质量。首步默认建立品牌识别、医生形象和授权声线基线；已有系列复用其作者档案中的人物、声线与品牌出场方式。人物基线不要求每集出镜；某集仅用固定品牌印记仍属于该系列，不记录为跳过形象。用户也可显式跳过人物基线或专用声线，制作通用纸剧场；只有无专用声线或明确跳过时才用 Edge，记录 `voice.mode: edge` 并重置声音待审。不得因专用声线后端故障静默切换。工具入口为 `configure_voice --mode edge|reference`。按 `runtime/workbench/docs/14_新用户首片SOP.md` 完成首片。
 
@@ -117,3 +117,20 @@ python3 runtime/native_helpers/med_autocast.py assets --workspace <workspace> --
 ## 五小时级全季优化后的默认生产纪律
 
 手绘拼贴初稿按 runtime/workbench/docs/42_paper-collage-mv制作方法适配.md 推进：同期语义变可见的小戏/科学关系，核心道具先看各状态，有角色才做重心/视线/表情样本；先把本集一段做深再审整集。动作有快慢与停顿，镜头/转场服务事件，不设数量配额或共用导演工厂。resolve_motion_audit 只读导出声明，不补写反应、承接或确认画面。中断按每集真实回执恢复；声明与批量成功不替代连续动态、听感或医学审查。
+
+## Durable Knowledge And Workspace Memory
+
+Use OPL knowledge recall with --repo <agent-root> --domain <domain-id>
+--stage <stage-id> and the authorized --workspace and --project roots.
+The hosted StageRun binds this selection once for producer, reviewer and
+repair roles. Read selected bodies and cite knowledge IDs, layers and digests.
+Agent knowledge lives in agent/knowledge/, indexed by
+contracts/durable_knowledge_catalog.json. Owner/team constraints and accepted
+cross-project lessons live in shared/memory/; project decisions and lessons
+live in the authorized project's memory/; dated facts live in its state/.
+Each workspace layer uses opl_durable_knowledge_catalog.json.
+Review freshness and keep superseded entries out of active recall. A project
+result is a candidate lesson until its domain or project owner accepts the
+evidence and scope. Private project content is never automatically promoted
+into the distributable Agent package. OPL owns validation, scoped recall and
+receipts; domain owners retain semantic acceptance.

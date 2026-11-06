@@ -44,11 +44,7 @@
       "policy_ref": "agent/stages/evidence-plan.md",
       "prompt_ref": "agent/prompts/evidence-plan.md",
       "knowledge_refs": [
-        "agent/knowledge/domain_boundary.md",
-        "docs/production-sop.md",
-        "docs/workspace-adapter.md",
-        "runtime/workbench/docs/28_初版质量与高效返修流程.md",
-        "runtime/workbench/docs/29_医学视频资产库与初稿前置质量SOP.md"
+        "agent/knowledge/domain_boundary.md"
       ],
       "quality_gate_refs": [
         "agent/quality_gates/evidence-plan.md"
@@ -85,6 +81,12 @@
         "agent/professional_skills/medical-video-series-producer/SKILL.md",
         "agent/professional_skills/medical-video-content-planner/SKILL.md",
         "agent/professional_skills/medical-video-director/SKILL.md"
+      ],
+      "policy_refs": [
+        "agent/policies/production-policy.md",
+        "docs/workspace-adapter.md",
+        "runtime/workbench/docs/28_初版质量与高效返修流程.md",
+        "runtime/workbench/docs/29_医学视频资产库与初稿前置质量SOP.md"
       ]
     },
     {
@@ -96,12 +98,7 @@
       "policy_ref": "agent/stages/story-directing.md",
       "prompt_ref": "agent/prompts/story-directing.md",
       "knowledge_refs": [
-        "agent/knowledge/domain_boundary.md",
-        "docs/production-sop.md",
-        "docs/workspace-adapter.md",
-        "runtime/workbench/docs/26_代码动画技法与风格工作流.md",
-        "runtime/workbench/docs/28_初版质量与高效返修流程.md",
-        "runtime/workbench/docs/29_医学视频资产库与初稿前置质量SOP.md"
+        "agent/knowledge/domain_boundary.md"
       ],
       "quality_gate_refs": [
         "agent/quality_gates/story-directing.md"
@@ -143,6 +140,13 @@
         "agent/professional_skills/medical-video-visual-qa/SKILL.md",
         "agent/professional_skills/medical-video-asset-curator/SKILL.md",
         "agent/professional_skills/medical-video-animation-craft/SKILL.md"
+      ],
+      "policy_refs": [
+        "agent/policies/production-policy.md",
+        "docs/workspace-adapter.md",
+        "runtime/workbench/docs/26_代码动画技法与风格工作流.md",
+        "runtime/workbench/docs/28_初版质量与高效返修流程.md",
+        "runtime/workbench/docs/29_医学视频资产库与初稿前置质量SOP.md"
       ]
     },
     {
@@ -154,12 +158,7 @@
       "policy_ref": "agent/stages/media-production.md",
       "prompt_ref": "agent/prompts/media-production.md",
       "knowledge_refs": [
-        "agent/knowledge/domain_boundary.md",
-        "docs/production-sop.md",
-        "docs/workspace-adapter.md",
-        "runtime/workbench/docs/26_代码动画技法与风格工作流.md",
-        "runtime/workbench/docs/28_初版质量与高效返修流程.md",
-        "runtime/workbench/docs/29_医学视频资产库与初稿前置质量SOP.md"
+        "agent/knowledge/domain_boundary.md"
       ],
       "quality_gate_refs": [
         "agent/quality_gates/media-production.md"
@@ -203,6 +202,13 @@
         "agent/professional_skills/medical-video-release-packager/SKILL.md",
         "agent/professional_skills/medical-video-asset-curator/SKILL.md",
         "agent/professional_skills/medical-video-animation-craft/SKILL.md"
+      ],
+      "policy_refs": [
+        "agent/policies/production-policy.md",
+        "docs/workspace-adapter.md",
+        "runtime/workbench/docs/26_代码动画技法与风格工作流.md",
+        "runtime/workbench/docs/28_初版质量与高效返修流程.md",
+        "runtime/workbench/docs/29_医学视频资产库与初稿前置质量SOP.md"
       ]
     },
     {
@@ -214,11 +220,7 @@
       "policy_ref": "agent/stages/visual-review.md",
       "prompt_ref": "agent/prompts/visual-review.md",
       "knowledge_refs": [
-        "agent/knowledge/domain_boundary.md",
-        "docs/production-sop.md",
-        "docs/workspace-adapter.md",
-        "runtime/workbench/docs/26_代码动画技法与风格工作流.md",
-        "runtime/workbench/docs/28_初版质量与高效返修流程.md"
+        "agent/knowledge/domain_boundary.md"
       ],
       "quality_gate_refs": [
         "agent/quality_gates/visual-review.md"
@@ -261,6 +263,12 @@
         "agent/professional_skills/medical-video-release-packager/SKILL.md",
         "agent/professional_skills/medical-video-content-planner/SKILL.md",
         "agent/professional_skills/medical-video-animation-craft/SKILL.md"
+      ],
+      "policy_refs": [
+        "agent/policies/production-policy.md",
+        "docs/workspace-adapter.md",
+        "runtime/workbench/docs/26_代码动画技法与风格工作流.md",
+        "runtime/workbench/docs/28_初版质量与高效返修流程.md"
       ]
     },
     {
@@ -273,9 +281,7 @@
       "policy_ref": "agent/stages/meta-review.md",
       "prompt_ref": "agent/prompts/meta-review.md",
       "knowledge_refs": [
-        "agent/knowledge/domain_boundary.md",
-        "docs/production-sop.md",
-        "docs/workspace-adapter.md"
+        "agent/knowledge/domain_boundary.md"
       ],
       "quality_gate_refs": [
         "agent/quality_gates/meta-review.md"
@@ -320,6 +326,10 @@
         "agent/professional_skills/medical-video-visual-qa/SKILL.md",
         "agent/professional_skills/medical-video-content-planner/SKILL.md",
         "agent/professional_skills/medical-video-series-producer/SKILL.md"
+      ],
+      "policy_refs": [
+        "agent/policies/production-policy.md",
+        "docs/workspace-adapter.md"
       ]
     },
     {
@@ -331,10 +341,7 @@
       "policy_ref": "agent/stages/review-handoff.md",
       "prompt_ref": "agent/prompts/review-handoff.md",
       "knowledge_refs": [
-        "agent/knowledge/domain_boundary.md",
-        "docs/production-sop.md",
-        "docs/workspace-adapter.md",
-        "runtime/workbench/docs/30_用户交付目录与导航SOP.md"
+        "agent/knowledge/domain_boundary.md"
       ],
       "quality_gate_refs": [
         "agent/quality_gates/review-handoff.md"
@@ -381,6 +388,11 @@
         "agent/professional_skills/medical-video-release-packager/SKILL.md",
         "agent/professional_skills/medical-video-content-planner/SKILL.md",
         "agent/professional_skills/medical-video-series-producer/SKILL.md"
+      ],
+      "policy_refs": [
+        "agent/policies/production-policy.md",
+        "docs/workspace-adapter.md",
+        "runtime/workbench/docs/30_用户交付目录与导航SOP.md"
       ]
     },
     {
@@ -392,11 +404,7 @@
       "policy_ref": "agent/stages/asset-curation.md",
       "prompt_ref": "agent/prompts/asset-curation.md",
       "knowledge_refs": [
-        "agent/knowledge/domain_boundary.md",
-        "docs/production-sop.md",
-        "docs/workspace-adapter.md",
-        "runtime/workbench/docs/26_代码动画技法与风格工作流.md",
-        "runtime/workbench/docs/29_医学视频资产库与初稿前置质量SOP.md"
+        "agent/knowledge/domain_boundary.md"
       ],
       "quality_gate_refs": [
         "agent/quality_gates/asset-curation.md"
@@ -440,6 +448,12 @@
         "agent/professional_skills/medical-video-director/SKILL.md",
         "agent/professional_skills/medical-video-asset-curator/SKILL.md",
         "agent/professional_skills/medical-video-animation-craft/SKILL.md"
+      ],
+      "policy_refs": [
+        "agent/policies/production-policy.md",
+        "docs/workspace-adapter.md",
+        "runtime/workbench/docs/26_代码动画技法与风格工作流.md",
+        "runtime/workbench/docs/29_医学视频资产库与初稿前置质量SOP.md"
       ]
     }
   ]

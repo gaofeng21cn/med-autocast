@@ -77,7 +77,7 @@ opl packages install med-autocast --json
 
 ## 进一步了解
 
-- [制作流程](docs/production-sop.md)：从选题、脚本到成片交付。
+- [制作流程](agent/policies/production-policy.md)：从选题、脚本到成片交付。
 - [视听复核](docs/visual-review-sop.md)与[交付说明](docs/delivery-sop.md)：如何审看、修订并整理成果。
 - [关键帧素材库](docs/keyframe-library.md)：如何积累和复用有价值的画面。
 - [可复用动画素材](runtime/workbench/docs/23_可复用素材保管与策展.md)：保管透明纸件、环境、组件、动作和声音，跨集采用精确版本。

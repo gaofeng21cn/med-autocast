@@ -16,7 +16,7 @@
 - `agent/professional_skills/medical-video-content-planner/SKILL.md`
 - `agent/professional_skills/medical-video-series-producer/SKILL.md`
 
-先读 `docs/production-sop.md` 的阶段映射；按 `docs/workspace-adapter.md` 选择实际工具和原输入合同。后续补充或返修从受影响职责继续，不为六阶段顺序重复制作。
+先读 `agent/policies/production-policy.md` 的阶段映射；按 `docs/workspace-adapter.md` 选择实际工具和原输入合同。后续补充或返修从受影响职责继续，不为六阶段顺序重复制作。
 
 ## 用户入口与过程交接分离
 

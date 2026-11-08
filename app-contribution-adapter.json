@@ -1,0 +1,76 @@
+{
+  "schema_version": "opl-package-app-contribution-adapter.v1",
+  "reads": {
+    "med-autocast.workspace.v1#status": {
+      "kind": "command",
+      "cwd": "package",
+      "stdin": "input_json",
+      "passthrough": true,
+      "argv": [
+        "python3",
+        "runtime/native_helpers/app_contribution.py",
+        "status"
+      ],
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "series_id": {
+            "type": "string",
+            "title": "系列"
+          },
+          "episode_id": {
+            "type": "string",
+            "title": "集号"
+          },
+          "shot_id": {
+            "type": "string",
+            "title": "镜头（可选）"
+          }
+        },
+        "additionalProperties": false
+      }
+    },
+    "med-autocast.workspace.v1#media": {
+      "kind": "command",
+      "cwd": "package",
+      "stdin": "input_json",
+      "passthrough": true,
+      "argv": [
+        "python3",
+        "runtime/native_helpers/app_contribution.py",
+        "media"
+      ],
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "series_id": {
+            "type": "string",
+            "title": "系列"
+          },
+          "episode_id": {
+            "type": "string",
+            "title": "集号"
+          },
+          "shot_id": {
+            "type": "string",
+            "title": "镜头（可选）"
+          }
+        },
+        "additionalProperties": false
+      }
+    }
+  },
+  "actions": {
+    "med-autocast.workspace.v1#review.note": {
+      "kind": "command",
+      "cwd": "package",
+      "stdin": "input_json",
+      "passthrough": true,
+      "argv": [
+        "python3",
+        "runtime/native_helpers/app_contribution.py",
+        "note"
+      ]
+    }
+  }
+}

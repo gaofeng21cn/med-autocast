@@ -1,5 +1,35 @@
 # 工作台工具与原合同接入
 
+## Mini App 任务与媒体入口
+
+Package 声明 `task_board` 和 `artifact_view` 两个共享视图，读取同一当前工作区。
+`app-contribution-adapter.json` 调用随包 `runtime/native_helpers/app_contribution.py`，
+工作区只从 Framework 验证后注入的 `OPL_PROFILE_WORKSPACE` 取得。空输入列出全部登记单集；
+`series_id`、`episode_id` 定位一集，`shot_id` 进一步聚焦 Score 中的镜头。不存在的身份返回诊断，不改选其他集或旧版本。
+
+返回的媒体与材料使用精确 `artifact_ref`，镜头保留原始 `start/end`；当前视频、
+交付清单及其中的 `reviews`、`quality_debt` 分别显示。读取不会播放、渲染、调用后端或写工作区。
+缺少成片时仍可查看已存在的工程和镜头，不把资料完整性当作启动门。
+
+Studio 通过共享产物链接在当前对话工作区内预览媒体，镜头入口跳到 `start` 并在 `end` 停止。
+制作目录须位于该对话工作区内；Framework 登记制作工作区本身不扩大 Host 的文件读取范围。
+
+“记录审看意见”接收选定单集、可选镜头和文字。它要求当前返回的 `revision`，将意见原文及
+对应媒体引用保存到工程 `qa/miniapp-notes/<request_id>.json`，并回读确认。相同 request ID
+重试返回同一材料；相同 ID 不同输入拒绝覆盖。刷新候选后需针对新 revision 重新提交。
+此动作不改 `reviews`、不批准医学或音画质量，也不自动启动制作；接着使用当前 OPL 任务
+动作把该意见引用交给 Visual Review 或返修阶段，复用已有 Task/StageRun。
+
+本地只读入口（制作工作区替换为自己的目录）：
+
+```sh
+OPL_PROFILE_WORKSPACE=/absolute/workspace python3 runtime/native_helpers/app_contribution.py status <<'JSON'
+{}
+JSON
+```
+
+MCP 请求由 Framework 处理确认与工作区身份；业务意见、媒体与专业审查仍由 MAC 工作区保管。
+
 制作工作区持有 workbench.yaml、作者/后端档案、系列、媒体、制作单和审核记录；Med Auto Cast 随包提供完整专业方法、模板及通用工作台工具。先按系列解析作者覆盖，再继承活动作者；设备、模型、字体和凭据来源由工作区配置决定。
 
 主入口中的路径相对已加载的 Skill 根。以下以该根为当前目录，`/absolute/workspace` 替换为制作工作区；Python 选用该工作区核心环境，VoxCPM2、Whisper 和视频模型使用各自登记环境。

@@ -29,3 +29,9 @@ console.log(JSON.stringify({status:'projected',owner:'one-person-lab',generator:
 const carrierDescriptor=structuredClone(ownerManifest);
 carrierDescriptor.codex_surface.plugin_source_path='.';
 fs.writeFileSync(path.join(root,'plugins/med-autocast/opl-package.json'),JSON.stringify(carrierDescriptor,null,2)+'\n');
+const adapter=JSON.parse(fs.readFileSync(path.join(root,'app-contribution-adapter.json'),'utf8'));
+for(const entry of [...Object.values(adapter.reads),...Object.values(adapter.actions)]){
+ entry.argv=entry.argv.map(arg=>arg==='runtime/native_helpers/app_contribution.py'
+   ? 'skills/med-autocast/runtime/native_helpers/app_contribution.py':arg);
+}
+fs.writeFileSync(path.join(root,'plugins/med-autocast/app-contribution-adapter.json'),JSON.stringify(adapter,null,2)+'\n');

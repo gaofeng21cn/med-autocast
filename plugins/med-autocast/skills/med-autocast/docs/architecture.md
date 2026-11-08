@@ -2,6 +2,14 @@
 
 正式名Med Auto Cast，技术身份med-autocast，领域medical_video。agent/持有专业语义，contracts/持有动作、阶段、身份与边界。工作区持有系列、媒体、部署profile、资产catalog和质量记录。runtime/native_helpers 提供只读核对与显式工具寻址；workbench_tool 同步执行一个已授权工具，不成为第二调度器或医学裁决者。runtime/workbench 随包提供通用核心、模板和完整方法，工作区原工具优先。
 
+## Mini App 工作入口
+
+MAC 的任务与媒体贡献遵循 [OPL MCP Apps 规范](https://github.com/gaofeng21cn/one-person-lab/blob/main/docs/mcp-apps/SPEC.md)。Framework 负责发现、共享进度/产物视图、上下文和当前任务动作；MAC 负责从登记工作区解析单集工程、当前候选、镜头时码与原有审查材料。资产库入口与 MAC 视频制作入口是独立贡献，不互相代替。
+
+当前工程由 `workbench.yaml.series.<series>.episodes.<episode>.project` 决定；当前视频由工程 `out/current.json` 决定。界面不按文件修改时间猜当前版本。只提供工作区时列出已登记单集，选定系列与集号后读取该集；制作中缺少成片仍显示可用工程与 Score。共享产物视图呈现候选媒体和镜头定位，专业制作继续使用既有工作台与工具。
+
+审看意见由 MAC 写入当前工程 `qa/miniapp-notes/`，绑定工程、Score 和当前媒体指针的 revision，供既有 Visual Review、Meta Review 和返修 Stage 读取。意见只是人工输入材料，不是审批、质量状态或第二任务队列；继续制作通过 OPL 当前可用的任务动作发起。连接能力经 OPL Connect 的宿主绑定接口调用，Mini App 不复制凭据或自行认定调用者身份。接口和使用方式见[工作台接入](workspace-adapter.md#mini-app-任务与媒体入口)。
+
 `plan-series` 进入证据规划；`produce-episodes` 进入故事导演、媒体制作、阶段复核、跨阶段 Meta Review 和审看交付；`review-delivery` 从阶段复核进入同一条 Meta Review/交付路线。`asset-curation` 是交付后的可选沉淀与恢复入口，不是成片交付的硬终点。已有结果可跳转或返修，`stage.requires`、能力包和产物字段都是质量上下文与交接建议，不是 LLM 输出不完整时的启动门。受权限、身份及当前性约束的依赖动作不能越界。
 
 ## Stage 能力与交接

@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
 """复查登记单集的真实预览几何；只定位，不推断文字所属纸件或批准质量。"""
 from __future__ import annotations
-import argparse, hashlib, json, subprocess
+import argparse, json, subprocess
+from _opl_file_hash import sha256_file
 from pathlib import Path
 from collections import Counter
 import yaml
@@ -22,7 +23,7 @@ def audit(workspace: Path, previews: Path, output: Path, overrides: dict[str, Pa
             data = json.loads(report.read_text())
             inputs.append({"key": key, "project": str((workspace / row["project"]).resolve()),
                            "preview": str(report.resolve()),
-                           "preview_sha256": hashlib.sha256(report.read_bytes()).hexdigest(),
+                           "preview_sha256": sha256_file(report),
                            "primary_view": data.get("primary_view", "unknown"),
                            "frames": data.get("frames", [])})
     # Use the same observer as the production preview, not a second formula.

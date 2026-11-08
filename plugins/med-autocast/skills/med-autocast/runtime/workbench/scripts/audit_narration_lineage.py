@@ -8,7 +8,7 @@ from __future__ import annotations
 
 import argparse
 import concurrent.futures
-import hashlib
+from _opl_file_hash import sha256_file as sha
 import json
 import subprocess
 import wave
@@ -26,10 +26,6 @@ def decode(path):
     return np.frombuffer(subprocess.check_output([
         "ffmpeg", "-v", "error", "-i", str(path), "-vn", "-ar", str(RATE),
         "-ac", "1", "-f", "f32le", "-"], stderr=subprocess.PIPE), dtype=np.float32)
-
-
-def sha(path):
-    return hashlib.sha256(path.read_bytes()).hexdigest()
 
 
 def similarity(a, b):

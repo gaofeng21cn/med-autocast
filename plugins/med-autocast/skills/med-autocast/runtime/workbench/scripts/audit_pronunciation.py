@@ -6,7 +6,7 @@ from __future__ import annotations
 import argparse
 import json
 import re
-import hashlib
+from _opl_file_hash import sha256_file
 import yaml
 from pathlib import Path
 
@@ -96,7 +96,7 @@ def main():
                             "requested_annotations": [a for a in annotation_spans(beat.get("tts_text", beat["text"]))
                                 if a["start"] <= index + phrase.index(TARGET_CHAR[phrase]) < a["end"]],
                             "project": str(project),
-                            "narration_sha256": hashlib.sha256(narration_path.read_bytes()).hexdigest(),
+                            "narration_sha256": sha256_file(narration_path),
                             "source_offset": index,
                             "model_text": audio.get("model_text"),
                             "audio": audio.get("audio"),

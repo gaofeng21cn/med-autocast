@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
 """Verify actual narration bytes and timing; metadata alone never proves repair."""
 from __future__ import annotations
-import argparse, hashlib, json, wave
+import argparse, json, wave
+from _opl_file_hash import sha256_file as sha
 from pathlib import Path
 
 def current_projects(workspace: Path):
@@ -16,7 +17,6 @@ def current_projects(workspace: Path):
                 if p.is_dir() and p not in seen: seen.append(p)
     return seen
 
-def sha(path): return hashlib.sha256(path.read_bytes()).hexdigest()
 def duration(path):
     with wave.open(str(path)) as handle: return handle.getnframes()/handle.getframerate()
 

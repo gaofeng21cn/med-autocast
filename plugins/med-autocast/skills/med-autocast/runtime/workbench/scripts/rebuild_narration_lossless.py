@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import argparse
-import hashlib
+from _opl_file_hash import sha256_file as sha
 import json
 import shutil
 import tempfile
@@ -13,10 +13,6 @@ from pathlib import Path
 from audio_baseline import normalize
 from narration_splice import join
 from scan_narration_boundaries import current_projects
-
-
-def sha(path):
-    return hashlib.sha256(path.read_bytes()).hexdigest()
 
 
 def rebuild(project, backup_root, gap_ms=180):

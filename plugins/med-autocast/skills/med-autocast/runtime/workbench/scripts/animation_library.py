@@ -5,6 +5,7 @@ from __future__ import annotations
 import copy
 import fcntl
 import hashlib
+from _opl_file_hash import sha256_file
 import html
 import json
 import os
@@ -36,9 +37,7 @@ def write(path, value):
 
 
 def digest(path):
-    with Path(path).open("rb") as stream:
-        result = hashlib.file_digest(stream, "sha256")
-    return result.hexdigest()
+    return sha256_file(Path(path))
 
 
 def token(value):

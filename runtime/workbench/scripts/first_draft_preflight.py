@@ -10,7 +10,7 @@ approval gate.
 from __future__ import annotations
 
 import argparse
-import hashlib
+from _opl_file_hash import sha256_file
 import json
 import re
 from pathlib import Path
@@ -73,7 +73,7 @@ def _manifest_brief(manifest_path: Path) -> dict[str, Any]:
         calibration = scale.get("calibration") or {}
         if calibration.get("status") == "calibrated" and calibration.get("source_sha256"):
             source = (manifest_path.parent / item.get("path", "")).resolve()
-            if source.is_file() and hashlib.sha256(source.read_bytes()).hexdigest() == calibration.get("source_sha256"):
+            if source.is_file() and sha256_file(source) == calibration.get("source_sha256"):
                 calibrated += 1
                 continue
         pending.append(item.get("asset_id"))

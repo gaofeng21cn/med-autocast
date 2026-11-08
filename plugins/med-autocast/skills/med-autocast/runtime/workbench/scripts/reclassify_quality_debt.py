@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import argparse
 import hashlib
+from _opl_file_hash import sha256_file
 import json
 from pathlib import Path
 
@@ -27,11 +28,7 @@ def sha256(path: Path, cache: dict | None = None) -> str | None:
         key = (str(path.resolve()), stat.st_size, stat.st_mtime_ns, stat.st_ctime_ns)
         if cache is not None and key in cache:
             return cache[key]
-        digest = hashlib.sha256()
-        with path.open("rb") as stream:
-            for chunk in iter(lambda: stream.read(1024 * 1024), b""):
-                digest.update(chunk)
-        value = digest.hexdigest()
+        value = sha256_file(path)
         if cache is not None:
             cache[key] = value
         return value

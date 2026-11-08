@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import argparse
-import hashlib
+from _opl_file_hash import sha256_file
 import json
 from pathlib import Path
 
@@ -34,7 +34,7 @@ def check_assets(manifest: Path) -> dict:
         source = file(asset.get("path"))
         calibration = (asset.get('human_scale') or {}).get('calibration') or {}
         if calibration.get('status') == 'calibrated':
-            if hashlib.sha256(source.read_bytes()).hexdigest() != calibration.get('source_sha256'):
+            if sha256_file(source) != calibration.get('source_sha256'):
                 raise ValueError(f'{aid}: 人物尺度标定与实际载荷不一致')
         source_type = asset.get("source_type")
         if source_type not in ("reviewed_library", "imagegen", "licensed_web", "authored_graphic"):
@@ -95,7 +95,7 @@ def check_assets(manifest: Path) -> dict:
         entry = file(reference.get("entry"))
         record = file(reference.get("library_record"))
         expected_record_sha = reference.get("library_record_sha256")
-        if expected_record_sha and hashlib.sha256(record.read_bytes()).hexdigest() != expected_record_sha:
+        if expected_record_sha and sha256_file(record) != expected_record_sha:
             raise ValueError(f"{external_id}: animation reference record changed")
         linked_shots = reference.get("shots", [])
         if not isinstance(linked_shots, list) or any(

@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
 """Whisper timing evidence for an explicit episode; approved words remain unchanged."""
 
-import argparse, hashlib, json
+import argparse, json
+from _opl_file_hash import sha256_file
 from pathlib import Path
 from build_episode_timelines import build_cues
 
@@ -20,7 +21,7 @@ def main():
     result = []
     for beat in receipt["beats"]:
         source = Path(beat["audio"])
-        source_sha = hashlib.sha256(source.read_bytes()).hexdigest()
+        source_sha = sha256_file(source)
         r = model.transcribe(
             str(source),
             language="zh",
@@ -43,8 +44,8 @@ def main():
     a.output.mkdir(parents=True, exist_ok=True)
     data = {
         "schema": "whisper_word_alignment/v2",
-        "voice_sha256": hashlib.sha256(Path(receipt["audio"]).read_bytes()).hexdigest(),
-        "narration_receipt_sha256": hashlib.sha256(a.receipt.read_bytes()).hexdigest(),
+        "voice_sha256": sha256_file(Path(receipt["audio"])),
+        "narration_receipt_sha256": sha256_file(a.receipt),
         "model": a.model,
         "timing_coordinates": "source_local_seconds",
         "beats": result,

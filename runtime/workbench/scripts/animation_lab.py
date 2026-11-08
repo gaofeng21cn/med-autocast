@@ -2,7 +2,7 @@
 """Create and render the original, brand-free MAC material/motion study."""
 from __future__ import annotations
 import argparse
-import hashlib
+from _opl_file_hash import sha256_file
 import json
 import os
 from pathlib import Path
@@ -61,7 +61,7 @@ def audio(project):
     out=project/'audio';out.mkdir(exist_ok=True)
     score=json.loads((project/'score.json').read_text())
     events=foley(project,score,out/'study.wav',48000)
-    save(out/'study-receipt.json',{'score_sha256':hashlib.sha256((project/'score.json').read_bytes()).hexdigest(),
+    save(out/'study-receipt.json',{'score_sha256':sha256_file(project/'score.json'),
         'events':events,'narration':None,'music':None,'full_listening':'pending',
         'purpose':'procedural material accents; no TTS or author voice changed'})
 
@@ -92,7 +92,7 @@ def capture(project, command):
         receipt=json.loads(result.stdout.strip().splitlines()[-1])
         os.replace(render_target,output)
         receipt['output']=str(output)
-        receipt['video_sha256']=hashlib.sha256(output.read_bytes()).hexdigest()
+        receipt['video_sha256']=sha256_file(output)
         save(project/'out/render-receipt.json',receipt)
     if command=='preview':
         study=json.loads((project/'LAB.json').read_text()).get('study','style_lab')

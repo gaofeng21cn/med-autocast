@@ -8,7 +8,7 @@ receipts already match the current voice hash is skipped.
 from __future__ import annotations
 
 import argparse
-import hashlib
+from _opl_file_hash import sha256_file as sha
 import json
 import subprocess
 import sys
@@ -16,10 +16,6 @@ import time
 from pathlib import Path
 
 from scan_narration_boundaries import current_projects
-
-
-def sha(path: Path) -> str:
-    return hashlib.sha256(path.read_bytes()).hexdigest()
 
 
 def run_step(command, cwd: Path):

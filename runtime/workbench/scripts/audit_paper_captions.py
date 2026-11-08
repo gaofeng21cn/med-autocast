@@ -3,7 +3,7 @@
 
 from __future__ import annotations
 import argparse
-import hashlib
+from _opl_file_hash import sha256_file as digest
 import json
 from pathlib import Path
 import yaml
@@ -18,10 +18,6 @@ def read(path: Path):
 def save(path: Path, data):
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(json.dumps(data, ensure_ascii=False, indent=2) + '\n', encoding='utf-8')
-
-
-def digest(path: Path):
-    return hashlib.sha256(path.read_bytes()).hexdigest()
 
 
 def project_report(workspace: Path, series: str, episode: str, row: dict) -> dict:

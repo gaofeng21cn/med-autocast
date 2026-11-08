@@ -9,7 +9,7 @@ user-facing MP4 still points at an older byte set.
 from __future__ import annotations
 
 import argparse
-import hashlib
+from _opl_file_hash import sha256_file
 import json
 import wave
 from pathlib import Path
@@ -22,7 +22,7 @@ from delivery_layout import locations
 def sha(path: Path) -> str | None:
     if not path.is_file():
         return None
-    return hashlib.sha256(path.read_bytes()).hexdigest()
+    return sha256_file(path)
 
 
 def read_json(path: Path) -> dict:

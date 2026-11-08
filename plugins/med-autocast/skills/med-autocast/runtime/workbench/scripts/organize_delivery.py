@@ -2,7 +2,7 @@
 """Flatten selected paper-theatre deliveries without rendering or changing review states."""
 from __future__ import annotations
 import argparse
-import hashlib
+from _opl_file_hash import sha256_file as digest
 import json
 import os
 from pathlib import Path
@@ -11,10 +11,6 @@ import tempfile
 import yaml
 
 from delivery_layout import locations, install, save
-
-
-def digest(path):
-    return hashlib.sha256(path.read_bytes()).hexdigest()
 
 
 def organize(workspace: Path, series: str, episode: str) -> dict:

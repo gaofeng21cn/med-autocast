@@ -5,7 +5,7 @@ from __future__ import annotations
 import argparse
 import copy
 from datetime import datetime, timezone
-import hashlib
+from _opl_file_hash import sha256_file
 import html
 import json
 import os
@@ -195,7 +195,7 @@ def migrate(workspace, series_ids, archive_series=(), archive_entries=()):
                     raise ValueError('当前用户交付指针越出 publish，拒绝猜测源版本')
                 receipt_path = Path(pointer['manifest']); receipt_path = receipt_path if receipt_path.is_absolute() else workspace / receipt_path
                 receipt = json.loads(receipt_path.read_text())
-                video = source / 'video.mp4'; actual = hashlib.sha256(video.read_bytes()).hexdigest()
+                video = source / 'video.mp4'; actual = sha256_file(video)
                 if receipt.get('sha256') and receipt['sha256'] != actual:
                     raise ValueError(f'{sid}/{eid}: 当前交付字节与记录不一致')
                 target = target_root / row['delivery']['episode_dirs'][eid]
@@ -247,7 +247,7 @@ def migrate(workspace, series_ids, archive_series=(), archive_entries=()):
         config_path.write_text(yaml.safe_dump(config,allow_unicode=True,sort_keys=False),encoding='utf-8')
         config_written = True
         for proof in proofs:
-            if hashlib.sha256((Path(proof['to'])/'video.mp4').read_bytes()).hexdigest()!=proof['sha256']:raise ValueError('迁移后视频字节不同')
+            if sha256_file(Path(proof['to'])/'video.mp4')!=proof['sha256']:raise ValueError('迁移后视频字节不同')
             receipt=json.loads(locations(workspace,proof['series_id'],proof['episode_id'])['record'].joinpath('manifest.json').read_text())
             if receipt.get('reviews',{})!=proof['reviews']:raise ValueError('迁移不应改变审核状态')
         result={'status':'migrated_and_read_back','series':len(series_ids),'episodes':len(proofs),'archive':str(archive),'video_bytes_unchanged':True,'review_states_unchanged':True,'mapping':proofs,'moves':[{'from':str(a),'to':str(b)} for a,b in moves]}

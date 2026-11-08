@@ -2,7 +2,7 @@
 """MAC companion discovery, non-blocking installation and exact-version reuse."""
 from __future__ import annotations
 import argparse
-import hashlib
+from _opl_file_hash import sha256_file
 import json
 import os
 from pathlib import Path
@@ -540,7 +540,7 @@ def register_animation_reference(project, selected, row, record, imported):
         'revision': row.get('revision'),
         'kind': record.get('kind'),
         'library_record': record_ref,
-        'library_record_sha256': hashlib.sha256(local_record.read_bytes()).hexdigest(),
+        'library_record_sha256': sha256_file(local_record),
         'entry': entry_ref,
         'mode': 'baseline_reference',
         'creative_ceiling': 'open',

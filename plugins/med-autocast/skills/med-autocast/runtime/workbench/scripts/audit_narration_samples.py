@@ -10,7 +10,7 @@ from __future__ import annotations
 
 import argparse
 import array
-import hashlib
+from _opl_file_hash import sha256_file
 import json
 import math
 import subprocess
@@ -20,7 +20,7 @@ from pathlib import Path
 
 
 def sha(path: Path) -> str | None:
-    return hashlib.sha256(path.read_bytes()).hexdigest() if path.is_file() else None
+    return sha256_file(path) if path.is_file() else None
 
 
 def decode(path: Path, rate: int) -> array.array:

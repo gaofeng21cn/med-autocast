@@ -3,6 +3,7 @@
 
 from __future__ import annotations
 import argparse, hashlib, html, json, os, re, shutil, subprocess, sys, tempfile, time
+from _opl_file_hash import sha256_file
 from pathlib import Path
 import yaml
 from workbench_config import load_author_profile
@@ -24,7 +25,7 @@ def save(p, v):
 
 
 def sha(p):
-    return hashlib.sha256(Path(p).read_bytes()).hexdigest()
+    return sha256_file(Path(p))
 
 
 def stamp():

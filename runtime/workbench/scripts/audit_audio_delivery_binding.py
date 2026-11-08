@@ -8,7 +8,7 @@ from __future__ import annotations
 
 import argparse
 from datetime import datetime, timezone
-import hashlib
+from _opl_file_hash import sha256_file
 import json
 import math
 import wave
@@ -37,7 +37,7 @@ def read_json(path: Path) -> dict:
 def sha(path: Path) -> str | None:
     if not path.is_file():
         return None
-    return hashlib.sha256(path.read_bytes()).hexdigest()
+    return sha256_file(path)
 
 
 def wav_duration(path: Path) -> float | None:

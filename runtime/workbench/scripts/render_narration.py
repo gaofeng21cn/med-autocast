@@ -2,6 +2,7 @@
 """Single-episode narration, exact segment selection, one registered voice baseline."""
 
 import argparse, hashlib, json, os, re, subprocess, sys, tempfile, wave
+from _opl_file_hash import sha256_file
 from pathlib import Path
 from workbench_config import (
     load_author_profile,
@@ -219,15 +220,15 @@ def synthesize(
             runtime_profile=spec.get("runtime_profile", {}),
             pronunciation_control="voxcpm_native_pinyin_braces_with_required_listening",
         )
-        settings["reference_sha256"] = hashlib.sha256(Path(settings["reference"]).read_bytes()).hexdigest()
-        settings["model_config_sha256"] = hashlib.sha256((model / "config.json").read_bytes()).hexdigest()
-        settings["worker_sha256"] = hashlib.sha256(Path(__file__).with_name("voxcpm_worker.py").read_bytes()).hexdigest()
+        settings["reference_sha256"] = sha256_file(Path(settings["reference"]))
+        settings["model_config_sha256"] = sha256_file(model / "config.json")
+        settings["worker_sha256"] = sha256_file(Path(__file__).with_name("voxcpm_worker.py"))
         settings["model_files"] = {
             name: {"size": (model / name).stat().st_size, "mtime_ns": (model / name).stat().st_mtime_ns}
             for name in ("model.safetensors", "audiovae.pth") if (model / name).is_file()
         }
         settings["runtime_metadata"] = {
-            str(p.relative_to(runtime)): hashlib.sha256(p.read_bytes()).hexdigest()
+            str(p.relative_to(runtime)): sha256_file(p)
             for p in sorted(runtime.glob(".venv/lib/python*/site-packages/voxcpm-*.dist-info/METADATA"))
         }
         if settings["runtime_profile"].get("normalize", False):
@@ -262,7 +263,7 @@ def synthesize(
         if valid:
             meta = json.loads(receipt.read_text())
             valid = (
-                meta.get("sha256") == hashlib.sha256(target.read_bytes()).hexdigest()
+                meta.get("sha256") == sha256_file(target)
                 and meta.get("tts_text", meta.get("text")) == spoken
                 and meta.get("model_text", meta.get("tts_text", meta.get("text"))) == actual
                 and not audio_rejected(meta)
@@ -342,7 +343,7 @@ def synthesize(
                     history = (
                         output
                         / "takes"
-                        / hashlib.sha256(target.read_bytes()).hexdigest()
+                        / sha256_file(target)
                     )
                     history.mkdir(parents=True, exist_ok=True)
                     import shutil
@@ -357,7 +358,7 @@ def synthesize(
                     target.with_suffix(".json"),
                     {
                         "cache_key": b["key"],
-                        "sha256": hashlib.sha256(target.read_bytes()).hexdigest(),
+                        "sha256": sha256_file(target),
                         "text": b["text"],
                         "tts_text": tts_text(b),
                         "model_text": b["model_text"],
@@ -399,7 +400,7 @@ def synthesize(
             b["trimmed_head_seconds"] = row["trim_start"]
             b["trimmed_tail_seconds"] = round(row["duration"] - row["trim_end"], 3)
             b["source_sample_rate"] = row["source_sample_rate"]
-            b["source_sha256"] = hashlib.sha256(Path(b["audio"]).read_bytes()).hexdigest()
+            b["source_sha256"] = sha256_file(Path(b["audio"]))
             row["id"] = b["id"]
             row["source_sha256"] = b["source_sha256"]
             row["decoded_sample_rate"] = rate
@@ -437,8 +438,8 @@ def synthesize(
         "lead_seconds": 0.32,
         "tail_seconds": 0.7,
         "takes": splice_report,
-        "raw_sha256": hashlib.sha256((output / "narration.wav").read_bytes()).hexdigest(),
-        "normalized_sha256": hashlib.sha256(normalized.read_bytes()).hexdigest(),
+        "raw_sha256": sha256_file(output / "narration.wav"),
+        "normalized_sha256": sha256_file(normalized),
         "review": "拼接处应可听到完整首字；实际听辨仍待审",
     }
     save(output / "narration_beats.json", result)
@@ -446,14 +447,14 @@ def synthesize(
         "schema": "narration_pronunciation_review/v1",
         "source": result["source"],
         "voice": str(normalized),
-        "voice_sha256": hashlib.sha256(normalized.read_bytes()).hexdigest(),
+        "voice_sha256": sha256_file(normalized),
         "status": "pending",
         "method": "先审听各声段原音，再复核最终混音；注音输入与ASR同字转写均不证明实际读音",
         "beats": [{
             "id": b["id"], "text": b["text"], "tts_text": tts_text(b),
             "model_text": b["model_text"],
             "audio": b["audio"],
-            "sha256": hashlib.sha256(Path(b["audio"]).read_bytes()).hexdigest(),
+            "sha256": sha256_file(Path(b["audio"])),
             "start": b["start"], "end": b["end"],
             "requested_pronunciations": pronunciation_controls(tts_text(b)),
             "control_status": "manual_review_required" if pronunciation_controls(tts_text(b)) else "none",

@@ -1,10 +1,12 @@
 // Local carrier projection using the Framework scaffold generator. No installation.
 import fs from 'node:fs';
 import path from 'node:path';
+import {execFileSync} from 'node:child_process';
 import {pathToFileURL,fileURLToPath} from 'node:url';
 const root=path.resolve(path.dirname(fileURLToPath(import.meta.url)),'..');
 const framework=process.env.OPL_FRAMEWORK_ROOT;
 if(!framework) throw new Error('Set OPL_FRAMEWORK_ROOT to a compatible Framework source checkout');
+execFileSync(process.execPath,[path.join(framework,'scripts/materialize-python-support.mjs'),'--module','file_hash','--target',path.join(root,'runtime/workbench/scripts/_opl_file_hash.py')]);
 const {buildScaffoldFiles}=await import(pathToFileURL(path.join(framework,'src/authority/packages/standard-domain-agent-scaffold-template.ts')));
 const ownerManifest=JSON.parse(fs.readFileSync(path.join(root,'contracts/opl_agent_package_manifest.json'),'utf8'));
 const files=buildScaffoldFiles('med-autocast','Med Auto Cast').filter(f=>f.path.startsWith('plugins/'));

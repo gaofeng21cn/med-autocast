@@ -2,6 +2,9 @@
 set -euo pipefail
 repo_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 export PYTHONDONTWRITEBYTECODE=1
+if [[ -n "${OPL_FRAMEWORK_ROOT:-}" ]]; then
+  node "${OPL_FRAMEWORK_ROOT}/scripts/materialize-python-support.mjs" --module file_hash --target "${repo_dir}/runtime/workbench/scripts/_opl_file_hash.py" --check
+fi
 python3 -m unittest discover -s "${repo_dir}/tests" -v
 python3 "${repo_dir}/scripts/verify_contracts.py"
 if [[ "${1:-fast}" == "full" ]]; then

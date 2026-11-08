@@ -3,20 +3,16 @@
 from __future__ import annotations
 
 import argparse
-import hashlib
 import json
 from pathlib import Path
+from _opl_file_hash import sha256_file
 import yaml
 
 
 def sha(path: Path) -> str | None:
     if not path.is_file():
         return None
-    h = hashlib.sha256()
-    with path.open("rb") as handle:
-        for chunk in iter(lambda: handle.read(1024 * 1024), b""):
-            h.update(chunk)
-    return h.hexdigest()
+    return sha256_file(path)
 
 
 def values(value, keys: set[str]):

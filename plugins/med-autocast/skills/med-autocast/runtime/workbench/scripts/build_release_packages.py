@@ -2,11 +2,11 @@
 """Build or verify standardized per-episode release packages."""
 
 import argparse
-import hashlib
 import json
 import os
 import shutil
 from pathlib import Path
+from _opl_file_hash import sha256_file as sha256
 
 import yaml
 
@@ -39,14 +39,6 @@ def source_links(catalog: dict, episode: dict) -> dict[str, str]:
 
 
 DISCLAIMER = "本内容仅作一般健康科普，不能替代个体化诊断和治疗建议。"
-
-
-def sha256(path: Path) -> str:
-    digest = hashlib.sha256()
-    with path.open("rb") as source:
-        for chunk in iter(lambda: source.read(1024 * 1024), b""):
-            digest.update(chunk)
-    return digest.hexdigest()
 
 
 def format_duration(seconds: float) -> str:

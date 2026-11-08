@@ -30,4 +30,10 @@
 
 ## 后续维护规则
 
+文件字节哈希复用 Framework 的 `python/opl_framework/file_hash.py`。
+`scripts/project-carrier.mjs` 将它逐字生成到工作台的
+`runtime/workbench/scripts/_opl_file_hash.py`，随工作台脚本一起复制到新制作工作区；
+单独工作台无需安装 Framework。缺文件与缓存策略仍由调用工具持有。
+设置 `OPL_FRAMEWORK_ROOT` 运行 `scripts/verify.sh` 时同时核对该生成文件。
+
 完整方法按需加载，不能为了缩短入口删除职责。修改专业 Skill 时回看原阶段输入、输出、方法和真实工具调用；增加工具要登记定位、依赖与副作用。改动制作单接口优先兼容原合同，不建立平行制作状态。验证按具体风险覆盖真实行为；单纯技能数量、文件长度、关键词匹配或安装成功均不证明能力等价。

@@ -3,11 +3,11 @@
 
 import argparse
 import difflib
-import hashlib
 import json
 import re
 import subprocess
 from pathlib import Path
+from _opl_file_hash import sha256_file as sha256
 
 import yaml
 
@@ -275,14 +275,6 @@ def paper_animation_gate(inputs: dict) -> dict:
         "render_bindings": bindings,
         "quality_debt": quality_debt,
     }
-
-
-def sha256(path: Path) -> str:
-    digest = hashlib.sha256()
-    with path.open("rb") as source:
-        for chunk in iter(lambda: source.read(1024 * 1024), b""):
-            digest.update(chunk)
-    return digest.hexdigest()
 
 
 def probe(path: Path) -> dict:

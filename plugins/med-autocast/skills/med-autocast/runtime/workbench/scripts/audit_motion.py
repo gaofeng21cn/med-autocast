@@ -16,6 +16,7 @@ import json
 import re
 from collections import Counter, defaultdict
 from pathlib import Path
+from _opl_file_hash import sha256_file
 from typing import Any
 
 
@@ -42,11 +43,7 @@ def canonical(value: Any) -> str:
 def sha256(path: Path) -> str | None:
     if not path.is_file():
         return None
-    h = hashlib.sha256()
-    with path.open("rb") as stream:
-        for chunk in iter(lambda: stream.read(1024 * 1024), b""):
-            h.update(chunk)
-    return h.hexdigest()
+    return sha256_file(path)
 
 
 def load_score(project: Path, explicit: Path | None) -> tuple[dict, Path]:

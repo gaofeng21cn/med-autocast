@@ -9,12 +9,12 @@ the current pointer is treated as in-flight rework and is protected.
 from __future__ import annotations
 
 import argparse
-import hashlib
 import json
 import re
 import shutil
 from datetime import datetime, timezone
 from pathlib import Path
+from _opl_file_hash import sha256_file
 
 import yaml
 
@@ -65,11 +65,7 @@ PRUNABLE_WORK_ROOTS = {
 def sha256(path: Path) -> str | None:
     if not path.is_file():
         return None
-    digest = hashlib.sha256()
-    with path.open("rb") as handle:
-        for chunk in iter(lambda: handle.read(1024 * 1024), b""):
-            digest.update(chunk)
-    return digest.hexdigest()
+    return sha256_file(path)
 
 
 def size(path: Path) -> int:

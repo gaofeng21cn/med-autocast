@@ -17,6 +17,12 @@ Studio 通过共享产物链接在当前对话工作区内预览媒体，镜头�
 “记录审看意见”接收选定单集、可选镜头和文字。它要求当前返回的 `revision`，将意见原文及
 对应媒体引用保存到工程 `qa/miniapp-notes/<request_id>.json`，并回读确认。相同 request ID
 重试返回同一材料；相同 ID 不同输入拒绝覆盖。刷新候选后需针对新 revision 重新提交。
+revision 包含当前媒体的实际 SHA-256，替换视频但保留文件时间和大小仍会使旧意见请求失效。
+意见以完整 JSON 原子落盘；候选或镜头后来变化不会改写已记录的原意见。
+调用结果未知或关闭 UI 后，先用 `status`/`media` 传同一 `series_id`、`episode_id` 和
+`request_id` 回查 `requested_note`，结果为 `recorded` 或 `not_found`。`recorded` 同时给出
+原意见、产物引用和是否仍匹配当前 revision；不需要重新提交，也不要求原镜头仍存在。
+动作成功结果的 `readback` 提供相同读取入口与输入。撤销工作台中的单集登记后，旧选择不能再读写该单集。
 此动作不改 `reviews`、不批准医学或音画质量，也不自动启动制作；接着使用当前 OPL 任务
 动作把该意见引用交给 Visual Review 或返修阶段，复用已有 Task/StageRun。
 

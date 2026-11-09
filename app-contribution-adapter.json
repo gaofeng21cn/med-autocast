@@ -25,6 +25,10 @@
           "shot_id": {
             "type": "string",
             "title": "镜头（可选）"
+          },
+          "request_id": {
+            "type": "string",
+            "title": "回查意见编号（可选）"
           }
         },
         "additionalProperties": false
@@ -54,6 +58,10 @@
           "shot_id": {
             "type": "string",
             "title": "镜头（可选）"
+          },
+          "request_id": {
+            "type": "string",
+            "title": "回查意见编号（可选）"
           }
         },
         "additionalProperties": false

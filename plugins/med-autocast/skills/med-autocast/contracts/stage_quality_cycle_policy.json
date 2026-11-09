@@ -94,6 +94,8 @@
   },
   "meta_review_policy": {
     "stage_id": "meta-review",
+    "max_route_back_rounds": 3,
+    "budget_exhaustion": "complete_with_quality_debt_if_consumable",
     "review_scope": [
       "global_goal_fit",
       "cross_stage_consistency",

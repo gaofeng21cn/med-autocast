@@ -79,6 +79,52 @@ def inspect_workspace(root: Path) -> dict:
             'production_ready': None, 'note': '仅配置与路径回读，未调用后端或批准任何媒体'}
 
 
+def project_knowledge_locator(root: Path, series_id: str, episode_id: str) -> dict:
+    """Resolve one native episode against the Framework-owned project inventory."""
+    root = root.resolve()
+    config = mapping(local_path(root, 'workbench.yaml'), yaml_format=True)
+    if config.get('schema') != 'medical_video_workbench/v2':
+        raise ContractError('不支持的 workbench schema')
+    spec = config.get('series', {}).get(series_id, {}).get('episodes', {}).get(episode_id)
+    if not isinstance(spec, dict):
+        raise ContractError('单集未在 workbench.yaml 登记')
+    project = local_path(root, spec.get('project'), exists=False)
+    if project == root or not project.is_dir():
+        raise ContractError('单集工程必须是工作区内独立目录')
+    entry = local_path(project, spec.get('entry', 'project.json'))
+    native = mapping(entry)
+    if native.get('series_id') != series_id or native.get('episode_id') != episode_id:
+        raise ContractError('登记工程与系列/集号不一致')
+    result = {'schema': 'med_autocast_project_knowledge_locator/v1', 'read_only': True,
+              'workspace_root': str(root), 'series_id': series_id, 'episode_id': episode_id,
+              'project_root': str(project), 'native_registration_ref': 'workbench.yaml',
+              'project_ref': str(entry), 'inventory_ref': 'workspace_index.json',
+              'project_id': None, 'knowledge_project_args': [],
+              'status': 'missing', 'quality_debt': ['project_knowledge_inventory_registration_missing']}
+    index_path = local_path(root, 'workspace_index.json', exists=False)
+    if not index_path.is_file():
+        return result
+    projects = mapping(index_path).get('projects')
+    if not isinstance(projects, list):
+        raise ContractError('正式项目 inventory 缺少 projects 数组')
+    matches = []
+    ids = set()
+    for row in projects:
+        if not isinstance(row, dict) or not isinstance(row.get('project_id'), str) or not row['project_id'].strip():
+            raise ContractError('正式项目 inventory 包含无效身份')
+        if row['project_id'] in ids:
+            raise ContractError('正式项目 inventory 包含重复身份')
+        ids.add(row['project_id'])
+        if local_path(root, row.get('project_root'), exists=False) == project:
+            matches.append(row)
+    if len(matches) > 1:
+        raise ContractError('同一单集目录对应多个正式项目身份')
+    if matches:
+        result.update(project_id=matches[0]['project_id'], status='ready', quality_debt=[],
+                      knowledge_project_args=['--project', str(project)])
+    return result
+
+
 def query_assets(root: Path, category: str | None = None, series: str | None = None) -> dict:
     catalog = mapping(local_path(root, 'assets/keyframes/catalog.json'))
     if catalog.get('schema') != 'medical_keyframe_library/v1':
@@ -228,8 +274,10 @@ def preflight(root: Path, delivery_ref: str, current_ref: str, review_ref: str) 
 def main():
     parser=argparse.ArgumentParser(description=__doc__)
     sub=parser.add_subparsers(dest='command',required=True)
-    for name in ('inspect','assets','preflight','tools','preflight-workbench'):
+    for name in ('inspect','project-knowledge-locator','assets','preflight','tools','preflight-workbench'):
         p=sub.add_parser(name);p.add_argument('--workspace',type=Path,required=True)
+        if name=='project-knowledge-locator':
+            p.add_argument('--series',required=True);p.add_argument('--episode',required=True)
         if name=='assets':
             p.add_argument('--category');p.add_argument('--series')
             p.add_argument('--library', choices=['keyframes', 'animation', 'external'], default='keyframes')
@@ -251,6 +299,7 @@ def main():
         root=a.workspace.resolve()
         if not root.is_dir():raise ContractError('workspace 必须为现有目录')
         if a.command=='inspect':result=inspect_workspace(root)
+        elif a.command=='project-knowledge-locator':result=project_knowledge_locator(root,a.series,a.episode)
         elif a.command=='assets':
             result = (query_animation_assets(root, a.query, a.kind, a.scope) if a.library == 'animation'
                       else (query_animation_reference(root, a.query, a.series,

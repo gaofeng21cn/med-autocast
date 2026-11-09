@@ -17,6 +17,10 @@
 
 有个人库、无个人库和混合来源使用同一条 Framework 链路：直接读取授权来源的已接受版本，冻结为本次 StageRun 上下文。工作区保存来源绑定引用、业务产物、提案与回执，不强制复制一份知识全文。生产、审阅、修复消费同一快照；其生命周期由 Framework 管理。
 
+三个公开动作都可处理多集，因此明确声明 `execution_scope.kind: none`。它们保留工作区来源授权，只召回适用的产品、用户或团队、主题知识，不将系列名或任意一集冒充本次项目范围。需要单集项目知识时，直接 Skill 从 `workbench.yaml` 选择真实单集，核对 `project.json` 的系列和集号，再由正式 `workspace_index.json.projects` 找到该真实目录唯一对应的 `project_id`；以该目录作为 `opl knowledge prepare --project` 的路径参数。每集独立 prepare，另一集的私有知识不进入快照。未登记、目录冲突或身份不一致时报告项目知识缺口，不从目录名生成身份，也不回退读取全部项目。
+
+`project-knowledge-locator` 提供上述只读核验；缺少正式登记时，Framework 的 `workspace adopt --project-root` 接入已存在单集目录，MAC 不写另一套 inventory。操作步骤见[单集知识登记](workspace-adapter.md#单集知识登记)。
+
 MAC 判断经验是否值得沉淀及其归属，有权维护者接受后经通用写回机制更新唯一正文。可选经验缺失不阻断独立制作；必需医学依据、作者关键约束或授权缺失限制依赖它的行动。媒体生成与发布前复核关键约束与授权，派生摘要随来源变化重审。素材复用包、原始媒体和项目交付按业务保留规则管理，不随知识缓存或运行日志清理。
 
 ## Mini App 工作入口

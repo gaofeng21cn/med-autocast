@@ -90,6 +90,37 @@ python3 runtime/native_helpers/med_autocast.py preflight-workbench --workspace /
 
 ## 新工作区与迁移
 
+### 单集知识登记
+
+批量 OPL 动作使用工作区授权的用户或团队、主题知识；单集私有知识由 direct Skill 明确选集后读取。先运行只读定位：
+
+```sh
+python3 runtime/native_helpers/med_autocast.py project-knowledge-locator \
+  --workspace /absolute/workspace --series SERIES --episode EPISODE
+```
+
+定位同时核对 `workbench.yaml`、真实工程 `project.json` 与 OPL 的 `workspace_index.json.projects`。`ready` 返回已登记的 `project_id` 和 `knowledge_project_args`；`missing` 明确表示尚无项目知识范围。工具不会猜项目 ID、修改登记或读取知识正文。
+
+若单集尚未登记，使用定位结果的真实 `project_root`，为该集指定稳定项目 ID，由 Framework 既有工作区入口接入：
+
+```sh
+opl workspace adopt --agent med-autocast --workspace /absolute/workspace \
+  --project-id EXPLICIT_PROJECT_ID --project-root /absolute/workspace/productions/SERIES/EPISODE --apply
+```
+
+`--project-root` 必须来自实际定位结果，不要求与示例目录同名。Framework 维护唯一正式项目 inventory，保留已有其他集，不搬动媒体或覆盖制作原件；MAC 不另写一份 inventory。接入后重新运行定位，确认身份和目录一致，再消费这一集：
+
+```sh
+opl knowledge prepare --repo /absolute/med-autocast --domain medical_video \
+  --stage story-directing --task-intent produce-episodes --workspace /absolute/workspace \
+  --project /absolute/workspace/productions/SERIES/EPISODE --output /absolute/task/episode.binding.json
+opl knowledge read-context --binding /absolute/task/episode.binding.json --json
+```
+
+正文来源、知识 ID、归属和授权仍须先按 Framework 的[知识来源接口](https://github.com/gaofeng21cn/one-person-lab/blob/main/docs/specs/knowledge-sources.md)登记；项目接入只建立身份映射，不产生知识读取授权。两集分别 prepare，输出使用各自新的 binding 文件。身份不一致时停止项目知识召回，独立制作工作仍可按现有范围继续。
+
+### 制作工作台初始化
+
 按[安装与迁移](../runtime/workbench/docs/10_安装与迁移.md)初始化核心环境，并从随包 runtime/workbench/templates 复制作者、后端及系列模板。`runtime/workbench` 是通用核心来源，不含私人档案、媒体或权重；新工作区可复制核心 scripts、backends、templates、依赖清单，再登记自己的 workbench.yaml；推荐直接执行 `bash runtime/workbench/scripts/setup_workbench.sh --workspace <新建空目录>` 自动完成初始化、标准目录和依赖安装。初始化会生成 `workspace.manifest.json` 与 `WORKSPACE.md`，两者只描述目录职责，不声称质量或发布状态。
 
 已有工作区不整体覆盖。若工作区缺少新目录或初始化入口，先执行：

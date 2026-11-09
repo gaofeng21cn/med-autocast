@@ -337,42 +337,6 @@ def alignment_metrics(manifest: dict, alignment: dict) -> dict:
     }
 
 
-def episode_inputs(episode_dir: Path, plan: dict) -> dict:
-    audio_root = (episode_dir / plan.get("audio", {}).get("source", "audio/local_voice/narration-normalized.wav")).parent
-    if (audio_root / "narration_beats.json").is_file():
-        return {
-            "kind": "production_plan",
-            "srt": episode_dir / plan.get("subtitles", {}).get("source", str((audio_root / "narration.srt").relative_to(episode_dir))),
-            "manifest": audio_root / "narration_beats.json",
-            "alignment": audio_root / "whisper-alignment.json",
-            "approved_text": None,
-            "legacy_whisper": None,
-        }
-    return {
-        "kind": "production_plan",
-        "srt": episode_dir / plan.get("subtitles", {}).get("source", str((audio_root / "narration_index.srt").relative_to(episode_dir))),
-        "manifest": None,
-        "alignment": None,
-        "approved_text": episode_dir / "narration.txt",
-        "legacy_whisper": episode_dir / "qa/whisper-index/index-tts25-narration.json",
-    }
-
-
-def legacy_alignment_metrics(approved_text: str, whisper_path: Path) -> dict:
-    whisper = json.loads(whisper_path.read_text(encoding="utf-8"))
-    approved = alignment_text(approved_text)
-    observed = alignment_text(whisper["text"])
-    words = [word for segment in whisper.get("segments", []) for word in segment.get("words", [])]
-    timed_words = [word for word in words if "start" in word and "end" in word]
-    return {
-        "mode": "legacy_full_track_whisper_word_alignment",
-        "approved_asr_match_ratio": round(
-            difflib.SequenceMatcher(None, approved, observed, autojunk=False).ratio(), 6
-        ),
-        "word_timing_coverage": round(len(timed_words) / len(words), 6) if words else 0.0,
-    }
-
-
 def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument("--production-root", type=Path)
@@ -411,7 +375,13 @@ def main() -> None:
             continue
         if plan is None:
             plan = yaml.safe_load(plan_path.read_text(encoding="utf-8"))
-            inputs = episode_inputs(episode_dir, plan)
+            audio_root = (episode_dir / plan.get("audio", {}).get("source", "audio/local_voice/narration-normalized.wav")).parent
+            inputs = {
+                "kind": "production_plan",
+                "srt": episode_dir / plan.get("subtitles", {}).get("source", str((audio_root / "narration.srt").relative_to(episode_dir))),
+                "manifest": audio_root / "narration_beats.json",
+                "alignment": audio_root / "whisper-alignment.json",
+            }
         srt = inputs.get("srt")
         animation_report = (
             paper_animation_gate(inputs)
@@ -464,9 +434,7 @@ def main() -> None:
             required = [video, srt, plan_path]
             required.extend(
                 path
-                for path in (
-                    inputs["manifest"], inputs["alignment"], inputs["approved_text"], inputs["legacy_whisper"]
-                )
+                for path in (inputs["manifest"], inputs["alignment"])
                 if path is not None
             )
         missing = [str(path) for path in required if not path.is_file()]
@@ -482,14 +450,11 @@ def main() -> None:
             manifest = inputs.get("manifest")
             approved_text = "".join(str(beat.get("text", "")) for beat in (manifest or {}).get("beats", []))
             alignment_report = paper_alignment_metrics(inputs)
-        elif inputs["manifest"]:
+        else:
             manifest = json.loads(inputs["manifest"].read_text(encoding="utf-8"))
             alignment = json.loads(inputs["alignment"].read_text(encoding="utf-8"))
             approved_text = "".join(beat["text"] for beat in manifest["beats"])
             alignment_report = alignment_metrics(manifest, alignment)
-        else:
-            approved_text = inputs["approved_text"].read_text(encoding="utf-8")
-            alignment_report = legacy_alignment_metrics(approved_text, inputs["legacy_whisper"])
 
         subtitle_frames = []
         for index, cue in enumerate(cues, 1):

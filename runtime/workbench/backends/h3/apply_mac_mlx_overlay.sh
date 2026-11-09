@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-H3_MAC_ROOT="${H3_MAC_ROOT:-$HOME/ai/minimax-h3-mac}"
+H3_MAC_ROOT="${H3_MAC_ROOT:-$HOME/.local/share/med-autocast/h3-mlx}"
 node_dir="${1:-$H3_MAC_ROOT/ComfyUI/custom_nodes/ComfyUI-MiniMax-H3-MLX-SolAttn}"
 bundle_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 overlay_dir="$bundle_dir/mac-mlx-overlay"
@@ -9,10 +9,6 @@ expected_revision="55bb7ddd015321a25385683419951e7c7f518775"
 files=(
   comfyui_nodes.py
   minimax_h3_mlx/staged.py
-  tests/test_comfy_workflow.py
-  tests/test_comfyui_nodes.py
-  workflows/minimax_h3_mlx_turbo4_sol.json
-  workflows/minimax_h3_mlx_36gb_compat_turbo4_sol.json
 )
 
 if [[ ! -d "$node_dir/.git" ]]; then
@@ -47,4 +43,4 @@ for relative_path in "${files[@]}"; do
   cp "$overlay_dir/$relative_path" "$node_dir/$relative_path"
 done
 
-echo "Applied Mac MLX resident and 36GB compatibility overlay."
+echo "Applied the packaged Mac MLX node overlay."

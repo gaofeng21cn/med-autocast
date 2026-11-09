@@ -96,9 +96,8 @@ def _voxcpm_pinyin_token(token, word):
     """Normalize one annotated syllable to VoxCPM's native brace syntax.
 
     VoxCPM's public demo documents lowercase numbered pinyin inside braces,
-    for example ``{ni3}{hao3}``.  IndexTTS's ``V`` spelling for ``j/q/x``
-    is accepted in old receipts, but VoxCPM should receive standard ``u``
-    there (``xue4``), while ``v`` remains the ASCII spelling of ``ü`` in
+    for example ``{ni3}{hao3}``. The backend expects standard ``u`` after
+    ``j/q/x`` (``xue4``), while ``v`` remains the ASCII spelling of ``ü`` in
     ``lü4``/``nü3``.
     """
     value = token.strip().replace("Ü", "ü").replace("V", "v")
@@ -108,8 +107,6 @@ def _voxcpm_pinyin_token(token, word):
             "请使用带 1-5 声调的拼音，例如 HAI2"
         )
     value = value.lower().replace("ü", "v")
-    if value.startswith(("j", "q", "x")):
-        value = value.replace("v", "u")
     if value[:-1] not in PINYIN_SYLLABLES:
         raise ValueError(f"VoxCPM 原生拼音音节无效 {token!r}（{word}）")
     return value
@@ -132,7 +129,7 @@ def voxcpm_text(value):
         # the editorial text retains the original digits (e.g. <5mg|WU3 HAO2 KE4>).
         numbered = all(VOXCPM_PINYIN.fullmatch(token) for token in tokens)
         if re.search(r"[\u3400-\u9fff]", word) or numbered and all(
-            re.sub(r"^([jqx])v", r"\1u", token.lower().replace("ü", "v"))[:-1] in PINYIN_SYLLABLES
+            token.lower().replace("ü", "v")[:-1] in PINYIN_SYLLABLES
             for token in tokens
         ):
             return "".join(f"{{{_voxcpm_pinyin_token(token, word)}}}" for token in tokens)

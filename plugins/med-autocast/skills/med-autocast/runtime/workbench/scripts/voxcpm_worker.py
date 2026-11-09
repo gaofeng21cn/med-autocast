@@ -60,6 +60,8 @@ def main() -> None:
                       "mps_watermarks": {key: os.environ.get(f"PYTORCH_MPS_{key.upper()}_WATERMARK_RATIO")
                                          for key in ("low", "high")}}, ensure_ascii=False), flush=True)
 
+    # Reuse the MPS allocator across this batch; flushing it after each beat
+    # did not lower driver memory in the Mac profile and slowed short takes.
     for beat in job["beats"]:
         started = time.perf_counter()
         torch.manual_seed(seed)
@@ -79,8 +81,6 @@ def main() -> None:
         sf.write(output, audio, sample_rate)
         del wav, audio
         sync()
-        if device.startswith("mps") and hasattr(torch, "mps"):
-            torch.mps.empty_cache()
         print(json.dumps({"beat": beat["id"], "status": "synthesized", "sample_rate": sample_rate,
                           "seconds": round(time.perf_counter() - started, 3)}, ensure_ascii=False), flush=True)
 

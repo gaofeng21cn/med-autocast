@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-H3_ROOT="${H3_ROOT:-$HOME/ai/minimax-h3}"
+H3_ROOT="${H3_ROOT:-$HOME/.local/share/med-autocast/h3}"
 COMFY_DIR="$H3_ROOT/ComfyUI"
 VENV_DIR="$H3_ROOT/.venv"
 COMFY_REF="v0.34.0"

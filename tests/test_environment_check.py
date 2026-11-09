@@ -79,7 +79,8 @@ class EnvironmentTests(unittest.TestCase):
             report = envcheck.check(self.root)
             self.assertEqual(report['status'], 'ready')
             self.assertFalse(report['production_ready'])
-            self.assertEqual(report['optional_media']['retired_index_tts']['state'], 'retired')
+            self.assertEqual(report['optional_media']['imagegen']['state'], 'session_dependent')
+            self.assertNotIn('model', report['optional_media']['imagegen'])
         actual = importlib.util.find_spec
         with patch('environment_check.command', side_effect=cmd), patch('environment_check.node_playwright', return_value={'state':'ready'}), patch('workbench_config.resolve_font', return_value=self.root/'font'), patch('environment_check.importlib.util.find_spec', side_effect=lambda n: None if n=='PIL' else actual(n)):
             self.assertEqual(envcheck.check(self.root)['status'], 'needs_setup')

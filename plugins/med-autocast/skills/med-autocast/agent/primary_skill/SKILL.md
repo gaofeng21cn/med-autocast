@@ -20,7 +20,7 @@ description: 使用 Med Auto Cast 规划、制作、修订和审查医学科普�
 3. S07/S08 由导演、后端与 `medical-video-release-packager` 共同完成配音、字幕、选段、品牌、混音和合成；具体工具见 `docs/workspace-adapter.md`。成片和候选交 `medical-video-visual-qa`，交付交 `medical-video-release-packager`，跨阶段恢复与资产沉淀交 `medical-video-series-producer`，均位于 `agent/professional_skills/`。
 4. 先复用已审资产和未变音轨。精简恢复原任务，保留单一 writer。每项通过状态必须对应真实证据；技术、静态、连续动态、完整听感、医学与上传分开。交付到 publish 表示审看入口，不能据此宣称已上传或可公开发布。
 
-新视频先执行作者/医生基线：确定作者档案、医生形象是否露脸、参考声线、表达方向和医疗身份边界，再进入内容和导演阶段。默认视频走本地 JS 动画与叙事性手绘拼贴，视频模型为显式备选；先用 `check_animation_assets` 检查正确且可分层的素材，再通过 `render_javascript_animation` 预览和渲染。有授权参考声线时使用作者档案登记的本地 VoxCPM2；无专用声线或用户明确跳过时，才使用 Edge TTS `zh-CN-XiaoyiNeural` 保底。ImageGen 素材由当前会话的 ImageGen Skill 生成并登记，网上素材须保留来源许可；`audio_baseline` 的响度结果不能代替完整语气审听。具体输入见 `runtime/workbench/docs/13_素材准入与配音基线.md`。
+新视频先执行作者/医生基线：确定作者档案、医生形象是否露脸、参考声线、表达方向和医疗身份边界，再进入内容和导演阶段。默认视频走本地 JS 动画与叙事性手绘拼贴，部署档案中登记的视频模型后端是显式备选；先用 `check_animation_assets` 检查正确且可分层的素材，再通过 `render_javascript_animation` 预览和渲染。有授权参考声线时使用作者档案登记的 VoxCPM2；无专用声线或用户明确跳过时，才使用 Edge TTS `zh-CN-XiaoyiNeural`。图像缺口由调用方会话使用 ImageGen；MAC 仅登记调用方回执、提示和审核结果，不选择或校验调用方的语言模型和图像模型。网上素材须保留来源许可；`audio_baseline` 的响度结果不能代替完整语气审听。具体输入见 `runtime/workbench/docs/13_素材准入与配音基线.md`。
 
 专业 Skill 及 SOP 可按当前任务选择加载，不要求用户重复批准已授权的本地工作。部署、生产媒体生成与发布须符合当前请求范围。详见 `agent/policies/production-policy.md`、`docs/workspace-adapter.md`。
 
@@ -108,7 +108,7 @@ python3 runtime/native_helpers/med_autocast.py assets --workspace <workspace> --
 
 用户从 publish/观看与发布.html 查找所有当前主题，系列与分集使用用户语言展示名；英文技术 ID 继续用于制作与内部交接。名称映射由 workbench.yaml.series.<series_id>.delivery 持有，所有包器共享 delivery_layout.locations。publish_catalog 提供离线观看页、实际 TXT 文案合集、链接回查和显式可恢复迁移；不把制作批次、历史、候选和机器清单留在用户入口。初始化默认此布局，旧工作区不静默搬迁；名称或导航欠项保留候选与质量债。见 runtime/workbench/docs/30_用户交付目录与导航SOP.md。
 
-当前配音统一通过随包 `render_narration` 与 `render_series_tts`，默认条理讲解；原生中文拼音和英文 CMU 音素从可读编辑标记转换，固定参考声线，`normalize=false`。每批复用参考编码，缓存绑定模型、运行包与 worker 身份，停顿与时码按真实采样写回。IndexTTS 已退役，新生成不使用其环境或权重；历史作品和原回执可只读复核。
+当前配音统一通过随包 `render_narration` 与 `render_series_tts`，默认条理讲解；原生中文拼音和英文 CMU 音素从可读编辑标记转换，固定参考声线，`normalize=false`。每批复用参考编码，缓存绑定模型、运行包与 worker 身份，停顿与时码按真实采样写回。
 
 配音修复后先用 `audit_narration_samples` 核对每个源 take 是否完整保留在原始拼接 PCM，再用 `audit_audio_freshness` 核对 source/timing/mix/render/publish 的当前绑定。两者只定位物理截字、旧轨和交接失配，不批准读音、语气或完整听感。发现失配时保留可消费候选并继续独立 Stage，已知旧 MP4 不得当作用户最新版。
 

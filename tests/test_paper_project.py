@@ -570,7 +570,9 @@ class ProjectTests(unittest.TestCase):
             rn.tts_text({"id": "B01", "text": "还清楚", "tts_text": "<仍|HAI2>清楚"})
 
     def test_native_pronunciation_controls_and_malformed_input(self):
-        self.assertEqual(rn.voxcpm_text("抽<血|XVE4>"), "抽{xue4}")
+        with self.assertRaises(ValueError):
+            rn.voxcpm_text("抽<血|XVE4>")
+        self.assertEqual(rn.voxcpm_text("抽<血|XUE4>"), "抽{xue4}")
         self.assertEqual(rn.voxcpm_text("<重影|CHONG2 YING3>"), "{chong2}{ying3}")
         self.assertEqual(rn.voxcpm_text("<分泌|FEN1 MI4>、<钼靶|MU4 BA3>、<视网膜|SHI4 WANG3 MO2>"),
                          "{fen1}{mi4}、{mu4}{ba3}、{shi4}{wang3}{mo2}")

@@ -16,7 +16,7 @@ Med Auto Cast 采用标准 OPL 软件包与 OCI 发布流程。当前源码已�
 
 已完成原工作台行为回归、原合同兼容性与错误版本拦截检查；隔离环境实际调用原合成器生成了 4.458333 秒测试片，核对 608×352、H.264/AAC、完整解码、字幕、品牌、BGM、双平台文案、复制字节与旧包恢复。该测试不调用模型，不修改真实作品，也不代表医学视频内容合格。
 
-历史迁移验证曾只读使用血脂单集的原修订制作单与母版，检查 13 段镜头及双平台文案；作者和后端仍从工作区解析，保留原 RTX 4090 视频与音频默认选择。原听感、连续动态与医学待审状态保持不变。源码和载体检查的最新结果见 [能力迁移验收](workbench-parity.md)。
+历史迁移验证曾只读使用血脂单集的原修订制作单与母版，检查 13 段镜头及双平台文案；作者和后端仍从工作区解析，历史视频与音频选择只作为原回执的一部分。原听感、连续动态与医学待审状态保持不变。源码和载体检查的最新结果见 [能力迁移验收](workbench-parity.md)。
 
 当前源码版本以 `contracts/opl_agent_package_manifest.json` 为准；OCI 发布与本机安装以 immutable ref、latest-stable 和 OPL Package 回读为准。独立 OMA 资格、托管生产运行、新后端真实推理、医学复核和上传均不由工程验证替代。
 
@@ -66,11 +66,11 @@ Med Auto Cast 以 `publisher: one-person-lab` 和 `standard_agent` 角色加入 
 
 当前源码的 OPL `agents check` 已通过 scaffold 与 generated_interfaces 检查。修复了 Standard Agent 描述中不被当前接口接受的 workspace_binding.shared_resources 字段；共享目录的生命周期仍由 OPL 工作区机制持有，不建立第二份初始化权威。全季交付经验已补入随包 `runtime/workbench/docs/25_全季交付回读与经验沉淀.md`，强调当前母版、逐字节回读、逐集归档和 Progress First；结构符合标准不代表独立 OMA 资格或生产质量已通过。
 
-新建制作目录支持自动初始化、依赖安装、真实浏览器与字体检查。默认 1280×720 / 24 fps 本机 JS 手绘拼贴；H3/Seedance 明确为备选。推荐授权声线 IndexTTS，用户可跳过并用 Edge；不强迫准备医生头像。共享 HTML 定帧/编码入口避免每集重写 render/mux，素材、字幕和视觉叙事仍由智能体负责并逐片验收。
+新建制作目录支持自动初始化、依赖安装、真实浏览器与字体检查。默认 1280×720 / 24 fps JavaScript 手绘拼贴；VoxCPM2 负责授权参考声线，Edge TTS 用于无专用声线或明确跳过；已登记的 ComfyUI 后端仅为显式备选。图像缺口由调用方会话提供 ImageGen，语言模型和图像模型均由调用方决定。共享 HTML 定帧/编码入口避免每集重写 render/mux，素材、字幕和视觉叙事仍由智能体负责并逐片验收。
 
 本轮在隔离工作区完成依赖安装、Chromium/Canvas 启动及中文字体检查；Edge XiaoyiNeural 短旁白为 8.184 秒、24 kHz 单声道，完整听感与语气仍待审。使用工作区独立 Python 运行 79 项测试全部通过，无跳过；包含真实共享 HTML 渲染的 H.264/AAC 输出、24 fps 默认值、旧项目 render/mux 调用兼容、已存在输出保护和缺失 CSS 资源拦截。合同/资源一致性、OPL agents check、source-hygiene 与 native-helper probe 均通过。
 
-环境报告分别展示 `core_ready` 与 `selected_narration`，当前选择的声音依赖缺失会返回 `needs_setup`；未选择的模型保持可选。IndexTTS 路径存在不代表权重完整或真实推理通过，Apple Silicon 安装脚本目前仍需按上游要求准备完整权重或从用户指定 LAN 复制。Linux/Windows、IndexTTS 全平台安装、完整医学样片及独立 OMA 资格尚未由本轮验收覆盖。
+环境报告分别展示 `core_ready` 与 `selected_narration`，当前选择的声音依赖缺失会返回 `needs_setup`；未选择的模型保持可选。当前旁白能力以 VoxCPM2 为主；未实现的云视频协议不进入当前能力目录。完整医学样片及独立 OMA 资格尚未由本轮验收覆盖。
 
 本轮改进位于源码与仓库内插件投影，版本为 0.2.2；发布前已安装缓存仍可能保留旧字节，必须在 OCI 发布后通过 OPL Package 更新并回读实际载体。首次部署说明与当前验收入口见安装文档。
 
@@ -93,7 +93,7 @@ preview 新增全部画内文字的交叠/出框观察、cue 时长和每帧实�
 
 ## 0.2.12 中文旁白发音控制
 
-IndexTTS 2.5 原生注音接入 `tts_text`，正文/字幕保持独立；发音输入参与缓存身份，明确拒用 take 不再复用。配音生成 `pronunciation-review.json` 定位原段与请求读音，交付内部保存旁白回执和听辨索引。内容策划、媒体制作、Review 与 Meta Review 加入语境读音及首句/术语/最终混音听辨职责；ASR 同字转写与注音输入不证明实际读音。具体系列音频与作者档案仍只在工作区，安装/工具资格不代替声音验收。
+当前 VoxCPM2 使用大括号拼音和独立正文/字幕，发音输入参与缓存身份，明确拒用 take 不再复用；具体作者声线与听辨状态仍由工作区记录，安装/工具资格不代替声音验收。
 
 ## 可复用素材与分层取用
 

@@ -173,10 +173,10 @@ def check(workspace: Path) -> dict:
             'selected_narration': narration,
             'optional_media': {
                 'edge_tts_fallback': {**packages['edge_tts'], 'network_required': True, 'synthesis_verified': False},
-                'retired_index_tts': {'state': 'retired', 'fix': '仅可在历史交付和历史回执中追溯；新旁白统一使用 VoxCPM2'},
                 'whisper_alignment': {'state': 'not_probed', 'fix': '按需安装 requirements-alignment.txt 和模型'},
-                'imagegen': {'state': 'session_dependent', 'fix': '使用会话 ImageGen Skill；或使用已审/授权网络素材'},
-                'video_models': {'state': 'optional', 'fix': '仅显式选择 H3/Seedance 时配置'}},
+                'imagegen': {'state': 'session_dependent',
+                             'fix': '使用调用方会话提供的 ImageGen 能力；MAC 负责素材准入与回执登记'},
+                'video_models': {'state': 'optional', 'fix': '仅显式选择已部署、workflow 齐备且可达的 ComfyUI H3 时配置'}},
             'status': 'ready' if environment_ready else 'needs_setup',
             'core_ready': ready, 'production_ready': False,
             'next': '环境通过；先确定作者形象与声线并制作短样片' if environment_ready else '按未就绪项的 fix 修复后重新检查'}

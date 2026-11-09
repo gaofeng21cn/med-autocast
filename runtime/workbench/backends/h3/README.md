@@ -1,8 +1,8 @@
 # MiniMax H3 部署包
 
-本目录同时保存 Linux/WSL2 + RTX 4090 的生产部署入口和 Apple Silicon 的本地备用入口。当前正式生产默认使用 RTX 4090；Mac 的 performance / 36gb 模式是独立可选能力，不会覆盖工作站配置。
+本目录保留 H3 的可选部署实现，包括标准 ComfyUI 与 MLX 兼容路线。工作台默认仍是本地 JavaScript 动画；H3 实例必须在制作单中显式选择，不能改变 `policy.default_video`。
 
-## RTX 4090 固定组件
+MLX 兼容安装与运行脚本、固定版本 overlay 已随包保留；此目录不附带可直接生产的 MLX API workflow。部署档案只有在 workflow、模型和 MP4 回读都验证后，才能把相应实例标记为可调用；`media_backend doctor` 中服务可达只证明 ComfyUI 在线，不证明 workflow 可生成。
 
 ## 固定组件
 
@@ -13,9 +13,9 @@
 - Text encoder: Qwen3-VL-32B NVFP4 AWQ
 - Turbo LoRA: 8 steps
 
-模型文件约 44.4 GB。安装、缓存和运行建议至少预留 70 GiB 可用磁盘、48 GiB 主机内存；当前原型使用 52 GB WSL2 内存配额。
+模型权重、缓存和运行资源按所选部署实例的诊断结果准备；这些要求不属于工作台核心安装条件。
 
-## 运行
+## 标准 ComfyUI 运行
 
 ```bash
 chmod +x setup_h3.sh run_h3.sh
@@ -23,39 +23,27 @@ chmod +x setup_h3.sh run_h3.sh
 ./run_h3.sh
 ```
 
-Mac 本地运行分为两个明确模式。当前高配 Mac 使用：
-
-```bash
-H3_MAC_MODE=performance ./run_h3_mac.sh
-```
-
-约 36GiB 统一内存的兼容机器使用：
-
-```bash
-H3_MAC_MODE=36gb ./run_h3_mac.sh
-```
-
-高性能模式加载 `minimax_h3_mlx_turbo4_sol.json`，显式 resident，并在同一 ComfyUI 进程内复用一套 Qwen、DiT 和 VAE。兼容模式加载 `minimax_h3_mlx_36gb_compat_turbo4_sol.json`，显式 stream2 + offset；两种模式不能混用内存承诺。
-
-`setup_mac_local.sh` 会把关键 MLX 节点固定到已验收 commit，并应用 `mac-mlx-overlay/` 中的 resident 与 36GB 工作流实现。overlay 只覆盖该固定版本，目标仓库存在其他改动时会停止，避免静默覆盖。
-
 国内网络下载 Hugging Face 模型较慢时，可临时使用镜像；模型 revision 仍由脚本固定：
 
 ```bash
 HF_ENDPOINT=https://hf-mirror.com ./setup_h3.sh
 ```
 
-在使用 systemd 的 WSL2 上，`run_h3.sh` 根据 `H3_ROOT` 渲染并启用用户服务，SSH 断开后服务仍持续运行。目录中的 service 是模板，不可直接复制安装。已有服务改变根路径时应显式停止旧服务后重新启动，不以修改源码替代运行时切换。
-
-`pituitary_tumor_handdrawn_h3_v2`、两份旧人物图与对应提示是早期部署验证历史，不是当前制作模板或可分享的通用资产。当前作者母版只从工作台选定的作者档案读取；旧图片保留以复核已有制作单，不继续更新。部署脚本不再自动加载个人提示与图片，参考工作流需显式提供输入。正式字幕与品牌由通用合成器按作者档案叠加。
-
-服务只监听 `127.0.0.1:8188`，应通过 SSH 端口转发访问，不要直接暴露到局域网或公网：
+## MLX 兼容运行
 
 ```bash
-ssh -L 18188:127.0.0.1:8188 <workstation-lan-ssh-target>
+./setup_mac_local.sh
+./setup_mac_mlx_36gb.sh
+./run_h3_mac.sh
 ```
 
-`<workstation-lan-ssh-target>` 使用已经核验主机密钥的局域网 IP、mDNS 名称或 SSH 别名，不依赖 Tailscale。新镜头用 `scripts/queue_h3_shots.py` 通过配置的 ComfyUI API 排队，提示词和该后端参考图位置保存在对应 production 目录。第一集旧入口仅保留历史兼容，不用于新系列。
+模型下载和转换需先确认磁盘空间与适用许可。内存模式、采样配置由实际 API workflow 中的 MLX 节点参数决定；启动 ComfyUI 本身不会选择性能档。`apply_mac_mlx_overlay.sh` 只应用随包存在的节点实现文件，不会生成或伪装缺失的 workflow。生产调用须显式指定部署档案中的后端 ID 和已审 workflow。
+
+若使用服务管理器，`run_h3.sh` 根据 `H3_ROOT` 渲染服务配置。目录中的 service 是模板，不可直接复制安装；已有服务改变根路径时应显式停止旧服务后重新启动，不以修改源码替代运行时切换。
+
+旧工作流、人物图和提示只能作为各工作区的历史回执，不是当前制作模板或可分享的通用资产。当前作者母版只从工作台选定的作者档案读取；部署脚本不自动加载个人提示与图片，参考工作流需显式提供输入。正式字幕与品牌由通用合成器按作者档案叠加。
+
+服务地址和安全访问方式由部署档案提供，不直接暴露到不受控网络。新镜头用 `scripts/queue_h3_shots.py` 通过档案解析的 ComfyUI API 排队，提示词和该后端参考图位置保存在对应 production 目录。
 
 ## 1-3 分钟视频的使用边界
 
@@ -73,7 +61,7 @@ H3 只负责短画面候选，VoxCPM2 的最终音轨负责主时间轴。每个
 
 ## 范围与限制
 
-- 这是开源 H3-Base 的本地 768p 以下验证路径，不含尚未开源的 H3-Context-IR 和 H3-Regenerate-2K。
-- 工作流使用约 0.2 MP 画布降低 24 GB 显存上的验证成本；运行稳定后可在 Resolution Selector 中逐步提高到 0.4 MP 或官方 768p。
+- 这是开源 H3-Base 的 768p 以下验证路径，不含尚未开源的 H3-Context-IR 和 H3-Regenerate-2K。
+- 工作流可使用较小画布降低验证成本；稳定后再按部署实例的资源能力提高分辨率。
 - 科普脚本只做一般健康教育，不提供诊断或治疗建议；生成后仍需人工检查解剖位置、字幕、语音和任何视觉伪影。
 - MiniMax H3 Community License 排除美国、欧盟、英国和韩国；在这些地区运行、展示或分发需另行获得 MiniMax 授权。

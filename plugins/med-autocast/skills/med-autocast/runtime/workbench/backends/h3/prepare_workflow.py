@@ -37,7 +37,7 @@ def main() -> None:
     nodes[115]["widgets_values"][1] = 0.2
     nodes[140]["widgets_values"][0] = prompt
     nodes[140]["widgets_values"][3] = 14
-    nodes[140]["widgets_values"][4] = 409020260903
+    nodes[140]["widgets_values"][4] = 20260903
     nodes[140]["widgets_values"][9] = True
     nodes[140]["widgets_values"][12] = 8
 

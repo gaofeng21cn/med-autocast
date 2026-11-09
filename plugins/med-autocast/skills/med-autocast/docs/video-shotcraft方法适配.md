@@ -21,7 +21,7 @@ Med Auto Cast 的默认纸剧场路线将这些方法翻译为自然语言导演
 
 Remotion、HyperFrames 或其他工具可以作为分镜/预览或替换渲染器，但不是纸剧场的默认后端。当前默认仍是本地 JavaScript + Canvas 2D；SVG、Remotion/DOM 和 Three.js/WebGL 按风格与镜头需要选择。所有后端共享 Score、Shot、Asset、Layout 和 Review 的语义，不把某个框架写成医学质量证明。
 
-Shotcraft 的产品宣传片案例不能替代医学证据、素材许可、作者档案、声线授权或医生终审。`Dr.咩`、人物母版、IndexTTS 参考声线和系列固定印记只从目标工作区的作者/系列档案读取，通用 Skill 不内置品牌。用户可以显式跳过人物或专用声线；Edge TTS 只是无专用声线时的本地保底。
+Shotcraft 的产品宣传片案例不能替代医学证据、素材许可、作者档案、声线授权或医生终审。`Dr.咩`、人物母版、VoxCPM2 参考声线和系列固定印记只从目标工作区的作者/系列档案读取，通用 Skill 不内置品牌。用户可以显式跳过人物或专用声线；Edge TTS 只是无专用声线时的本地保底。
 
 ## Progress First
 

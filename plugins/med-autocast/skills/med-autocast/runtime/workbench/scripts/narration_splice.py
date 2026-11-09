@@ -17,7 +17,7 @@ from pathlib import Path
 
 
 def read_pcm(path: Path, rate: int):
-    # IndexTTS sources are frequently 22050 Hz and VoxCPM sources 48000 Hz.
+    # Decode each source at its declared sample rate before resampling.
     # Writing their raw samples under a 24000 Hz header changes pitch and timing.
     payload = subprocess.check_output([
         "ffmpeg", "-v", "error", "-i", str(path), "-ar", str(rate),

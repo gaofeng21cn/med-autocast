@@ -1,8 +1,8 @@
 schema: medical_video_backend_catalog/v1
-updated_at: 2026-09-04
+updated_at: 2026-11-09
 purpose: >-
-  可移植的媒体后端能力与供应商协议目录。实际主机、端口、路径、
-  凭据环境变量和默认选择属于 profiles/backends/ 中的部署档案。
+  当前已接入的媒体后端能力目录。实际主机、端口、运行时路径和默认选择
+  属于 profiles/backends/ 中的部署档案。
 
 definitions:
   video:
@@ -11,6 +11,9 @@ definitions:
       provider: local
       kind: javascript_animation
       protocol: browser_frame_capture
+      selection: automatic
+      default: true
+      role: primary_video_generation
       runtime: node20_playwright_ffmpeg
       capabilities:
         deterministic_timeline: true
@@ -24,44 +27,23 @@ definitions:
       provider: minimax
       kind: comfyui
       protocol: comfyui_prompt_history
+      selection: explicit
+      default: false
+      role: optional_video_generation
       models: [MiniMax-H3]
       capabilities:
         text_to_video: true
         image_conditioning: true
         asynchronous: true
       implementation_docs: backends/h3/README.md
-    minimax_h3_api:
-      label: MiniMax H3 官方 Video V2 API
-      provider: minimax
-      kind: http_api
-      protocol: minimax_video_v2
-      default_endpoint: https://api.minimax.io
-      create_path: /v2/video_generation
-      status_path: /v2/query/video_generation/{task_id}
-      api_key_env: MINIMAX_API_KEY
-      models: [MiniMax-H3, MiniMax-H3-Max]
-      credential_owner: user
-      gateway_mode: deferred_until_native_video_support
-      implementation_docs: docs/08_云视频API接入.md
-    seedance_2_5_api:
-      label: APIYI Seedance 2.5 API
-      provider: apiyi
-      kind: http_api
-      protocol: apiyi_seedance_v3
-      default_endpoint: https://api.apiyi.com
-      create_path: /seedance/api/v3/contents/generations/tasks
-      status_path: /seedance/api/v3/contents/generations/tasks/{task_id}
-      api_key_env: SEEDANCE_API_KEY
-      models: [doubao-seedance-2-5-260628]
-      credential_owner: user
-      gateway_mode: deferred_until_native_video_support
-      implementation_docs: docs/08_云视频API接入.md
   audio:
     edge_tts:
       label: Edge TTS XiaoyiNeural
       provider: microsoft
       kind: edge_tts
       protocol: edge_tts_cli
+      selection: profile
+      role: fallback_narration
       voice: zh-CN-XiaoyiNeural
       capabilities:
         chinese: true
@@ -74,6 +56,8 @@ definitions:
       provider: openbmb
       kind: voxcpm
       protocol: voxcpm_python_api
+      selection: author_profile
+      role: primary_narration
       models: [VoxCPM2]
       capabilities:
         reference_voice: true

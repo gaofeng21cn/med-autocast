@@ -1,15 +1,15 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# Prepare Apple Silicon MLX assets for a Mac with roughly 32–36 GiB unified memory.
-# This is a disk/build preparation script: it does not reserve or consume 36 GiB
-# of RAM by itself. The runtime must explicitly use memory_mode=stream2.
+# Prepare MLX assets for the lower-memory compatibility profile.
+# This is a disk/build preparation script: it does not reserve runtime memory.
+# The workflow must explicitly select the streaming memory mode.
 # Downloads/conversion are explicit because the build needs roughly 105–120 GiB
 # of free disk space, depending on the selected profile and cache state.
 # The default profile "24" is an upstream alias that builds the 4-bit-pruned
 # resident weights and the matching stream2 checkpoint. Use "4-pruned" only
 # when a resident-only artifact is intentional.
-H3_MAC_ROOT="${H3_MAC_ROOT:-$HOME/ai/minimax-h3-mac}"
+H3_MAC_ROOT="${H3_MAC_ROOT:-$HOME/.local/share/med-autocast/h3-mlx}"
 COMFY_DIR="$H3_MAC_ROOT/ComfyUI"
 PYTHON="$H3_MAC_ROOT/.venv/bin/python"
 NODE_DIR="$COMFY_DIR/custom_nodes/ComfyUI-MiniMax-H3-MLX-SolAttn"
@@ -31,8 +31,8 @@ if [[ "$available_kib" -lt "$required_kib" ]]; then
   exit 2
 fi
 
-echo "Preparing MLX profile=$PROFILE for a Mac with roughly 32–36 GiB unified memory."
-echo "This setup step downloads/builds model files; it does not reserve 36 GiB of RAM."
+echo "Preparing MLX profile=$PROFILE for the configured lower-memory compatibility profile."
+echo "This setup step downloads/builds model files; it does not reserve runtime memory."
 echo "At runtime, set memory_mode=stream2 explicitly in the workflow."
 
 exec uv run --python "$PYTHON" --no-project \

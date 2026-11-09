@@ -50,7 +50,7 @@ python3 scripts/audit_pronunciation.py \
 }
 ```
 
-IndexTTS 历史回执按原输入与音频只读追溯，不再依赖已退役的词表和模型环境；新 VoxCPM2 回执分别保存 `tts_text`、原生拼音控制后的 `model_text` 和 `pronunciation_controls`，把带控制的声段标记为 `manual_review_required`。不合法的拼音输入会在该次合成前报错；其他镜头和素材工作继续。
+旧旁白回执按原输入与音频只读追溯；新 VoxCPM2 回执分别保存 `tts_text`、原生拼音控制后的 `model_text` 和 `pronunciation_controls`，把带控制的声段标记为 `manual_review_required`。不合法的拼音输入会在该次合成前报错；其他镜头和素材工作继续。
 
 去掉注音标签后必须还原同一正文；正文不能偷换成拼音，也不为绕开读音任意降低表达质量。`paper_project narrate --beat B01` 将配音输入纳入缓存，未变声段继续复用。`audio/pronunciation-review.json` 提供全段原音、当前轨道哈希、时间与请求读音，默认 pending；它是听辨索引，不是自动发音判定器。
 

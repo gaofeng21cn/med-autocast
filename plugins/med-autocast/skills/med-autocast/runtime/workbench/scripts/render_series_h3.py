@@ -18,7 +18,7 @@ def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument("--production-root", type=Path)
     parser.add_argument("--series", required=True)
-    parser.add_argument("--backend")
+    parser.add_argument("--backend", required=True, help="显式选择已登记的可选 ComfyUI 后端实例")
     parser.add_argument("--queue-runner", type=Path, default=Path(__file__).with_name("queue_h3_shots.py"))
     parser.add_argument("--base-queue", type=Path, required=True)
     parser.add_argument("--output-root", type=Path, required=True)
@@ -28,10 +28,17 @@ def main() -> None:
     args = parser.parse_args()
     args.production_root = production_root_for(args.series, args.production_root)
     config = load_config()
-    backend_id = args.backend or config["policy"]["default_video"]
-    backend = config["video"][backend_id]
+    backend_id = args.backend
+    try:
+        backend = config["video"][backend_id]
+    except KeyError as exc:
+        raise ValueError(f"Unknown video backend {backend_id!r}; choose an explicitly registered H3 instance") from exc
     if not backend.get("kind", "").startswith("comfyui"):
         raise ValueError("render_series_h3 only accepts a ComfyUI backend")
+    if backend.get("selection") != "explicit" or backend.get("default") is not False:
+        raise ValueError("render_series_h3 requires an explicitly selected non-default H3 backend")
+    if backend.get("capability") == "setup_required":
+        raise ValueError(f"H3 backend {backend_id!r} is not ready: {backend.get('setup_note', 'complete setup and verification first')}")
     args.base_url = args.base_url or backend["endpoint"]
 
     summary = []

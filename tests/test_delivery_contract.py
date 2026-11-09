@@ -42,7 +42,7 @@ class DeliveryContractTests(unittest.TestCase):
         self,
         root: Path,
         classes: list[str],
-        backend: str = "seedance_api",
+        backend: str = "optional_comfyui_remote",
     ) -> tuple[Path, dict]:
         episode = root / "productions/02_example"
         candidates = episode / "candidates"
@@ -107,23 +107,40 @@ class DeliveryContractTests(unittest.TestCase):
             self.assertEqual(animation_gate(episode, plan)["status"], "passed")
 
     @patch("delivery_contract.sampled_frame_hashes", return_value=["a", "b"])
-    def test_legacy_h3_manifest_remains_compatible(self, _hashes) -> None:
+    def test_current_video_backend_manifest_is_accepted(self, _hashes) -> None:
         with tempfile.TemporaryDirectory() as temporary:
             episode, plan = self.make_episode(
-                Path(temporary), ["minimax_h3_hand_drawn_animation"]
+                Path(temporary), ["generative_animation"]
             )
-            plan["delivery"].pop("author_profile")
-            plan["delivery"].pop("primary_video_backend")
-            plan["delivery"]["primary_generator"] = "MiniMax H3-Base"
+            plan["delivery"]["primary_video_backend"] = "optional_comfyui_remote"
             manifest_path = episode / "visual_delivery_manifest.json"
             manifest = json.loads(manifest_path.read_text())
-            manifest["schema"] = "medical_video_visual_delivery/v1"
-            manifest.pop("author_profile")
-            manifest.pop("primary_video_backend")
-            manifest["primary_generator"] = "MiniMax H3-Base"
-            manifest["segments"][0]["visual_class"] = "minimax_h3_hand_drawn_animation"
+            manifest["primary_video_backend"] = "optional_comfyui_remote"
+            manifest["segments"][0]["backend_id"] = "optional_comfyui_remote"
+            manifest["segments"][0]["visual_class"] = "generative_animation"
             manifest_path.write_text(json.dumps(manifest))
             self.assertEqual(animation_gate(episode, plan)["status"], "passed")
+
+    @patch("delivery_contract.sampled_frame_hashes", return_value=["a", "b"])
+    def test_manifest_without_current_backend_is_rejected(self, _hashes) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            episode, plan = self.make_episode(Path(temporary), ["generative_animation"])
+            plan["delivery"].pop("primary_video_backend")
+            manifest_path = episode / "visual_delivery_manifest.json"
+            manifest = json.loads(manifest_path.read_text())
+            manifest.pop("primary_video_backend")
+            manifest_path.write_text(json.dumps(manifest))
+            self.assertIn("missing_primary_video_backend", animation_gate(episode, plan)["violations"])
+
+    @patch("delivery_contract.sampled_frame_hashes", return_value=["a", "b"])
+    def test_unregistered_visual_class_is_rejected(self, _hashes) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            episode, plan = self.make_episode(Path(temporary), ["generative_animation"])
+            manifest_path = episode / "visual_delivery_manifest.json"
+            manifest = json.loads(manifest_path.read_text())
+            manifest["segments"][0]["visual_class"] = "unregistered_visual_class"
+            manifest_path.write_text(json.dumps(manifest))
+            self.assertIn("unsupported_visual_class:B01", animation_gate(episode, plan)["violations"])
 
     @patch("delivery_contract.sampled_frame_hashes", return_value=["same", "same"])
     def test_static_fallback_cannot_pass_as_animation(self, _hashes) -> None:
@@ -157,8 +174,8 @@ class DeliveryContractTests(unittest.TestCase):
                 Path(temporary),
                 [
                     "generative_animation",
-                    "deterministic_hand_drawn_animation",
-                    "deterministic_hand_drawn_animation",
+                    "deterministic_animation",
+                    "deterministic_animation",
                 ],
             )
             gate = animation_gate(episode, plan)
@@ -170,7 +187,7 @@ class DeliveryContractTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as temporary:
             episode, plan = self.make_episode(
                 Path(temporary),
-                ["generative_animation", "deterministic_hand_drawn_animation"],
+                ["generative_animation", "deterministic_animation"],
             )
             manifest_path = episode / "visual_delivery_manifest.json"
             manifest = json.loads(manifest_path.read_text())

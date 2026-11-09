@@ -150,12 +150,16 @@ def check_backend(name: str, spec: dict[str, Any], kind: str) -> dict[str, Any]:
         "label": spec.get("label"),
         "mode": spec.get("mode"),
         "capability": spec.get("capability"),
+        "selection": spec.get("selection"),
+        "default": spec.get("default"),
+        "role": spec.get("role"),
         "device": spec.get("device"),
         "workflow": spec.get("workflow"),
+        "setup_note": spec.get("setup_note"),
         "runtime_profile": spec.get("runtime_profile"),
         "checks": [],
     }
-    if spec.get("kind") in {"comfyui", "voxcpm"}:
+    if spec.get("kind") == "voxcpm":
         root = Path(spec["root"])
         result["root"] = str(root)
         result["root_exists"] = root.exists()
@@ -177,24 +181,9 @@ def check_backend(name: str, spec: dict[str, Any], kind: str) -> dict[str, Any]:
                 result["voxcpm_package"] = completed.stdout.strip() or "ready"
             except Exception as exc:  # noqa: BLE001 - doctor remains diagnostic
                 result["voxcpm_package"] = {"state": "error", "error": f"{type(exc).__name__}: {exc}"}
-    if spec.get("kind") == "comfyui":
+    if spec.get("kind", "").startswith("comfyui"):
         result["endpoint"] = spec.get("endpoint")
         result["endpoint_status"] = endpoint_status(spec.get("endpoint", ""))
-    if spec.get("kind") == "comfyui_remote":
-        result["endpoint"] = spec.get("endpoint")
-        result["endpoint_status"] = endpoint_status(spec.get("endpoint", ""))
-    if spec.get("kind") == "http_api":
-        endpoint = spec.get("endpoint", "")
-        api_key_configured = bool(os.getenv(spec.get("api_key_env", "")))
-        result["endpoint"] = endpoint
-        result["api_key_configured"] = api_key_configured
-        if endpoint and api_key_configured:
-            state = "configured"
-        elif endpoint or api_key_configured:
-            state = "partially_configured"
-        else:
-            state = "not_configured"
-        result["endpoint_status"] = {"state": state}
     return result
 
 

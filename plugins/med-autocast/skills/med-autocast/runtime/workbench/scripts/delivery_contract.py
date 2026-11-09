@@ -7,26 +7,14 @@ from pathlib import Path
 
 
 GENERATIVE_ANIMATION_CLASS = "generative_animation"
-LEGACY_HAND_DRAWN_ANIMATION_CLASS = "generative_hand_drawn_animation"
-LEGACY_H3_ANIMATION_CLASS = "minimax_h3_hand_drawn_animation"
-GENERATIVE_ANIMATION_CLASSES = {
-    GENERATIVE_ANIMATION_CLASS,
-    LEGACY_HAND_DRAWN_ANIMATION_CLASS,
-    LEGACY_H3_ANIMATION_CLASS,
-}
+GENERATIVE_ANIMATION_CLASSES = {GENERATIVE_ANIMATION_CLASS}
 DETERMINISTIC_ANIMATION_CLASS = "deterministic_animation"
-LEGACY_DETERMINISTIC_ANIMATION_CLASS = "deterministic_hand_drawn_animation"
-DETERMINISTIC_ANIMATION_CLASSES = {
-    DETERMINISTIC_ANIMATION_CLASS,
-    LEGACY_DETERMINISTIC_ANIMATION_CLASS,
-}
+DETERMINISTIC_ANIMATION_CLASSES = {DETERMINISTIC_ANIMATION_CLASS}
 FINAL_ANIMATION_CLASSES = GENERATIVE_ANIMATION_CLASSES | DETERMINISTIC_ANIMATION_CLASSES
 ALLOWED_STATIC_CLASS = "reviewed_visual_insert"
 FORBIDDEN_FINAL_STRATEGIES = {"reviewed_keyframe_stable_hold", "static_loop"}
 MAX_STATIC_SEGMENT_RATIO = 0.25
 MIN_GENERATIVE_DURATION_RATIO = 0.50
-LEGACY_ANIMATION_MODE = "hand_drawn_patient_explainer_animation"
-LEGACY_VISUAL_STYLE = "hand_drawn_medical_explainer"
 REQUIRED_MOTION_REVIEW = "approved_watchable_motion"
 REQUIRED_ALIGNMENT_REVIEW = "approved_audio_visual_alignment"
 
@@ -64,8 +52,8 @@ def animation_gate(episode_dir: Path, plan: dict) -> dict:
     visual_requirement = delivery.get("visual_requirement")
     if not visual_requirement:
         violations.append("missing_visual_requirement")
-    expected_animation_mode = delivery.get("animation_mode") or LEGACY_ANIMATION_MODE
-    expected_visual_style = delivery.get("visual_style") or LEGACY_VISUAL_STYLE
+    expected_animation_mode = delivery.get("animation_mode")
+    expected_visual_style = delivery.get("visual_style")
     minimum_generative_ratio = float(
         delivery.get("minimum_generative_duration_ratio", MIN_GENERATIVE_DURATION_RATIO)
     )
@@ -79,8 +67,7 @@ def animation_gate(episode_dir: Path, plan: dict) -> dict:
     )
     if javascript_primary:
         minimum_generative_ratio = 0.0
-    legacy_primary_generator = delivery.get("primary_generator")
-    if not primary_backend and not legacy_primary_generator:
+    if not primary_backend:
         violations.append("missing_primary_video_backend")
     if delivery.get("static_animatic_allowed_as_final") is not False:
         violations.append("static_animatic_final_prohibition_missing")
@@ -123,12 +110,8 @@ def animation_gate(episode_dir: Path, plan: dict) -> dict:
         if requires_alignment_review and manifest.get("audio_visual_alignment_review") != "approved":
             violations.append("audio_visual_alignment_not_reviewed")
         manifest_backend = manifest.get("primary_video_backend")
-        manifest_legacy_generator = manifest.get("primary_generator")
-        if primary_backend:
-            if manifest_backend != primary_backend:
-                violations.append("visual_manifest_primary_backend_mismatch")
-        elif manifest_legacy_generator != legacy_primary_generator:
-            violations.append("visual_manifest_primary_generator_mismatch")
+        if manifest_backend != primary_backend:
+            violations.append("visual_manifest_primary_backend_mismatch")
         author_profile = delivery.get("author_profile")
         if author_profile and manifest.get("author_profile") != author_profile:
             violations.append("visual_manifest_author_profile_mismatch")
@@ -248,7 +231,6 @@ def animation_gate(episode_dir: Path, plan: dict) -> dict:
         "visual_style": expected_visual_style,
         "animation_mode": expected_animation_mode,
         "primary_video_backend": primary_backend,
-        "primary_generator": legacy_primary_generator,
         "manifest": str(manifest_path),
         "animated_segments": animated_segments,
         "generative_segments": generative_segments,

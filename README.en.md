@@ -14,7 +14,7 @@ Med Auto Cast (MAC) is a medical education video agent for clinicians, health ed
 
 Start with a topic or continue from an existing script, recording, asset collection, or video. Refine one episode, produce a series, or update earlier work while building on what you already have.
 
-New productions default to local JavaScript animation in a hand-drawn collage style. The agent prepares medically grounded, layered assets and designs shots around the narration. Video models are used only when explicitly selected in the production plan. With an authorized reference voice, local IndexTTS is recommended; without one, or when the creator explicitly skips it, Edge TTS `zh-CN-XiaoyiNeural` is available and requires a network connection for synthesis.
+New productions default to local JavaScript animation in a hand-drawn collage style. The agent prepares medically grounded, layered assets and designs shots around the narration. Video models are used only when explicitly selected in the production plan. VoxCPM2 is used with an authorized reference voice; Edge TTS `zh-CN-XiaoyiNeural` is used when no dedicated voice is configured or the creator explicitly skips it, and requires a network connection. Image gaps can be filled with ImageGen supplied by the calling session; MAC does not choose or validate the calling agent's language or image model.
 
 Code animation includes reusable path drawing, camera tracks, material motion, and event-aligned sound, with seven style studies that run locally. Story treatments and key shots guide production; modules provide a starting point while keeping custom shot design open. See the [animation craft workflow](runtime/workbench/docs/26_代码动画技法与风格工作流.md) for implementation and review boundaries.
 

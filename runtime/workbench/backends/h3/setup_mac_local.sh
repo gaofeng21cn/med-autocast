@@ -4,7 +4,7 @@ set -euo pipefail
 # Apple Silicon deployment scaffold. Model downloads are opt-in because the
 # H3 bundle is large. The MLX node provides a separate 24/32 GB Core4-pruned
 # profile with strict staging; this script keeps downloads explicit.
-H3_MAC_ROOT="${H3_MAC_ROOT:-$HOME/ai/minimax-h3-mac}"
+H3_MAC_ROOT="${H3_MAC_ROOT:-$HOME/.local/share/med-autocast/h3-mlx}"
 COMFY_DIR="$H3_MAC_ROOT/ComfyUI"
 VENV_DIR="$H3_MAC_ROOT/.venv"
 bundle_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -49,8 +49,8 @@ clone_or_update() {
   fi
 }
 
-# These compatibility layers are required by the currently documented MPS
-# H3 route. They are isolated under the Mac install and never alter the 4090.
+# These compatibility layers are required by the documented MLX route. They are
+# isolated under this backend install and do not alter other deployments.
 clone_or_update https://github.com/pawel-mazurkiewicz/ComfyUI-AppleSilicon-FP8.git ComfyUI-AppleSilicon-FP8
 clone_or_update https://github.com/city96/ComfyUI-GGUF.git ComfyUI-GGUF
 clone_or_update https://github.com/xmarre/ComfyUI-Spectrum-MiniMax-H3.git ComfyUI-Spectrum-MiniMax-H3

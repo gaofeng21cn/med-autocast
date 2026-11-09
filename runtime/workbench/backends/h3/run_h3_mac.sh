@@ -1,11 +1,11 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-H3_MAC_ROOT="${H3_MAC_ROOT:-$HOME/ai/minimax-h3-mac}"
+H3_MAC_ROOT="${H3_MAC_ROOT:-$HOME/.local/share/med-autocast/h3-mlx}"
 H3_MAC_MODE="${H3_MAC_MODE:-performance}"
 COMFY_DIR="$H3_MAC_ROOT/ComfyUI"
 PYTHON="$H3_MAC_ROOT/.venv/bin/python"
-PORT="${H3_MAC_PORT:-28188}"
+PORT="${H3_MAC_PORT:-8188}"
 LOG_DIR="$H3_MAC_ROOT/logs"
 PID_FILE="$H3_MAC_ROOT/comfyui-mac.pid"
 
@@ -14,14 +14,14 @@ case "$H3_MAC_MODE" in
     export MINIMAX_H3_MODELS_DIR="${MINIMAX_H3_MODELS_DIR:-$COMFY_DIR/models}"
     ;;
   36gb)
-    # The compatibility workflow itself enforces stream2 + offset. The model
-    # root may be local, NAS-backed, or otherwise supplied by the machine.
+    # The selected workflow must set stream2 + offset explicitly.
     ;;
   *)
     echo "Unknown H3_MAC_MODE '$H3_MAC_MODE'; choose performance or 36gb." >&2
     exit 2
     ;;
 esac
+
 # Keep the Apple Silicon allocator from growing a cached pool into swap. The
 # custom FP8 node reads these before torch/MPS initialization; callers can
 # override them explicitly when running on a larger machine.

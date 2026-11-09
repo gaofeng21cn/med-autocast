@@ -1,6 +1,6 @@
 ---
 name: medical-video-backends
-description: Select, invoke, and verify registered local, LAN, and user-configured cloud video or narration backends for this medical-video workbench.
+description: Select, invoke, and verify registered local and LAN video or narration backends for this medical-video workbench.
 metadata:
   short-description: 医学视频后端运行
 ---
@@ -10,9 +10,9 @@ metadata:
 以显式 `workspace_root` 定位制作数据，按目标系列解析作者覆盖和后端档案。OPL 持有阶段运行；本 Skill 保留原工作台专业职责。下文 `scripts/`、`backends/`、`content/`、`productions/`、`work/`、`publish/` 均相对制作工作区，方法链接相对本 Skill。工具通过 [工作台工具接入](../../../docs/workspace-adapter.md) 定位：优先使用现有工作区入口，缺少通用工具时使用随包工具；不得默默替换工作区的专用修订入口。案例中的疾病、尺寸和作者选择只适用于对应案例。
 
 
-这个 Skill 负责从工作台已经登记的本地、局域网和云端后端中选择合适路径，提交生成任务，并把结果验收到可交给剪辑和视觉 QA 的程度。生产前先读取作者/医生基线，确认参考音频和表达方向。新视频默认走本地 JavaScript/SVG/Canvas 动画与手绘拼贴：先查已审关键帧与插图库，缺口再用 ImageGen 或授权网上素材补齐；有授权参考声线时按作者档案调用本机 VoxCPM2，未设定声线或用户明确跳过时才使用 Edge TTS `zh-CN-XiaoyiNeural`。按[十阶段SOP](../../../runtime/workbench/docs/04_医学科普视频系列SOP.md#0-十阶段流程与交接)，S06仅按需确认能力和具体替代，S07接收已审故事包/生成计划并产出实际媒体与回执；选题、故事设计或文档更新不触发模型调用。MiniMax H3 等视频模型保留为显式备选。
+这个 Skill 负责从部署档案登记的媒体后端中选择路径、提交任务，并把结果验收到可交给剪辑和视觉 QA 的程度。生产前先读取作者/医生基线，确认参考音频和表达方向。新视频默认走 JavaScript/SVG/Canvas 动画与手绘拼贴；其他视频生成能力，包括远端、本地和 MLX ComfyUI 路线，只有部署档案显式登记、状态可用并在制作单明确选择时才调用。先查已审关键帧与插图库，图像缺口由调用方会话提供 ImageGen 或使用授权网上素材补齐；MAC 记录调用方回执、提示和审核结果，不路由或校验调用方的语言模型与图像模型。有授权参考声线时按作者档案调用 VoxCPM2，无专用声线或用户明确跳过时才使用 Edge TTS `zh-CN-XiaoyiNeural`。按[十阶段SOP](../../../runtime/workbench/docs/04_医学科普视频系列SOP.md#0-十阶段流程与交接)，S06仅按需确认能力和具体替代，S07接收已审故事包/生成计划并产出实际媒体与回执；选题、故事设计或文档更新不触发模型调用。
 
-始终先读 `workbench.yaml` 的 `active_profiles.media_backends`、`backends/config/media_backends.yaml` 和 `docs/05_多后端本地与远程运行.md`。能力目录定义可移植协议，部署档案定义当前机器可用的实例与默认选择，两者不可互相取代。实际生产再读 `docs/06_媒体后端运行SOP.md`；使用云供应商时读 `docs/08_云视频API接入.md`；只有诊断当前机器或复核性能时才读 `docs/local/`。
+始终先读 `workbench.yaml` 的 `active_profiles.media_backends`、`backends/config/media_backends.yaml` 和 `docs/05_多后端本地与远程运行.md`。能力目录定义已接入的运行能力，部署档案定义当前可调用的实例与默认选择。实际生产再读 `docs/06_媒体后端运行SOP.md`；只有诊断当前机器或复核性能时才读 `docs/local/`。
 
 ## 首次环境准备
 
@@ -26,7 +26,7 @@ metadata:
 
 1. 先解析用户显式指定的后端；没有指定时使用登记表当前默认值。不要在 Skill 中硬编码默认后端、端口或路径，也不要因某个服务暂时不可达而静默切换。
 2. 根据任务所需的文生、图生、首尾帧、参考图/视频/音频、分辨率、时长、音轨、隐私、成本和时延选择后端。后端不支持的字段必须显式拒绝或降级说明，不能悄悄忽略。
-3. 本地与局域网后端适合可控、离线或已有算力的场景；云 API 不要求工作台机器具备模型所需硬件。二者是并列能力，不互相取代。
+3. 当前部署档案决定可调用的视频与音频实例。H3 属于显式备选；调用 `render_series_h3.py` 必须提供档案中已登记的 `--backend`，不得从视频默认值推断实例。能力状态为 `setup_required` 时先完成部署和验收。
 4. 保持旁白和画面解耦：先由导演共同设计内容与可见事件，再用统一声线完成旁白时间轴，生成对应镜头。H3原生音轨默认不进入成片；不把后期丢弃音轨声称为已关闭内部音频采样或节省推理算力。
 5. 新后端的 `contract_documented`、`candidate` 或服务可达都不等于可生产。只有真实产出、媒体回读和质量验收完成后才能标记 ready。
 
@@ -40,13 +40,6 @@ metadata:
 3. 回执至少保存后端、供应商、模型、去密后的请求参数、任务 ID 或本地运行 ID、状态、耗时、精确输出路径、文件大小及对应任务引用；既有接口幂等校验标识按原合同保留，不新增日常剪辑哈希。不得按文件名前缀或目录时间猜测最新结果。
 4. 用 `ffprobe` 或等价工具验证文件可解码、时长、分辨率和音视频流；随后按目标旁白时码交给 `medical-video-visual-qa`。本机遵守后台复核要求，不自动打开播放器或发声。
 5. 记录加载、推理和端到端耗时；一次 smoke 只能证明该参数组合，不得外推整季吞吐量。
-
-## 云视频 API
-
-1. 每个云后端都按 `docs/08_云视频API接入.md` 中登记的供应商原生合同调用。Bearer 鉴权或 `/models` 可见不能证明它兼容 OpenAI 视频协议。
-2. endpoint 与 API Key 由用户或部署环境提供。Key 只从登记的环境变量或受控密钥存储读取，不写入项目、命令、回执或日志。
-3. 工作台负责公共参数到供应商字段的转换、异步轮询、下载、错误归一化和技术验收。模型特有的输入组合和限制留在供应商合同，不复制到 Skill。
-4. OPL Gateway 只有在真实支持该视频协议并完成出片验收后才作为可选入口；切换 Gateway 只改变 endpoint 和凭据来源，不删除直连、本地或局域网能力。
 
 ## 生成视频经验
 

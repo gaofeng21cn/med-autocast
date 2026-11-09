@@ -9,15 +9,39 @@ video:
     label: 本地 JavaScript/SVG/Canvas 动画
     kind: javascript_animation
     mode: local
-    device: cpu_or_mps
     runtime: node20_playwright_ffmpeg
+    selection: automatic
+    default: true
+    role: primary_video_generation
     capability: reference_prototype
-  preferred_video:
-    definition: minimax_h3_api
-    label: User-configured MiniMax H3 API
-    endpoint: ${MINIMAX_VIDEO_API_BASE_URL:-}
-    model: MiniMax-H3
-    capability: contract_documented
+  optional_comfyui_remote:
+    definition: minimax_h3_comfyui
+    label: User-configured remote ComfyUI backend
+    kind: comfyui_remote
+    endpoint: ${COMFYUI_REMOTE_ENDPOINT:-}
+    selection: explicit
+    default: false
+    role: optional_video_generation
+    capability: optional_candidate
+  optional_comfyui_local:
+    definition: minimax_h3_comfyui
+    label: User-configured local ComfyUI backend
+    kind: comfyui
+    endpoint: ${COMFYUI_LOCAL_ENDPOINT:-}
+    selection: explicit
+    default: false
+    role: optional_video_generation
+    capability: optional_candidate
+  optional_comfyui_mlx:
+    definition: minimax_h3_comfyui
+    label: User-configured ComfyUI MLX backend
+    kind: comfyui
+    endpoint: ${COMFYUI_MLX_ENDPOINT:-}
+    selection: explicit
+    default: false
+    role: optional_video_generation
+    capability: optional_candidate
+    workflow: user_supplied_comfyui_api_workflow_required
 audio:
   edge_tts_local:
     definition: edge_tts
@@ -27,22 +51,17 @@ audio:
     device: cpu
     voice: zh-CN-XiaoyiNeural
     capability: configured_requires_network_verification
-  voxcpm_local_mac:
+  voxcpm_reference:
     definition: voxcpm_2
-    label: 用户独立配置的本机 VoxCPM2
+    label: User-configured VoxCPM2 reference voice
     kind: voxcpm
-    device: mps
-    root: ${VOXCPM_ROOT:-$HOME/ai/voxcpm-test}
-    python: ${VOXCPM_PYTHON:-$HOME/ai/voxcpm-test/.venv/bin/python}
-    model_root: ${VOXCPM_MODEL_ROOT:-$HOME/ai/voxcpm-test/models/VoxCPM2}
+    root: ${VOXCPM_ROOT:-$HOME/.local/share/med-autocast/voxcpm2}
+    python: ${VOXCPM_PYTHON:-$HOME/.local/share/med-autocast/voxcpm2/.venv/bin/python}
+    model_root: ${VOXCPM_MODEL_ROOT:-$HOME/.local/share/med-autocast/voxcpm2/models/VoxCPM2}
     runtime_profile:
       normalize: false
       inference_timesteps: 10
-      mps_low_watermark_ratio: 0.3
-      mps_high_watermark_ratio: 0.5
     capability: candidate
 policy:
   default_video: js_animation_local
-  # 只有作者没有授权声线基线时才使用 Edge TTS 保底；实际作者档案优先。
   default_audio: edge_tts_local
-  preserve_remote_4090: false

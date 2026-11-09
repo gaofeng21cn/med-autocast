@@ -11,7 +11,6 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 from qa_series_videos import (
     EPISODE_RE,
-    episode_inputs,
     paper_alignment_metrics,
     paper_animation_gate,
     paper_cues,
@@ -86,16 +85,6 @@ class PaperProjectAdapterTests(unittest.TestCase):
             })
             self.assertEqual(report["render_bindings"]["sha256"]["status"], "mismatch")
             self.assertIn("paper_render_binding_mismatch:sha256", report["violations"])
-
-    def test_legacy_yaml_input_contract_remains_readable(self):
-        with tempfile.TemporaryDirectory() as temporary:
-            episode = Path(temporary)
-            (episode / "audio/local_voice").mkdir(parents=True)
-            plan = {"audio": {"source": "audio/local_voice/narration-normalized.wav"}, "subtitles": {"source": "captions.srt"}}
-            inputs = episode_inputs(episode, plan)
-            self.assertEqual(inputs["kind"], "production_plan")
-            self.assertEqual(inputs["srt"], episode / "captions.srt")
-
 
 if __name__ == "__main__":
     unittest.main()

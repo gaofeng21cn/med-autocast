@@ -2,7 +2,7 @@
 """One local project entry: existing creative code remains the director's source."""
 
 from __future__ import annotations
-import argparse, hashlib, html, json, os, re, shutil, subprocess, sys, tempfile, time
+import argparse, hashlib, html, json, os, re, shutil, subprocess, sys, tempfile, time, uuid
 from _opl_file_hash import sha256_file
 from pathlib import Path
 import yaml
@@ -29,7 +29,8 @@ def sha(p):
 
 
 def stamp():
-    return time.strftime("%Y%m%dT%H%M%S") + "-" + str(time.time_ns() % 1000000)
+    # Distinguish history/output paths even when retries share a clock tick.
+    return time.strftime("%Y%m%dT%H%M%S") + "-" + uuid.uuid4().hex
 
 
 def safe_id(s):

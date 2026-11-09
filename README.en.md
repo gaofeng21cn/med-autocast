@@ -51,6 +51,8 @@ For an existing project, provide its folder and identify the current version, wh
 
 **Keep your own style.** Reuse your author information, authorized voice, branding, and presentation preferences to maintain a consistent voice and visual style across a series.
 
+**Use your existing knowledge library.** Author preferences, lasting topic knowledge, and project decisions each retain one editable source. MAC reads authorized notes from Obsidian or another existing directory; without a personal library, the production workspace holds those notes. Each task records the versions it uses, and reviewed lessons return to their original source. Voice references, media, finished videos, and review evidence stay with the production project. See [knowledge ownership and runtime records](docs/architecture.md#知识归属正文来源与运行记录).
+
 **Make focused revisions.** Reuse audio and subtitles when the narration is unchanged, and focus visual revisions on the affected shots. Updating one episode preserves the others.
 
 **Continue after an interruption.** Use existing files and production records to establish progress, resume unfinished work, and retain earlier versions for reference.

@@ -2,6 +2,27 @@
 
 正式名Med Auto Cast，技术身份med-autocast，领域medical_video。agent/持有专业语义，contracts/持有动作、阶段、身份与边界。工作区持有系列、媒体、部署profile、资产catalog和质量记录。runtime/native_helpers 提供只读核对与显式工具寻址；workbench_tool 同步执行一个已授权工具，不成为第二调度器或医学裁决者。runtime/workbench 随包提供通用核心、模板和完整方法，工作区原工具优先。
 
+## 知识归属、正文来源与运行记录
+
+通用规则由 [OPL 知识来源与记忆政策](https://github.com/gaofeng21cn/one-person-lab/blob/main/docs/policies/knowledge-source-and-memory-policy.md) 持有。MAC 按知识 v2 合同声明 `scope` 和 `content_kind`；归属、内容性质和物理来源相互独立，`contracts/durable_knowledge_catalog.json` 只登记随包规则。
+
+| 归属 | MAC 中的内容 | 正文与事实来源 |
+|---|---|---|
+| 产品 | 通用制作方法、领域边界和医学审查要求 | `agent/knowledge/`，随产品版本维护 |
+| 用户或团队 | 作者表达偏好、协作规则和团队政策 | 用户已维护的资料库；无个人库时由工作目录保存正文 |
+| 主题 | 疾病科普经验、长期系列的表达原则与跨集方法 | 主题知识主源，可在 Obsidian 或制作工作区 |
+| 项目 | 某个系列或单集的叙事取舍、设计和已接受经验 | 对应项目的唯一正文位置 |
+
+机制、政策、时点状态与决策可以出现在各个归属范围。当前母版、医学审核和声线许可来自业务原件及其回读；笔记总结保留来源和观察时间，不覆盖工作台事实。声线、形象和品牌执行配置继续由原作者档案维护，知识来源绑定不创建另一套配置。
+
+有个人库、无个人库和混合来源使用同一条 Framework 链路：直接读取授权来源的已接受版本，冻结为本次 StageRun 上下文。工作区保存来源绑定引用、业务产物、提案与回执，不强制复制一份知识全文。生产、审阅、修复消费同一快照；其生命周期由 Framework 管理。
+
+三个公开动作都可处理多集，因此明确声明 `execution_scope.kind: none`。它们保留工作区来源授权，只召回适用的产品、用户或团队、主题知识，不将系列名或任意一集冒充本次项目范围。需要单集项目知识时，直接 Skill 从 `workbench.yaml` 选择真实单集，核对 `project.json` 的系列和集号，再由正式 `workspace_index.json.projects` 找到该真实目录唯一对应的 `project_id`；以该目录作为 `opl knowledge prepare --project` 的路径参数。每集独立 prepare，另一集的私有知识不进入快照。未登记、目录冲突或身份不一致时报告项目知识缺口，不从目录名生成身份，也不回退读取全部项目。
+
+`project-knowledge-locator` 提供上述只读核验；缺少正式登记时，Framework 的 `workspace adopt --project-root` 接入已存在单集目录，MAC 不写另一套 inventory。操作步骤见[单集知识登记](workspace-adapter.md#单集知识登记)。
+
+MAC 判断经验是否值得沉淀及其归属，有权维护者接受后经通用写回机制更新唯一正文。可选经验缺失不阻断独立制作；必需医学依据、作者关键约束或授权缺失限制依赖它的行动。媒体生成与发布前复核关键约束与授权，派生摘要随来源变化重审。素材复用包、原始媒体和项目交付按业务保留规则管理，不随知识缓存或运行日志清理。
+
 ## Mini App 工作入口
 
 MAC 的任务与媒体贡献遵循 [OPL MCP Apps 规范](https://github.com/gaofeng21cn/one-person-lab/blob/main/docs/mcp-apps/SPEC.md)。Framework 负责发现、共享进度/产物视图、上下文和当前任务动作；MAC 负责从登记工作区解析单集工程、当前候选、镜头时码与原有审查材料。资产库入口与 MAC 视频制作入口是独立贡献，不互相代替。

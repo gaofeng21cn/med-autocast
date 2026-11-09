@@ -16,6 +16,7 @@
       "summary": "规划医学科普系列；按当前任务范围执行，保留真实待审状态。",
       "owner": "med-autocast",
       "effect": "mutating",
+      "execution_scope": { "kind": "none" },
       "execution_binding": {
         "kind": "stage_binding",
         "stage_manifest_ref": "agent/stages/manifest.json"
@@ -87,6 +88,7 @@
       "summary": "制作与修订单集；按当前任务范围执行，保留真实待审状态。",
       "owner": "med-autocast",
       "effect": "mutating",
+      "execution_scope": { "kind": "none" },
       "execution_binding": {
         "kind": "stage_binding",
         "stage_manifest_ref": "agent/stages/manifest.json"
@@ -165,6 +167,7 @@
       "summary": "复核与审看交付；按当前任务范围执行，保留真实待审状态。",
       "owner": "med-autocast",
       "effect": "mutating",
+      "execution_scope": { "kind": "none" },
       "execution_binding": {
         "kind": "stage_binding",
         "stage_manifest_ref": "agent/stages/manifest.json"

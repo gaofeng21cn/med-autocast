@@ -1,15 +1,20 @@
 {
   "surface_kind": "opl_durable_knowledge_catalog",
-  "version": "durable-knowledge-catalog.v1",
+  "version": "durable-knowledge-catalog.v2",
   "owner": "one-person-lab",
   "domain_id": "medical_video",
   "items": [
     {
       "surface_kind": "opl_durable_knowledge_item",
-      "version": "durable-knowledge-item.v1",
+      "version": "durable-knowledge-item.v2",
       "knowledge_id": "medical_video.domain_boundary",
       "title": "domain boundary",
-      "layer": "agent_pack",
+      "scope": {
+        "kind": "product",
+        "id": "medical_video"
+      },
+      "content_kind": "policy",
+      "requirement": "required",
       "owner": "medical_video",
       "body_ref": {
         "kind": "repo_path",

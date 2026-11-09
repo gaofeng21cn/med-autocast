@@ -118,19 +118,12 @@ python3 runtime/native_helpers/med_autocast.py assets --workspace <workspace> --
 
 手绘拼贴初稿按 runtime/workbench/docs/42_paper-collage-mv制作方法适配.md 推进：同期语义变可见的小戏/科学关系，核心道具先看各状态，有角色才做重心/视线/表情样本；先把本集一段做深再审整集。动作有快慢与停顿，镜头/转场服务事件，不设数量配额或共用导演工厂。resolve_motion_audit 只读导出声明，不补写反应、承接或确认画面。中断按每集真实回执恢复；声明与批量成功不替代连续动态、听感或医学审查。
 
-## Durable Knowledge And Workspace Memory
+## 知识来源与经验写回
 
-Use OPL knowledge recall with --repo <agent-root> --domain <domain-id>
---stage <stage-id> and the authorized --workspace and --project roots.
-The hosted StageRun binds this selection once for producer, reviewer and
-repair roles. Read selected bodies and cite knowledge IDs, layers and digests.
-Agent knowledge lives in agent/knowledge/, indexed by
-contracts/durable_knowledge_catalog.json. Owner/team constraints and accepted
-cross-project lessons live in shared/memory/; project decisions and lessons
-live in the authorized project's memory/; dated facts live in its state/.
-Each workspace layer uses opl_durable_knowledge_catalog.json.
-Review freshness and keep superseded entries out of active recall. A project
-result is a candidate lesson until its domain or project owner accepts the
-evidence and scope. Private project content is never automatically promoted
-into the distributable Agent package. OPL owns validation, scoped recall and
-receipts; domain owners retain semantic acceptance.
+采用 OPL 知识 v2 合同：`scope` 区分产品、用户或团队、主题、项目；`content_kind` 区分机制、政策、时点状态和决策。通用制作规则在 `agent/knowledge/`，由 `contracts/durable_knowledge_catalog.json` 声明。作者偏好、主题经验和项目决定按当前授权绑定到唯一正文；有 Obsidian 等个人库时直接引用，无库时使用工作目录，可按项混合，不生成第二份可编辑正文。作者执行配置、声线原件、制作工程和审核事实继续由原工作台维护。
+
+直接 Skill 使用 `opl knowledge prepare --repo <agent-root> --domain medical_video --stage <stage-id> --workspace <workspace-root> --task-intent <action-id> --output <binding.json>`；随后用 `opl knowledge read-context --binding <binding.json> --json` 读取冻结正文。托管 StageRun 通过同一机制绑定生产、审阅和修复所用版本。引用知识 ID、scope、来源版本与摘要，不把目录清单当已读取知识。
+
+三个公开动作支持多集，`execution_scope.kind: none`，只召回已授权的产品、用户或团队、主题知识。单集 direct Skill 先运行 `med_autocast.py project-knowledge-locator --workspace <workspace-root> --series <series> --episode <episode>`，核对 workbench 原登记、`project.json` 身份与正式 inventory。缺登记时由 `opl workspace adopt --agent med-autocast --workspace <workspace-root> --project-id <稳定项目ID> --project-root <真实单集目录> --apply` 接入，再回读定位；具体步骤见 `docs/workspace-adapter.md` 的“单集知识登记”。只有定位 `ready` 才给 prepare 加 `--project <真实单集目录>`（这里传路径，不传 ID）。每集单独冻结上下文；未登记时报告项目知识缺口，继续不依赖该知识的制作，不猜 `projects/<id>`、不读取其他集私有知识。
+
+经验提案使用 `source_refs`、`target_scope: {kind, id}`、`content_kind`、`proposed_rule_or_mechanism`、`evidence_class`、`review_requirement`，经有权维护者接受后调用 Framework 共用机制写回原文。MAC 持有医学、制作与复用语义判断；私人作者资料和单集结论不自动进入产品规则。来源漂移、过期或撤回时按任务必要性处理缺口；媒体生成和发布前重新核对影响行动的作者授权与关键约束。遵循 Framework 的知识来源与记忆政策，本领域落位见 `docs/architecture.md`。

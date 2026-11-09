@@ -583,7 +583,9 @@ class ProjectTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "不支持"):
             rn.prepare_model_text("<还|HAI2>", "edge_tts")
 
-    def test_retime_preserves_editorial_caption_breaks(self):
+    @patch.object(pp.time, "time_ns", return_value=123456789000)
+    @patch.object(pp.time, "strftime", return_value="20261109T000000")
+    def test_retime_preserves_editorial_caption_breaks(self, _clock_text, _clock_ns):
         p = self.root
         pp.save(p / "project.json", {"schema": "paper_project/v1", "series_id": "s", "episode_id": "e",
             "score": "score.json", "voice": "voice.wav", "beat_shots": {"B01": "s1"}})
@@ -607,6 +609,7 @@ class ProjectTests(unittest.TestCase):
             {"id": "B01", "text": "第一句。第二句。", "start": 1, "end": 13}]})
         pp.retime(args)
         self.assertNotEqual(pp.read(p / "score.json")["cues"], score["cues"])
+        self.assertEqual(len(list((p / "history").glob("*/score.json"))), 3)
 
     def test_revision_edit_does_not_mutate_source(self):
         src = self.root / "v1"; src.mkdir()

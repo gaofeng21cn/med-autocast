@@ -5,7 +5,7 @@
   "owner": "medical_video",
   "capability_bundle_ref": "contracts/stage_capability_bundle.json",
   "animation_style_registry_ref": "contracts/animation_style_registry.json",
-  "meta_review_policy_ref": "agent/quality_gates/meta-review.md",
+  "meta_review_policy_ref": "contracts/stage_quality_cycle_policy.json#/meta_review_policy",
   "progress_first_policy": {
     "semantic_route_decision_owner": "decisive_codex_attempt",
     "stage_transition_materialization_owner": "opl_stage_run_controller",

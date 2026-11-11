@@ -19,5 +19,6 @@
     "defaultPrompt": [
       "Use Med Auto Cast to select and run the next domain Stage."
     ]
-  }
+  },
+  "mcpServers": "./mcp.json"
 }

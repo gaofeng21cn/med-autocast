@@ -13,7 +13,7 @@ const files=buildScaffoldFiles('med-autocast','Med Auto Cast').filter(f=>f.path.
 for(const f of files){
  const destination=path.join(root,f.path);fs.mkdirSync(path.dirname(destination),{recursive:true});
  const body=f.path.endsWith('/SKILL.md')?fs.readFileSync(path.join(root,'agent/primary_skill/SKILL.md')):f.content;
- if(f.path.endsWith('plugin.json')){const manifest=JSON.parse(body);manifest.version=ownerManifest.version;fs.writeFileSync(destination,JSON.stringify(manifest,null,2)+'\n');}
+ if(f.path.endsWith('plugin.json')){const manifest=JSON.parse(body);manifest.version=ownerManifest.version;if(f.path.includes('.codex-plugin/')) manifest.mcpServers='./mcp.json';fs.writeFileSync(destination,JSON.stringify(manifest,null,2)+'\n');}
  else fs.writeFileSync(destination,body);
 }
 // Bundle source-relative support paths alongside the primary Skill. This preserves

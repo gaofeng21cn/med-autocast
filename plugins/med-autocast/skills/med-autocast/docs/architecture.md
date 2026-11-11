@@ -33,6 +33,12 @@ MAC 的任务与媒体贡献遵循 [OPL MCP Apps 规范](https://github.com/gaof
 
 `plan-series` 进入证据规划；`produce-episodes` 进入故事导演、媒体制作、阶段复核、跨阶段 Meta Review 和审看交付；`review-delivery` 从阶段复核进入同一条 Meta Review/交付路线。`asset-curation` 是交付后的可选沉淀与恢复入口，不是成片交付的硬终点。已有结果可跳转或返修，`stage.requires`、能力包和产物字段都是质量上下文与交接建议，不是 LLM 输出不完整时的启动门。受权限、身份及当前性约束的依赖动作不能越界。
 
+### 媒体审看专用 MiniApp
+
+当用户需要在候选视频、镜头时码、交付审查和 revision-bound 意见之间连续切换时，MAC 使用独立标准 MCP App `ui://med-autocast/media-review.html`。`open_media_review` 是只读 launcher，`media_review_note` 仅对 App 可见；两者都通过 `runtime/native_helpers/app_contribution.py` 调用现有 owner 读取与写入路径。媒体候选、Score、交付记录和意见文件仍归 MAC 工作区，MiniApp 不建立第二份媒体索引或质量状态。
+
+该 surface 只提供当前候选、镜头时间线、工作区 artifact bridge、既有意见和意见表单。写意见时必须提交当前 `revision`，owner 负责并发检查、幂等和回读；审看意见是人工输入材料，不等于质量批准、Meta Review 结论或发布授权。没有 MCP App 宿主时，launcher 返回结构化 owner 数据，便于 Agent 继续使用既有工作台。
+
 ## Stage 能力与交接
 
 阶段定位由 `agent/stages/manifest.json` 给出；每个 Stage 通过 `contracts/stage_capability_bundle.json` 关联建议的工作包、输入/输出产物、工具、Review 范围和 route-back 目标。Stage prompt、专业 Skill、quality gate 与工具入口仍各自保持单一职责，能力包只帮助 OPL 选择和交接，不创建第二调度器。

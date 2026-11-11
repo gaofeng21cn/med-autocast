@@ -53,7 +53,7 @@ function errorResult(error) {
 }
 
 export function createMcpServer() {
-  const server = new McpServer({ name: 'med-autocast-media-review', version: '0.1.0' }, { instructions: 'Use this MiniApp for dense media and shot review. Notes are human review material only; they never approve quality or publish a candidate.' });
+  const server = new McpServer({ name: 'med-autocast-media-review', version: '0.1.1' }, { instructions: 'Use this MiniApp for dense media and shot review. Notes are human review material only; they never approve quality or publish a candidate.' });
   registerAppResource(server, 'Med Auto Cast media review', resourceUri, { _meta: { ui: { prefersBorder: true, csp: { connectDomains: [], resourceDomains: [] } } } }, async () => ({ contents: [{ uri: resourceUri, mimeType: RESOURCE_MIME_TYPE, text: html, _meta: { ui: { prefersBorder: true, csp: { connectDomains: [], resourceDomains: [] } } } }] }));
   registerAppTool(server, 'open_media_review', { title: '打开 Med Auto Cast 媒体审看', description: '读取登记工作区的当前候选、镜头时码、交付审查和既有意见，并打开媒体审看 UI。只读。', inputSchema, annotations: { readOnlyHint: true, destructiveHint: false, openWorldHint: false }, _meta: { ui: { resourceUri, 'openai/outputTemplate': resourceUri } } }, async input => {
     try {

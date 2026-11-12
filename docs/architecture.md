@@ -70,3 +70,5 @@ Score / Shot / Asset / Layout / Review
 OPL负责运行、阶段状态、生成接口、独立评测、包版本和激活。本仓不拥有OPL标准，不生成伪owner回执。六个专业Skill分工继承工作台经验，与OPL Book Forge保持相同层次。
 
 原十阶段与六个 OPL 阶段的完整职责对应见 [制作 SOP](../agent/policies/production-policy.md)，实际工具和输入合同见 [工作台接入](workspace-adapter.md)。同一个专业 Skill 可以参与多个阶段；合成由成片打包 Skill 实现，不能只交给后端 Skill。
+
+媒体审看的加载、空态、错误和内容页都保留同一 OPL Apps 家族标题栏。家族标识与“媒体审看”标题同行；颜色、焦点、按钮和深浅主题遵循 App 持有的视觉契约，领域布局继续保留单集、镜头与审看意见的连续操作。

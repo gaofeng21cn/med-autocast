@@ -57,12 +57,12 @@ function render() {
   const item = selectedItem();
   const shot = selectedShot(item);
   if (state.error) {
-    root.innerHTML = `<div class="error-state" role="alert"><div><strong>媒体审看读取失败</strong><p>${escape(state.error)}</p><button class="button" type="button" data-refresh>重新读取</button></div></div>`;
+    root.innerHTML = `<header class="topbar"><div class="family-heading"><h1>媒体审看</h1><span class="family-label">OPL Apps · Med Auto Cast</span></div></header><div class="error-state" role="alert"><div><strong>媒体审看读取失败</strong><p>${escape(state.error)}</p><button class="button" type="button" data-refresh>重新读取</button></div></div>`;
     root.querySelector('[data-refresh]')?.addEventListener('click', () => void refresh());
     return;
   }
   if (result.state !== 'ready' || !items.length || !item) {
-    root.innerHTML = `<div class="empty-state" role="status"><div><strong>${escape(result.reason || '还没有可审看的登记单集')}</strong><p>先在 Med Auto Cast 工作区登记系列与单集，再从这里读取当前候选。</p><button class="button" type="button" data-refresh>重新读取</button></div></div>`;
+    root.innerHTML = `<header class="topbar"><div class="family-heading"><h1>媒体审看</h1><span class="family-label">OPL Apps · Med Auto Cast</span></div></header><div class="empty-state" role="status"><div><strong>还没有可审看的登记单集</strong><p>先在 Med Auto Cast 工作区登记系列与单集，再从这里读取当前候选。</p><button class="button" type="button" data-refresh>重新读取</button></div></div>`;
     root.querySelector('[data-refresh]')?.addEventListener('click', () => void refresh());
     return;
   }
@@ -72,7 +72,7 @@ function render() {
   const currentArtifactHref = artifactHref(item, shot);
   const shotButtons = shots.map(entry => `<button class="shot-button" type="button" data-shot="${escape(entry.id)}" aria-pressed="${entry.id === shot?.id ? 'true' : 'false'}" style="--weight:${Math.max(.5, Number(entry.end) - Number(entry.start) || 1)}"><strong>${escape(entry.title || entry.id)}</strong><small>${escape(formatTime(entry.start))}–${escape(formatTime(entry.end))}</small></button>`).join('');
   root.innerHTML = `<header class="topbar">
-    <div class="topbar-copy"><div class="family-kicker">OPL Apps · Med Auto Cast</div><h1>媒体审看</h1><div class="topbar-meta"><span>${escape(item.title || `${item.series_id} · ${item.episode_id}`)}</span><span class="badge">${escape(item.status || 'ready')}</span><span class="badge ${item.media ? '' : 'warning'}">${item.media ? '当前候选' : '尚无成片'}</span></div></div>
+    <div class="topbar-copy"><div class="family-heading"><h1>媒体审看</h1><span class="family-label">OPL Apps · Med Auto Cast</span></div><div class="topbar-meta"><span>${escape(item.title || `${item.series_id} · ${item.episode_id}`)}</span><span class="badge">${escape(item.status || 'ready')}</span><span class="badge ${item.media ? '' : 'warning'}">${item.media ? '当前候选' : '尚无成片'}</span></div></div>
     <div class="topbar-actions"><button class="button quiet" type="button" data-fullscreen>展开</button><button class="button" type="button" data-refresh>刷新</button></div>
   </header>
   <div class="workspace">

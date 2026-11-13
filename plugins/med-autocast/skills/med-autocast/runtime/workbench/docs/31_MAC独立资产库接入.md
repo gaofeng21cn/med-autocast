@@ -4,7 +4,7 @@
 
 ## 安装与发现
 
-标准安装 `opl packages install med-autocast --json` 由 OPL Framework 解析 required 依赖，先自动安装公开的 `mac-media-assets`，再安装 MAC；更新同样使用 Framework 的软件包入口。用户只执行一次 MAC 安装，不必单独安装素材 Skill 或手动克隆。资产库作为独立 headless 能力包，媒体与入口可由 MAC 调用，不占用普通对话的 Skill 入口。分发通过各自的 OCI 软件包，来源及版权证据随素材保存。
+标准安装 `opl packages install med-autocast --json` 由 OPL Framework 解析 required 依赖，先自动安装公开的 `mac-media-assets` 轻量目录包，再安装 MAC；更新同样使用 Framework 的软件包入口。用户只执行一次 MAC 安装，不必单独安装素材 Skill 或手动克隆。资产库作为独立 headless 能力包，媒体与入口可由 MAC 调用，不占用普通对话的 Skill 入口。分发通过各自的 OCI 软件包，来源及版权证据随素材保存。
 
 首次准备工作台使用 `bash scripts/setup_workbench.sh --workspace <目录>`。它调用 `media_asset_library ensure`，优先发现已安装的资产库；已有配置或兄弟目录仍可复用。缺失才从公开 GitHub 仓库获取并校验。已有库不隐式 fetch、reset 或覆盖；部分目录有内容时保留并诊断。直接使用原生 Codex 插件安装入口不会运行工作台 shell，也不会替代 Framework 的依赖安装入口。
 
@@ -13,6 +13,10 @@
 `workbench.yaml.asset_library.root` 是已有工作区的路径权威。没有可用默认路径时查找 `MAC_MEDIA_ASSETS_ROOT`、共享 companion 目录、OPL headless 原生载体及已安装 Skill/插件；`CODEX_HOME`、`OPL_COMPANION_SOURCES_ROOT` 可指定宿主位置。自动创建的相对默认值不覆盖用户配置。`asset_library.enabled: false` 停用发现，`auto_install: false` 停用自动下载；手工已有库仍可只读使用。
 
 ## 制作的真实工具
+
+新版库默认保留轻量索引与原记录，媒体在选中后获取。`status/query` 不下载；`use` 在缺少原件时调用库内 `media_store fetch`，核对长度和SHA-256后复制到独立项目。共享缓存可用 `asset_library.cache_root` 和 `cache_limit_bytes` 配置；`offline: true` 或 `auto_fetch: false` 仅使用已获取字节。离线制作前可在库内按主题、分类或精确版本预取并 `--pin`；项目副本不受缓存清理影响。已有完整库、作者档案和自定义路径保持原样。
+
+`query --system 呼吸 --patient-task 理解身体功能` 可按医学任务发现素材。查询的 `storage.fetch_required` 明确原件是否缺失；登记存在和下载完成均不替代当前镜头的实看、连续动作及医学审核。
 
 ```sh
 .venv/bin/python scripts/media_asset_library.py status --workspace .

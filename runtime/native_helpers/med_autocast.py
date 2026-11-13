@@ -294,7 +294,7 @@ def main():
             p.add_argument('--category');p.add_argument('--series')
             p.add_argument('--library', choices=['keyframes', 'animation', 'external'], default='keyframes')
             p.add_argument('--query');p.add_argument('--kind');p.add_argument('--scope')
-            for flag in ('motion-action','story-role','medium','collection','maturity','character-role','pose'):
+            for flag in ('motion-action','story-role','medium','collection','maturity','character-role','pose','topic','system','patient-task'):
                 p.add_argument('--'+flag)
             p.add_argument('--limit',type=int)
             p.add_argument('--animation-reference', action='store_true',
@@ -321,7 +321,8 @@ def main():
                            if a.animation_reference else query_external_assets(root, a.query, a.kind, a.scope, a.series,
                            category=a.category, action=a.motion_action, story_role=a.story_role,
                            medium=a.medium, collection=a.collection, maturity=a.maturity, limit=a.limit,
-                           character_role=a.character_role, pose=a.pose)) if a.library == 'external'
+                           character_role=a.character_role, pose=a.pose,
+                           topic=a.topic, system=a.system, patient_task=a.patient_task)) if a.library == 'external'
                       else query_assets(root, a.category, a.series))
         elif a.command=='preflight':result=preflight(root,a.delivery,a.current,a.source_review)
         else:

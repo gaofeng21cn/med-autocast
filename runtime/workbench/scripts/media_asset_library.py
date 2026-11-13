@@ -131,6 +131,8 @@ def report(workspace, explicit=None):
             result.update(status='available', asset_count=len({row.get('source_id', row['id']) for row in rows}),
                           registered_versions=len(rows), payload_files=sum(len(row.get('payload', [])) for row in rows),
                           skill=str(root / 'skills/mac-media-assets/SKILL.md'))
+            storage = root / 'catalog/media-storage.json'
+            result['storage_profile'] = json.loads(storage.read_text()).get('profile', 'full') if storage.is_file() else 'full'
         except (OSError, ValueError, TypeError) as error:
             result.update(status='diagnostic', diagnostic=type(error).__name__)
     return result
@@ -171,19 +173,33 @@ def ensure(workspace, explicit=None, repository=REPOSITORY, offline=False):
     try:
         with tempfile.TemporaryDirectory(prefix='.mac-media-assets-', dir=root.parent) as temporary:
             staged = Path(temporary) / 'repo'
-            completed = subprocess.run(['git', 'clone', '--depth', '1', '--single-branch', '--branch', 'main',
+            completed = subprocess.run(['git', 'clone', '--filter=blob:none', '--no-checkout', '--depth', '1', '--single-branch', '--branch', 'main',
                                         '--', repository, str(staged)], capture_output=True, timeout=240,
                                        env={**os.environ, 'GIT_TERMINAL_PROMPT': '0'})
+            if not completed.returncode:
+                completed = subprocess.run(['git', '-C', str(staged), 'sparse-checkout', 'set', '--no-cone', '--stdin'],
+                                           input='/*\n!/payloads/\n!/records/**/files/\n', text=True, capture_output=True, timeout=120)
+            if not completed.returncode:
+                completed = subprocess.run(['git', '-C', str(staged), 'checkout', 'main'], capture_output=True, timeout=120)
             if completed.returncode or not valid(staged):
                 return {**result, 'installation': 'not_downloaded',
                         'diagnostic': '获取失败，请检查网络和仓库访问权限；未输出凭据，继续本地素材或新创'}
-            verification = subprocess.run([sys.executable, '-B', str(staged / 'tools/verify_catalog.py')],
+            verify_command = [sys.executable, '-B', str(staged / 'tools/verify_catalog.py')]
+            if (staged / 'catalog/media-storage.json').is_file():
+                verify_command.append('--metadata-only')
+                # Small original code components are part of the core package.
+                bundled = json.loads((staged / 'catalog/media-storage.json').read_text()).get('bundled_source_ids', [])
+                if bundled:
+                    subprocess.run(['git', '-C', str(staged), 'sparse-checkout', 'add',
+                                    *['/payloads/paper-theatre/' + identifier + '/' for identifier in bundled]],
+                                   capture_output=True, timeout=120, check=True)
+            verification = subprocess.run(verify_command,
                                            capture_output=True, timeout=120)
             if verification.returncode:
                 return {**result, 'installation': 'not_installed', 'diagnostic': '资产库文件校验失败，保留原工作区并继续新创'}
             staged.rename(root)
         return {**report(workspace, root), 'read_only': False, 'installation': 'installed_and_verified'}
-    except (OSError, subprocess.TimeoutExpired):
+    except (OSError, subprocess.TimeoutExpired, subprocess.CalledProcessError):
         return {**result, 'installation': 'not_downloaded', 'diagnostic': '获取或校验超时/失败；继续本地素材或新创'}
 
 
@@ -297,7 +313,7 @@ def clinician_request(*values):
 def query(workspace, *, explicit=None, text=None, kind=None, scope=None, series=None, include_author_assets=False,
           include_reference=False, category=None, action=None, story_role=None, medium=None, collection=None,
           maturity=None, limit=None, character_role=None, pose=None, asset_id=None, all_versions=False,
-          character_context=None):
+          character_context=None, topic=None, system=None, patient_task=None):
     policy = clinician_author_policy(workspace, series)
     if policy and (character_role or text or asset_id or character_context == 'generic'):
         profile, identity, library = policy
@@ -325,6 +341,9 @@ def query(workspace, *, explicit=None, text=None, kind=None, scope=None, series=
                         ('--character-role', character_role), ('--pose', pose), ('--id', asset_id)]:
         if value:
             command.extend([flag, str(value)])
+    for flag, value in [('--topic', topic), ('--system', system), ('--patient-task', patient_task)]:
+        if value:
+            command.extend([flag, str(value)])
     if include_author_assets:
         command.append('--include-author-assets')
     if include_reference:
@@ -332,7 +351,11 @@ def query(workspace, *, explicit=None, text=None, kind=None, scope=None, series=
     if all_versions:
         command.append('--all-versions')
     try:
-        completed = subprocess.run(command, capture_output=True, text=True, timeout=30)
+        environment = dict(os.environ)
+        cache_path = (config(workspace).get('asset_library') or {}).get('cache_root')
+        if cache_path:
+            environment['MAC_MEDIA_CACHE'] = str(Path(cache_path).expanduser())
+        completed = subprocess.run(command, capture_output=True, text=True, timeout=30, env=environment)
         if completed.returncode:
             raise ValueError('query_failed')
         rows = json.loads(completed.stdout)
@@ -361,8 +384,11 @@ def query(workspace, *, explicit=None, text=None, kind=None, scope=None, series=
             rows = [row for row in rows if row.get('review_boundary', {}).get('admission') != 'reference_only'
                     and row.get('curation', {}).get('status') not in {'needs_rebuild', 'superseded'}]
         for row in rows:
-            row['resolved_payloads'] = [{'role': item.get('role'), 'path': str(confined(root, item['path'])),
-                                        'exists': confined(root, item['path']).is_file()} for item in row.get('payload', [])]
+            cached = {part['path']: part.get('resolved_path') for part in row.get('storage', {}).get('files', [])}
+            row['resolved_payloads'] = [{'role': item.get('role'),
+                                        'path': cached.get(item['path']) or str(confined(root, item['path'])),
+                                        'exists': bool(cached.get(item['path'])) or confined(root, item['path']).is_file()}
+                                       for item in row.get('payload', [])]
         result.update(assets=rows, count=len(rows))
     except (OSError, ValueError, KeyError, subprocess.TimeoutExpired) as error:
         result.update(status='diagnostic', diagnostic=type(error).__name__)
@@ -593,8 +619,8 @@ def use(workspace, project, identifier, explicit=None, asset_id=None):
     from animation_library import archive, read, reuse, digest
     if identifier.startswith('author:'):
         project_path = confined(workspace, project)
-        config = read(project_path / 'project.json')
-        policy = clinician_author_policy(workspace, config.get('series_id'))
+        project_config = read(project_path / 'project.json')
+        policy = clinician_author_policy(workspace, project_config.get('series_id'))
         if not policy:
             raise ValueError('当前系列未配置作者人物素材')
         profile, identity, library = policy
@@ -648,13 +674,35 @@ def use(workspace, project, identifier, explicit=None, asset_id=None):
         return {**result, 'quality_debt': ['作者身份与资产复用范围不一致，请换用通用资产或新创']}
     if record['id'] != row['source_id'] or record['revision'] != row['revision']:
         raise ValueError('外库原记录与索引身份不一致')
+    resolved_media = {}
+    if any(not confined(root, part['path']).is_file() for part in row['payload']):
+        store_tool = root / 'tools/media_store.py'
+        if not store_tool.is_file():
+            return {**result, 'quality_debt': ['所选版本的媒体尚未安装，当前库不支持按需获取']}
+        spec = config(workspace).get('asset_library') or {}
+        command = [sys.executable, '-B', str(store_tool), 'fetch', '--id', identifier]
+        if spec.get('cache_root'):
+            command.extend(['--cache', str(Path(spec['cache_root']).expanduser())])
+        if spec.get('offline') or spec.get('auto_fetch') is False:
+            command.append('--offline')
+        if spec.get('cache_limit_bytes') is not None:
+            command.extend(['--max-bytes', str(spec['cache_limit_bytes'])])
+        try:
+            completed = subprocess.run(command, capture_output=True, text=True, timeout=240)
+        except (OSError, subprocess.TimeoutExpired) as error:
+            return {**result, 'quality_debt': ['所选媒体获取未完成：' + type(error).__name__],
+                    'media_fetch': {'status': 'diagnostic'}}
+        if completed.returncode:
+            return {**result, 'quality_debt': ['所选媒体获取未完成；可离线预取、调整缓存或继续新创'],
+                    'media_fetch': json.loads(completed.stdout) if completed.stdout.strip() else {'status': 'diagnostic'}}
+        resolved_media = json.loads(completed.stdout)['resolved']
     files = []
     for item in record['files']:
         exact_suffix = '/' + row['source_id'] + '/' + row['revision'] + '/' + item['path']
         matches = [part for part in row['payload'] if part['path'].endswith(exact_suffix)]
         if len(matches) != 1:
             raise ValueError('缺少精确载荷映射')
-        source = confined(root, matches[0]['path'])
+        source = Path(resolved_media[matches[0]['path']]) if matches[0]['path'] in resolved_media else confined(root, matches[0]['path'])
         if digest(source) != item['sha256'] or item['sha256'] != matches[0]['sha256']:
             raise ValueError('载荷字节与所选版本不一致')
         files.append({'source': str(source), 'path': item['path'], 'role': item.get('role', 'payload')})
@@ -742,7 +790,7 @@ def main():
     parser.add_argument('--root', type=Path)
     parser.add_argument('--offline', action='store_true')
     for name in ['query', 'kind', 'scope', 'series', 'id', 'asset-id', 'project', 'category', 'motion-action',
-                 'story-role', 'medium', 'collection', 'maturity', 'character-role', 'pose']:
+                 'story-role', 'medium', 'collection', 'maturity', 'character-role', 'pose', 'topic', 'system', 'patient-task']:
         parser.add_argument('--' + name)
     parser.add_argument('--character-context', choices=['generic'],
                         help='启用作者医生默认策略时仍解析到作者私有形象；未启用时限定为公共通用范围')
@@ -763,7 +811,8 @@ def main():
                            maturity=args.maturity, limit=args.limit,
                            character_role=getattr(args, 'character_role'), pose=args.pose,
                            asset_id=args.id, all_versions=args.all_versions,
-                           character_context=getattr(args, 'character_context', None))
+                           character_context=getattr(args, 'character_context', None),
+                           topic=args.topic, system=args.system, patient_task=args.patient_task)
         elif args.action == 'animation-reference':
             result = animation_reference(workspace, explicit=args.root, text=args.query,
                                          series=args.series, action=args.motion_action,

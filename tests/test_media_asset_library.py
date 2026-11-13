@@ -76,6 +76,41 @@ class MediaCompanionTests(unittest.TestCase):
         self.assertEqual(companion.use(self.workspace,'productions/s/e', self.row['id'])['status'], 'copied_and_verified')
         self.assertEqual(len(local.read(self.workspace/'assets/paper-theatre/uses.json')['uses']), 1)
 
+    def test_catalog_installs_bundled_components_in_a_non_cone_checkout(self):
+        component='payloads/paper-theatre/small_component/v1/runtime.mjs'
+        (self.repo/component).parent.mkdir(parents=True)
+        (self.repo/component).write_text('export const component = true;')
+        (self.repo/'catalog/media-storage.json').write_text(json.dumps({'profile':'catalog','bundled_source_ids':['small_component']}))
+        subprocess.run(['git','-C',str(self.repo),'add','.'],check=True)
+        subprocess.run(['git','-C',str(self.repo),'-c','user.name=Test','-c','user.email=test@example.invalid','commit','-m','catalog fixture'],check=True,capture_output=True)
+        installed=companion.ensure(self.workspace,repository=str(self.repo))
+        self.assertEqual(installed['installation'],'installed_and_verified')
+        self.assertEqual((self.target/component).read_text(),'export const component = true;')
+        self.assertEqual(installed['storage_profile'],'catalog')
+
+    def test_missing_media_uses_the_companion_cache_contract_and_preserves_project_copy(self):
+        companion.ensure(self.workspace, repository=str(self.repo))
+        (self.target/self.row['payload'][0]['path']).unlink()
+        (self.target/'catalog/media-storage.json').write_text('{"profile":"catalog"}')
+        response={'resolved':{self.row['payload'][0]['path']:str(self.base/'original.png')}}
+        (self.target/'tools/media_store.py').write_text('import json;print('+repr(json.dumps(response))+')')
+        (self.workspace/'workbench.yaml').write_text('asset_library:\n  root: '+str(self.target)+'\n  offline: true\n')
+        imported=companion.use(self.workspace,'productions/s/e',self.row['id'])
+        self.assertEqual(imported['status'],'copied_and_verified')
+        self.assertEqual(Path(imported['entry']).read_bytes(),b'actual paper bytes')
+        (self.base/'original.png').unlink()
+        self.assertEqual(Path(imported['entry']).read_bytes(),b'actual paper bytes')
+
+    def test_missing_media_fetch_failure_and_timeout_return_consumable_diagnostics(self):
+        companion.ensure(self.workspace, repository=str(self.repo))
+        (self.target/self.row['payload'][0]['path']).unlink()
+        (self.target/'tools/media_store.py').write_text('import json;print(json.dumps({"status":"diagnostic","error":"offline missing"}));raise SystemExit(2)')
+        self.assertEqual(companion.use(self.workspace,'productions/s/e',self.row['id'])['status'],'not_imported')
+        with patch.object(companion.subprocess,'run',side_effect=subprocess.TimeoutExpired('media fetch',240)):
+            failed=companion.use(self.workspace,'productions/s/e',self.row['id'])
+        self.assertEqual(failed['status'],'not_imported')
+        self.assertTrue(failed['quality_debt'])
+
     def test_central_curation_blocks_stale_catalog_exact_and_collection_imports(self):
         companion.ensure(self.workspace, repository=str(self.repo))
         (self.target / 'collections/curation.json').write_text(json.dumps({'assets': {

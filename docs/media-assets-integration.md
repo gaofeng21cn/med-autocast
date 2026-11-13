@@ -4,9 +4,9 @@
 
 ## 安装与发现
 
-标准安装 `opl packages install med-autocast --json` 由 OPL Framework 解析 required 依赖，先自动安装公开的 `mac-media-assets`，再安装 MAC；更新同样使用 Framework 的软件包入口。用户只执行一次 MAC 安装，不必单独安装素材 Skill 或手动克隆。资产库作为独立 headless 能力包，媒体与入口可由 MAC 调用，不占用普通对话的 Skill 入口。分发通过各自的 OCI 软件包，来源及版权证据随素材保存。
+标准安装 `opl packages install med-autocast --json` 由 OPL Framework 解析 required 依赖，先自动安装公开的 `mac-media-assets` 轻量目录包，再安装 MAC；更新同样使用 Framework 的软件包入口。用户只执行一次 MAC 安装，不必单独安装素材 Skill 或手动克隆。资产库作为独立 headless 能力包，媒体与入口可由 MAC 调用，不占用普通对话的 Skill 入口。分发通过各自的 OCI 软件包，来源及版权证据随素材保存。
 
-Full 安装器不再内置约 1.45 GB 的媒体库。App 核心就绪后沿现有 Official Profile required 依赖后台安装；不阻塞 App 导航。MAC 每次开始或恢复实际制作时运行 `python3 runtime/native_helpers/med_autocast.py prepare --workspace <目录>`，检查已安装库，缺失才安装并回读路径。单独 inspect/query 继续只读，用户停用自动下载的设置有效。
+所有 MAC 标准安装入口默认依赖轻量素材包；OPL App Full 也内置经内容锁校验的小核心。旧发行尚未携带小核心时，App 沿现有 Official Profile required 依赖补齐。同一素材库在软件中心提供“安装离线完整版”，用户主动选择后安装全部登记媒体；不另建产品条目。MAC 每次开始或恢复实际制作时运行 `python3 runtime/native_helpers/med_autocast.py prepare --workspace <目录>`，检查已安装库，缺失才安装并回读路径。单独 inspect/query 继续只读，用户停用自动下载的设置有效。
 
 首次准备工作台使用 `bash runtime/workbench/scripts/setup_workbench.sh --workspace <目录>`。它调用 `media_asset_library ensure`，优先发现已安装的资产库；已有配置或兄弟目录仍可复用。缺失时优先通过 `opl packages install mac-media-assets --json` 交给 Framework 安装、配置并重新发现；不能只凭命令退出成功声明库可用。没有 Framework 的独立插件环境保留既有公开 GitHub 获取与校验路径。Framework 失败或超时只返回诊断，不再另起 Git 克隆重试。已有库不隐式 fetch、reset 或覆盖；部分目录有内容时保留并诊断。直接使用原生 Codex 插件安装入口不会运行工作台 shell，也不会替代 Framework 的依赖安装入口。
 
@@ -15,6 +15,10 @@ Full 安装器不再内置约 1.45 GB 的媒体库。App 核心就绪后沿现�
 `workbench.yaml.asset_library.root` 是已有工作区的路径权威。没有可用默认路径时查找 `MAC_MEDIA_ASSETS_ROOT`、共享 companion 目录、OPL headless 原生载体及已安装 Skill/插件；`CODEX_HOME`、`OPL_COMPANION_SOURCES_ROOT` 可指定宿主位置。自动创建的相对默认值不覆盖用户配置。`asset_library.enabled: false` 停用发现，`auto_install: false` 停用自动下载；手工已有库仍可只读使用。
 
 ## 制作的真实工具
+
+新版库提供轻量目录与按需媒体，检索仍离线且只读；查询的 `storage.fetch_required` 表示所选原件尚未获取。`use` 才调用库内 `media_store fetch`，逐文件校验后沿原有 archive/reuse 复制。相同哈希共享缓存，项目副本独立。`asset_library` 可配置 `cache_root`、`cache_limit_bytes`、`auto_fetch` 和 `offline`；已有路径与作者设置不改写。独立获取优先部分克隆和稀疏检出元数据，旧完整库继续使用。发布与缓存细节由素材库的 `docs/media-storage.md` 持有。
+
+新版查询还可组合 `--system <医学系统>`、`--topic <主题>`、`--patient-task <患者任务>`。未下载媒体不能宣称已经看过；先按所选精确版本取用或预取，再看真实原件和动作。
 
 ```sh
 python3 runtime/native_helpers/workbench_tool.py --workspace <目录> --name media_asset_library -- status

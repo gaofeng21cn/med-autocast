@@ -18,7 +18,7 @@ description: 使用 Med Auto Cast 规划、制作、修订和审查医学科普�
 首次准备本地环境由智能体按`docs/installation.md`调用随包 `runtime/workbench/scripts/setup_workbench.sh --workspace <新目录>`；先检查已有工作区，不能覆盖其专用实现。环境就绪、作者基线、真实语音/成片验收分开；可选模型不阻断核心安装。
 
 1. 以 `workspace_root` 定位制作工作台，读取 `workbench.yaml`、`workspace.manifest.json`（若存在）、`WORKSPACE.md`（若存在）、`runtime/workbench/docs/17_工作台目录结构与资产生命周期.md` 与当前选集制作单。用仓库的 `runtime/native_helpers/med_autocast.py inspect --workspace <绝对路径>` 只读检查可用路径和 `workspace_layout`；缺少布局标记时可调用 `init_workbench.py --upgrade` 或工作区 `setup_workbench.sh` 增量修复，不把它当成内容或质量硬门；不要把当前 cwd 当作制作工作区。
-2. 开始或恢复实际制作任务时，先运行 `python3 runtime/native_helpers/med_autocast.py prepare --workspace <绝对路径>`：检查外挂素材库，缺失时由 Framework 安装并回读可用路径；已有库、用户停用或自定义内容保持原样。Full 安装包不内置素材库，首次启动后台安装后仍可能需要这次补齐。单独只读检查使用 inspect，不触发 prepare。离线或安装失败保留诊断，继续可执行的制作。
+2. 开始或恢复实际制作任务时，先运行 `python3 runtime/native_helpers/med_autocast.py prepare --workspace <绝对路径>`：检查外挂素材库，缺失时由 Framework 安装并回读可用路径；已有库、用户停用或自定义内容保持原样。所有 MAC 安装默认依赖轻量素材包，Full 同样集成小核心；已有旧安装仍可能需要这次补齐。单独只读检查使用 inspect，不触发 prepare。离线或安装失败保留诊断，继续可执行的制作。
 3. 新作者或新系列先由 `medical-video-series-producer` 核对作者表达基线、系列登记与完整样片依据；执行原 `workbench_config validate --series`。选题与证据交 `agent/professional_skills/medical-video-content-planner/SKILL.md`；故事、画面解释与时间轴交 `medical-video-director`；真实媒体缺口交 `medical-video-backends`。具体路径见 `agent/stages/manifest.json`。
 4. S07/S08 由导演、后端与 `medical-video-release-packager` 共同完成配音、字幕、选段、品牌、混音和合成；具体工具见 `docs/workspace-adapter.md`。成片和候选交 `medical-video-visual-qa`，交付交 `medical-video-release-packager`，跨阶段恢复与资产沉淀交 `medical-video-series-producer`，均位于 `agent/professional_skills/`。
 4. 先复用已审资产和未变音轨。精简恢复原任务，保留单一 writer。每项通过状态必须对应真实证据；技术、静态、连续动态、完整听感、医学与上传分开。交付到 publish 表示审看入口，不能据此宣称已上传或可公开发布。
@@ -95,7 +95,7 @@ Stage 返回尽量引用真实产物与版本/来源信息，给出质量债务�
 
 导演稿前先看 `media_asset_library character-coverage`，用 `query --character-role <角色> --pose <姿态>` 找到并实际查看完整人物。缺姿态先补同一母版，按当前尺寸与器械/椅面做代表动作；`use` 后回读本集manifest与 `registration_readback`。管理链的字段、版本与复制证据不代替真实接触和连续动态，细节见人物与尺度契约。
 
-标准 `opl packages install med-autocast --json` 通过 Framework required 依赖自动安装公开的 `mac-media-assets`，用户只需一次安装。Full 不内置媒体库；首次启动沿 Framework required 依赖安装。开始/恢复制作时运行 `med_autocast.py prepare` 再检查、安装和发现。首次准备工作台时 `setup_workbench.sh` 调用 `media_asset_library ensure` 优先发现已安装库，已有内容不覆盖，离线或没有合适素材时继续其他工作与新创。插件安装与工作台运行环境准备分开，首次工作台仍使用随包 setup。路径发现与真实取用见 `docs/media-assets-integration.md`。制作时先用外挂仓库的只读查询发现纸片、环境板、动作组件和 BGM 分轨，再回到当前工作区登记实际复用版本。MAC 可直接调用：
+标准 `opl packages install med-autocast --json` 通过 Framework required 依赖自动安装公开的 `mac-media-assets`，用户只需一次安装。默认安装轻量素材包，Full 也集成这份小核心；用户可在软件中心为同一素材库选择“安装离线完整版”。开始/恢复制作时运行 `med_autocast.py prepare` 再检查、安装和发现。首次准备工作台时 `setup_workbench.sh` 调用 `media_asset_library ensure` 优先发现已安装库，已有内容不覆盖，离线或没有合适素材时继续其他工作与新创。插件安装与工作台运行环境准备分开，首次工作台仍使用随包 setup。路径发现与真实取用见 `docs/media-assets-integration.md`。制作时先用外挂仓库的只读查询发现纸片、环境板、动作组件和 BGM 分轨，再回到当前工作区登记实际复用版本。MAC 可直接调用：
 
 ```sh
 python3 runtime/native_helpers/med_autocast.py assets --workspace <workspace> --library external --query 纸景

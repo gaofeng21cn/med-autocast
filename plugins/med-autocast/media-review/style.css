@@ -39,10 +39,12 @@ h1 { margin: 0; font-size: var(--dsw-font-s-14-font-size); overflow-wrap: anywhe
 .badge { display: inline-flex; align-items: center; min-height: 24px; border-radius: var(--dsw-radius-md); padding: 2px 9px; color: var(--accent); background: var(--accent-soft); font-size: var(--dsw-font-xxs-12-font-size); font-weight: var(--dsw-font-s-strong-14-font-weight); white-space: nowrap; }
 .badge.warning { color: var(--warning); background: var(--dsw-alias-interactive-bg-hover); }
 .badge.danger { color: var(--danger); background: var(--dsw-alias-interactive-bg-hover); }
-.workspace { min-height: 0; display: grid; grid-template-columns: minmax(210px, 250px) minmax(0, 1fr) minmax(280px, 360px); }
+.workspace { min-width: 0; min-height: 0; display: grid; grid-template-columns: minmax(210px, 250px) minmax(0, 1fr) minmax(280px, 360px); }
 .rail, .review-rail { min-width: 0; overflow: auto; padding: 20px; background: var(--canvas); }
 .rail { border-right: 1px solid var(--line); }
-.review-rail { border-left: 1px solid var(--line); }
+.review-rail { grid-template-columns: minmax(0, 1fr); border-left: 1px solid var(--line); overflow-x: hidden; }
+.review-rail > *, .review-rail .note-list, .review-rail .note-form, .review-rail .field, .review-rail .note { min-width: 0; }
+.review-rail small { overflow-wrap: anywhere; word-break: break-word; }
 .rail h2, .review-rail h2, .stage h2 { margin: 0; font-size: var(--dsw-font-s-14-font-size); }
 .rail-section { display: grid; gap: 10px; margin-bottom: 24px; }
 .field { display: grid; gap: 6px; color: var(--muted); font-size: var(--dsw-font-xxs-12-font-size); }
@@ -55,6 +57,7 @@ select, textarea { width: 100%; }
 .episode-button small { margin-top: 4px; color: var(--muted); line-height: var(--dsw-font-s-14-line-height); }
 .stage { min-width: 0; min-height: 0; overflow: auto; padding: clamp(22px, 3vw, 38px); background: var(--surface); }
 .stage-header { display: flex; align-items: flex-start; justify-content: space-between; gap: 14px; margin-bottom: 18px; }
+.stage-header > div { min-width: 0; }
 .stage-header p { max-width: 70ch; margin: 7px 0 0; color: var(--muted); line-height: var(--dsw-font-s-14-line-height); overflow-wrap: anywhere; }
 .media-frame { display: grid; place-items: center; min-height: min(52vh, 520px); border: 1px solid var(--line); border-radius: var(--radius); background: var(--media-surface); color: var(--text); }
 .media-placeholder { display: grid; gap: 12px; max-width: 44ch; padding: 34px; text-align: center; }

@@ -241,12 +241,14 @@ def current_curation(root):
                 external[source_root] = source["assets"]
             except (OSError, ValueError):
                 external[source_root] = None
-        latest = external[source_root].get(identifier, decision) if external[source_root] is not None else None
+        original_id=decision.get('external_asset_id',identifier)
+        latest = external[source_root].get(original_id, decision) if external[source_root] is not None else None
         if not isinstance(latest, dict) or not isinstance(latest.get("review_boundary", {}), dict):
             # Only this cached source becomes unavailable; unrelated local assets remain usable.
             latest = {"status": "needs_rebuild", "reason": "无法读取外库当前策展决定，恢复库后重新取用",
                       "review_boundary": {"motion": "pending", "static": "pending"}}
-        decisions[identifier] = {**latest, "external_library_root": source_root}
+        decisions[identifier] = {**latest, "external_library_root": source_root,
+                                **({'external_asset_id':original_id} if original_id!=identifier else {})}
     return decisions
 
 
@@ -463,7 +465,7 @@ def board(root, records):
             preview = html.escape(str((package / sample).relative_to(root)))
             poster_attr = f' poster="{html.escape(str((package / poster).relative_to(root)))}"' if poster else ""
             media = f'<video controls muted playsinline preload="none"{poster_attr} src="{preview}"></video>'
-        elif path.suffix.lower() in {".wav", ".mp3", ".flac", ".ogg"}:
+        elif path.suffix.lower() in {".wav", ".mp3", ".flac", ".m4a", ".ogg"}:
             media = f'<audio controls preload="none" src="{html.escape(source)}"></audio>'
         elif poster:
             media = f'<div class="image"><img loading="lazy" src="{html.escape(str((package / poster).relative_to(root)))}" alt=""></div>'

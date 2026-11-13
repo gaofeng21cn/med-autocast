@@ -57,6 +57,41 @@ class MediaCompanionTests(unittest.TestCase):
         local.write(self.project/'project.json', {'series_id':'s','episode_id':'e'})
         local.write(self.project/'asset_manifest.json', {'assets':[]})
 
+    def test_complete_encoded_install_is_discovered_and_old_selection_resolves_to_its_new_record(self):
+        import hashlib
+        companion.ensure(self.workspace,repository=str(self.repo))
+        cache=self.base/'cache';full=cache/'offline/versions/encoded'
+        shutil.copytree(self.target,full)
+        compressed=self.base/'compressed.webp';compressed.write_bytes(b'encoded compressed media')
+        encoded=local.archive(full,{'id':'paper','kind':'image','entry':'files/paper.webp','reuse_scope':{'kind':'general'},
+            'asset':{'asset_id':'paper','path':'files/paper.webp','medical':True},'delivery':{'source_asset_id':self.row['id']}},
+            [{'source':str(compressed),'path':'files/paper.webp'}])
+        record=local.read(full/encoded['record'])
+        row={**self.row,'id':'paper:paper@'+record['revision'],'revision':record['revision'],'portable_record':encoded['record'],
+            'delivery':{'source_asset_id':self.row['id']},
+            'payload':[{**record['files'][0],'path':str(Path(encoded['record']).parent/'files/paper.webp')} ]}
+        (full/'catalog/assets.jsonl').write_text(json.dumps(row)+'\n')
+        local.write(full/'catalog/delivery-report.json',{'aliases':{self.row['id']:row['id']}})
+        local.write(full/'offline-installation.json',{'source_catalog_sha256':hashlib.sha256((self.target/'catalog/assets.jsonl').read_bytes()).hexdigest(),'core_content_digest':None})
+        local.write(cache/'offline/current.json',{'directory':'versions/encoded'})
+        (self.workspace/'workbench.yaml').write_text('asset_library:\n  root: '+str(self.target)+'\n  cache_root: '+str(cache)+'\n')
+        self.assertEqual(companion.report(self.workspace)['repo'],str(full.resolve()))
+        self.assertEqual(companion.query(self.workspace)['assets'][0]['id'],row['id'])
+        used=companion.use(self.workspace,'productions/s/e',self.row['id'])
+        self.assertEqual(used['status'],'copied_and_verified')
+        self.assertTrue(used['entry'].endswith('.webp'))
+        self.assertEqual(Path(used['entry']).read_bytes(),compressed.read_bytes())
+        self.assertEqual(local.read(self.project/'asset_manifest.json')['assets'][0]['visual_review']['status'],'pending')
+        # A source withdrawal also revokes reuse of its encoded copy.
+        local.write(full/'offline-installation.json',{'source_library_root':str(self.target),
+            'source_catalog_sha256':hashlib.sha256((self.target/'catalog/assets.jsonl').read_bytes()).hexdigest(),'core_content_digest':None})
+        local.write(self.target/'collections/curation.json',{'assets':{self.row['id']:{'status':'needs_rebuild','reason':'opaque source'}}})
+        refused=companion.use(self.workspace,'productions/s/e',self.row['id'])
+        self.assertEqual(refused['status'],'not_imported')
+        # The independent project copy remains available for repair; it is not overwritten.
+        self.assertEqual(Path(used['entry']).read_bytes(),compressed.read_bytes())
+
+
     def test_real_install_reuse_copy_review_and_idempotence(self):
         installed = companion.ensure(self.workspace, repository=str(self.repo))
         self.assertEqual(installed['installation'], 'installed_and_verified')

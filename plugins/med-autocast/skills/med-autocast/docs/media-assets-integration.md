@@ -55,3 +55,5 @@ python3 runtime/native_helpers/workbench_tool.py --workspace <目录> --name med
 外挂库的 `collections/curation.json` 覆盖目录和原包的历史审核声明。查询、精确 ID 导入和组合取用均应用当前决定；`needs_rebuild` / `superseded` 不可导入，损坏的策展记录不静默回退。
 
 导入保留原记录与原载荷，并在 `external-source.json` 保存 `effective_review_boundary`、当次策展和当前镜头 pending。本地缓存保存精确版本注解及外库来源根；直接重用时重新读取中央决定，防止导入后被撤回的包继续从缓存进入新项目。旧工程保持原版本，后续修订按受影响范围重新审查。
+
+完整离线安装可保存直接使用的WebP/AAC/FLAC与去重媒体。`status/query/use` 发现与当前核心索引、内容锁匹配的离线安装后使用其压缩版本；旧ID按来源映射到新revision，保留独立扩展名、哈希、坐标和当前镜头待审状态。项目复制仍独立，缓存清理不删除项目文件。

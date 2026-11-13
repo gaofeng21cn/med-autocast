@@ -120,8 +120,29 @@ def locate(workspace, explicit=None):
 
 def report(workspace, explicit=None):
     root, source = locate(workspace, explicit)
+    core_root = root
+    # Prefer the complete encoded data installation when it belongs to this
+    # exact core catalog. No download or cache mutation during discovery.
+    if root and valid(root):
+        spec = config(workspace).get('asset_library') or {}
+        cache = Path(spec.get('cache_root') or os.environ.get('MAC_MEDIA_CACHE') or Path.home()/'.cache/mac-media-assets').expanduser().resolve()
+        pointer = cache/'offline/current.json'
+        if pointer.is_file():
+            from _opl_file_hash import sha256_file
+            selected = json.loads(pointer.read_text())
+            full = (cache/'offline'/selected['directory']).resolve()
+            if not full.is_relative_to(cache/'offline/versions'):
+                raise ValueError('离线安装目录越界')
+            marker = full/'offline-installation.json'
+            if marker.is_file() and valid(full):
+                receipt = json.loads(marker.read_text())
+                descriptor = root/'opl-package.json'
+                core_digest = json.loads(descriptor.read_text()).get('content_lock', {}).get('digest') if descriptor.is_file() else None
+                if receipt.get('source_catalog_sha256') == sha256_file(root/'catalog/assets.jsonl') and receipt.get('core_content_digest') == core_digest:
+                    root, source = full, 'complete_offline_installation'
     result = {'schema': 'mac_media_assets_status/v1', 'read_only': True, 'status': 'unavailable',
               'repo': str(root) if root else None, 'discovery': source,
+              'core_repo': str(core_root) if core_root else None,
               'repository': REPOSITORY, 'blocks_production': False, 'note': NOTE}
     if root is None:
         result['status'] = 'disabled'
@@ -608,10 +629,23 @@ def effective_asset_row(root, row):
     if not isinstance(curation, dict) or not isinstance(curation.get('assets'), dict):
         raise ValueError('策展登记不可读，不能判断该版本是否已撤回')
     decision = curation['assets'].get(row['id'], row.get('curation', {}))
+    marker=root/'offline-installation.json'
+    original_id=row.get('delivery', {}).get('source_asset_id')
+    if marker.is_file() and original_id:
+        origin=json.loads(marker.read_text()).get('source_library_root')
+        if origin:
+            current=json.loads((Path(origin)/'collections/curation.json').read_text()).get('assets')
+            if not isinstance(current,dict):raise ValueError('来源策展登记不可读')
+            if original_id in current:
+                decision={**decision,**{key:current[original_id][key] for key in ('status','reason','review_boundary') if key in current[original_id]}}
     if not isinstance(decision, dict) or not isinstance(decision.get('review_boundary', {}), dict):
         raise ValueError('策展决定必须是对象')
-    return {**row, 'curation': decision,
-            'review_boundary': {**row.get('review_boundary', {}), **decision.get('review_boundary', {})}}
+    boundary={**row.get('review_boundary', {}), **decision.get('review_boundary', {})}
+    if row.get('delivery',{}).get('encoding_review')=='pending':
+        boundary['encoding']='pending'
+        for field in ('static','motion','listening'):
+            if boundary.get(field) not in (None,'not_applicable'):boundary[field]='pending'
+    return {**row, 'curation': decision, 'review_boundary': boundary}
 
 
 def use(workspace, project, identifier, explicit=None, asset_id=None):
@@ -644,6 +678,11 @@ def use(workspace, project, identifier, explicit=None, asset_id=None):
     if reference_catalog.is_file():
         rows.extend(json.loads(line) for line in reference_catalog.read_text().splitlines() if line.strip())
     row = next((item for item in rows if item['id'] == identifier), None)
+    if row is None and (root/'catalog/delivery-report.json').is_file():
+        alias = json.loads((root/'catalog/delivery-report.json').read_text()).get('aliases', {}).get(identifier)
+        row = next((item for item in rows if item['id'] == alias), None)
+        if row:
+            identifier = row['id']
     if not row:
         return {**result, 'quality_debt': ['未找到所选精确资产 ID，可重新检索或新创']}
     original_review_boundary = row.get('review_boundary')
@@ -715,6 +754,10 @@ def use(workspace, project, identifier, explicit=None, asset_id=None):
     decision = {**row.get('curation', {}), 'review_boundary': row.get('review_boundary', {})}
     if (root / 'collections/curation.json').is_file():
         decision['external_library_root'] = str(root)
+    if row.get('delivery', {}).get('source_asset_id') and (root/'offline-installation.json').is_file():
+        origin=read(root/'offline-installation.json').get('source_library_root')
+        if origin:
+            decision.update(external_library_root=origin,external_asset_id=row['delivery']['source_asset_id'])
     from animation_library import save_curation
     save_curation(local, identifier, decision)
     imported = reuse(workspace, local, project, record['id'], record['revision'], asset_id)

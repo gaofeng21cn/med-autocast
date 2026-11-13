@@ -36,6 +36,12 @@ JSON
 
 MCP 请求由 Framework 处理确认与工作区身份；业务意见、媒体与专业审查仍由 MAC 工作区保管。
 
+独立媒体审看未收到已验证的 profile 环境时，从 `opl workspace list --json` 读取 Med Auto Cast 的当前工作区，
+通过公开 `opl app contribution read/execute` 调用原领域入口。显式 `workspace_path` 每次由 Framework
+核对登记和目录状态；未登记时提示接入，不猜测源码目录。页面显示当前工作区，并在切换单集、
+刷新、记录意见和恢复最近位置时保留这一引用。没有第二份工作区注册表。
+
+
 制作工作区持有 workbench.yaml、作者/后端档案、系列、媒体、制作单和审核记录；Med Auto Cast 随包提供完整专业方法、模板及通用工作台工具。先按系列解析作者覆盖，再继承活动作者；设备、模型、字体和凭据来源由工作区配置决定。
 
 主入口中的路径相对已加载的 Skill 根。以下以该根为当前目录，`/absolute/workspace` 替换为制作工作区；Python 选用该工作区核心环境，VoxCPM2、Whisper 和视频模型使用各自登记环境。

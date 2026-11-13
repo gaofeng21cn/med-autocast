@@ -39,3 +39,38 @@ test('real stdio launcher forwards navigation input to the Python owner', { time
     assert.match(missing.content[0].text, /所选系列未登记/);
   } finally { await client.close(); await rm(profile, { recursive: true, force: true }); }
 });
+
+test('standalone launcher selects the active Framework workspace and preserves explicit focus', async () => {
+  const { resolveMediaFocus } = await import('../server.mjs');
+  const calls = [];
+  const run = async (...args) => {
+    calls.push(args);
+    return { workspace_catalog: { projects: [
+      { project: 'unrelated', active_binding: { status: 'active', workspace_path: '/other' } },
+      { project: 'med-autocast', active_binding: { status: 'active', workspace_path: '/production' } },
+    ] } };
+  };
+  assert.deepEqual(await resolveMediaFocus({ series_id: 'series' }, {}, run), { workspace_path: '/production', series_id: 'series' });
+  assert.deepEqual(calls[0].slice(0, 2), ['opl', ['workspace', 'list', '--json']]);
+  assert.deepEqual(await resolveMediaFocus({ workspace_path: '/selected', episode_id: 'ep2' }, {}, run), { workspace_path: '/selected', episode_id: 'ep2' });
+  assert.equal(calls.length, 1, 'explicit navigation must not follow a changed active workspace');
+  await assert.rejects(resolveMediaFocus({}, {}, async () => ({ workspace_catalog: { projects: [] } })), /登记制作工作区/);
+});
+
+test('standalone reads and notes use the authoritative contribution broker with the exact workspace', async () => {
+  const { invoke } = await import('../server.mjs');
+  const focus = { workspace_path: '/production', series_id: 'series', episode_id: 'ep2' };
+  const calls = [];
+  const data = { state: 'ready', data: { items: [{ episode_id: 'ep2' }] } };
+  const run = async (...args) => { calls.push(args); return { opl_app_contribution: { response: { result: data } } }; };
+  assert.deepEqual(await invoke('media', focus, { OPL_BIN: '/framework/bin/opl' }, run), data);
+  assert.deepEqual(calls[0].slice(0, 3), ['/framework/bin/opl', [
+    'app', 'contribution', 'read', '--package-id', 'med-autocast', '--ref', 'med-autocast.workspace.v1#media', '--input-stdin', '--json',
+  ], focus]);
+  const note = { ...focus, revision: 'sha256:current', request_id: 'review-1', note: 'Check framing' };
+  await invoke('note', note, {}, run);
+  assert.equal(calls[1][1][2], 'execute');
+  assert.ok(calls[1][1].includes('--confirm'));
+  assert.deepEqual(calls[1][2], note);
+  await assert.rejects(invoke('media', focus, {}, async () => ({ opl_app_contribution: { response: { result: { state: 'unavailable', reason: 'Workspace was archived' } } } })), /Workspace was archived/);
+});

@@ -15,6 +15,7 @@ function localize(value, fallback = '') {
   const labels = record(value);
   return labels['zh-CN'] || labels.zh || labels.en || labels['en-US'] || fallback;
 }
+function workspaceFocus() { return state.input.workspace_path ? { workspace_path: state.input.workspace_path } : {}; }
 function selectedItem() {
   const data = record(state.payload?.data?.data);
   const items = Array.isArray(data.items) ? data.items.filter(item => item && typeof item === 'object') : [];
@@ -73,7 +74,7 @@ function render() {
   const currentArtifactHref = artifactHref(item, shot);
   const shotButtons = shots.map(entry => `<button class="shot-button" type="button" data-shot="${escape(entry.id)}" aria-pressed="${entry.id === shot?.id ? 'true' : 'false'}" style="--weight:${Math.max(.5, Number(entry.end) - Number(entry.start) || 1)}"><strong>${escape(entry.title || entry.id)}</strong><small>${escape(formatTime(entry.start))}–${escape(formatTime(entry.end))}</small></button>`).join('');
   root.innerHTML = `<header class="topbar">
-    <div class="topbar-copy"><div class="family-heading"><h1>媒体审看</h1><span class="family-label">OPL Apps · Med Auto Cast</span></div><div class="topbar-meta"><span>${escape(item.title || `${item.series_id} · ${item.episode_id}`)}</span><span class="badge">${escape(item.status || 'ready')}</span><span class="badge ${item.media ? '' : 'warning'}">${item.media ? '当前候选' : '尚无成片'}</span></div></div>
+    <div class="topbar-copy"><div class="family-heading"><h1>媒体审看</h1><span class="family-label">OPL Apps · Med Auto Cast</span></div><div class="topbar-meta">${state.input.workspace_path ? `<span title="${escape(state.input.workspace_path)}">工作区：${escape(state.input.workspace_path.split(/[\\/]/).filter(Boolean).at(-1))}</span>` : ''}<span>${escape(item.title || `${item.series_id} · ${item.episode_id}`)}</span><span class="badge">${escape(item.status || 'ready')}</span><span class="badge ${item.media ? '' : 'warning'}">${item.media ? '当前候选' : '尚无成片'}</span></div></div>
     <div class="topbar-actions"><button class="button quiet" type="button" data-fullscreen>展开</button><button class="button" type="button" data-refresh>刷新</button></div>
   </header>
   <div class="workspace">
@@ -91,12 +92,12 @@ function render() {
   </div>`;
   root.querySelector('[data-refresh]')?.addEventListener('click', () => void refresh());
   root.querySelector('[data-fullscreen]')?.addEventListener('click', () => void app.requestDisplayMode({ mode: app.getHostContext()?.displayMode === 'fullscreen' ? 'inline' : 'fullscreen' }).catch(() => {}));
-  root.querySelectorAll('[data-episode]').forEach(button => button.addEventListener('click', () => { state.selectedId = button.dataset.episode; state.selectedShotId = ''; state.input = { series_id: item.series_id, episode_id: item.episode_id }; render(); }));
-  root.querySelector('[data-series]')?.addEventListener('change', event => { state.input = { series_id: event.target.value }; void refresh(); });
+  root.querySelectorAll('[data-episode]').forEach(button => button.addEventListener('click', () => { state.selectedId = button.dataset.episode; state.selectedShotId = ''; const next = selectedItem(); state.input = { ...workspaceFocus(), series_id: next.series_id, episode_id: next.episode_id }; render(); }));
+  root.querySelector('[data-series]')?.addEventListener('change', event => { state.input = { ...workspaceFocus(), series_id: event.target.value }; void refresh(); });
   root.querySelectorAll('[data-shot]').forEach(button => button.addEventListener('click', () => { state.selectedShotId = button.dataset.shot; render(); }));
   root.querySelector('#note')?.addEventListener('input', event => { state.note = event.target.value; });
   root.querySelector('.note-form')?.addEventListener('submit', event => { event.preventDefault(); void recordNote(item, shot); });
-  app.updateModelContext({ content: [{ type: 'text', text: `正在审看 ${item.title || item.id}${shot ? `，镜头 ${shot.id}` : ''}` }], structuredContent: { navigation: { series_id: item.series_id, episode_id: item.episode_id, ...(shot ? { shot_id: shot.id } : {}) }, series_id: item.series_id, episode_id: item.episode_id, revision: item.revision, shot: shot || null } }).catch(() => {});
+  app.updateModelContext({ content: [{ type: 'text', text: `正在审看 ${item.title || item.id}${shot ? `，镜头 ${shot.id}` : ''}` }], structuredContent: { navigation: { ...workspaceFocus(), series_id: item.series_id, episode_id: item.episode_id, ...(shot ? { shot_id: shot.id } : {}) }, series_id: item.series_id, episode_id: item.episode_id, revision: item.revision, shot: shot || null } }).catch(() => {});
 }
 async function refresh() {
   state.error = '';
@@ -105,9 +106,10 @@ async function refresh() {
     const result = await call('open_media_review', state.input);
     const payload = record(result);
     state.payload = payload;
+    state.input = record(payload.focus);
     if (state.input.shot_id) state.selectedShotId = state.input.shot_id;
     const item = selectedItem();
-    if (item) { state.selectedId = `${item.series_id}/${item.episode_id}`; state.input = { series_id: item.series_id, episode_id: item.episode_id }; }
+    if (item) { state.selectedId = `${item.series_id}/${item.episode_id}`; state.input = { ...workspaceFocus(), series_id: item.series_id, episode_id: item.episode_id }; }
     render();
   } catch (error) { state.error = error?.message || '读取失败'; render(); }
 }
@@ -116,7 +118,7 @@ async function recordNote(item, shot) {
   if (!note || state.busy) return;
   state.busy = true; render();
   try {
-    await call('media_review_note', { series_id: item.series_id, episode_id: item.episode_id, shot_id: shot?.id, revision: item.revision, request_id: crypto.randomUUID(), note });
+    await call('media_review_note', { ...workspaceFocus(), series_id: item.series_id, episode_id: item.episode_id, shot_id: shot?.id, revision: item.revision, request_id: crypto.randomUUID(), note });
     state.note = '';
     await refresh();
   } catch (error) { state.busy = false; state.error = error?.message || '意见未记录'; render(); }

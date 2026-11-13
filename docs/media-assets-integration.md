@@ -6,7 +6,9 @@
 
 标准安装 `opl packages install med-autocast --json` 由 OPL Framework 解析 required 依赖，先自动安装公开的 `mac-media-assets`，再安装 MAC；更新同样使用 Framework 的软件包入口。用户只执行一次 MAC 安装，不必单独安装素材 Skill 或手动克隆。资产库作为独立 headless 能力包，媒体与入口可由 MAC 调用，不占用普通对话的 Skill 入口。分发通过各自的 OCI 软件包，来源及版权证据随素材保存。
 
-首次准备工作台使用 `bash runtime/workbench/scripts/setup_workbench.sh --workspace <目录>`。它调用 `media_asset_library ensure`，优先发现已安装的资产库；已有配置或兄弟目录仍可复用。缺失才从公开 GitHub 仓库获取并校验。已有库不隐式 fetch、reset 或覆盖；部分目录有内容时保留并诊断。直接使用原生 Codex 插件安装入口不会运行工作台 shell，也不会替代 Framework 的依赖安装入口。
+Full 安装器不再内置约 1.45 GB 的媒体库。App 核心就绪后沿现有 Official Profile required 依赖后台安装；不阻塞 App 导航。MAC 每次开始或恢复实际制作时运行 `python3 runtime/native_helpers/med_autocast.py prepare --workspace <目录>`，检查已安装库，缺失才安装并回读路径。单独 inspect/query 继续只读，用户停用自动下载的设置有效。
+
+首次准备工作台使用 `bash runtime/workbench/scripts/setup_workbench.sh --workspace <目录>`。它调用 `media_asset_library ensure`，优先发现已安装的资产库；已有配置或兄弟目录仍可复用。缺失时优先通过 `opl packages install mac-media-assets --json` 交给 Framework 安装、配置并重新发现；不能只凭命令退出成功声明库可用。没有 Framework 的独立插件环境保留既有公开 GitHub 获取与校验路径。Framework 失败或超时只返回诊断，不再另起 Git 克隆重试。已有库不隐式 fetch、reset 或覆盖；部分目录有内容时保留并诊断。直接使用原生 Codex 插件安装入口不会运行工作台 shell，也不会替代 Framework 的依赖安装入口。
 
 安装依赖保证库自动到位；创作阶段仍 Progress First：离线、没有合适元素或素材欠项时可继续其他工作、找合法来源或 ImageGen 新创，不用素材匹配结果阻断故事与制作。已安装的媒体可离线查询和复制。
 

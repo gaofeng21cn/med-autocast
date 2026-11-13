@@ -149,6 +149,22 @@ def ensure(workspace, explicit=None, repository=REPOSITORY, offline=False):
         return {**result, 'installation': 'preserved_existing', 'diagnostic': '配置目录已有内容，未覆盖；请检查资产库路径'}
     if offline or os.environ.get('OPL_COMPANION_DISABLE_REMOTE_INSTALL') == '1':
         return {**result, 'installation': 'not_downloaded', 'diagnostic': '离线模式；继续本地素材或新创'}
+    opl = shutil.which('opl')
+    if repository == REPOSITORY and opl:
+        try:
+            completed = subprocess.run([opl, 'packages', 'install', 'mac-media-assets', '--json'],
+                                       capture_output=True, timeout=600)
+        except (OSError, subprocess.TimeoutExpired):
+            return {**result, 'installation': 'framework_install_unresolved',
+                    'diagnostic': 'Framework 安装未确认完成；下次先检查已安装库，不重复克隆或覆盖'}
+        if completed.returncode:
+            return {**result, 'installation': 'framework_install_failed',
+                    'diagnostic': 'Framework 素材库安装失败；保留现有配置，继续其他制作工作'}
+        installed = report(workspace, explicit)
+        return {**installed, 'read_only': False,
+                'installation': 'installed_via_framework' if installed['status'] == 'available' else 'framework_install_not_discovered',
+                **({} if installed['status'] == 'available' else
+                   {'diagnostic': 'Framework 命令完成，但尚未发现可用素材库；未声明配置成功'})}
     if not shutil.which('git'):
         return {**result, 'installation': 'not_downloaded', 'diagnostic': '缺少 Git；继续本地素材或新创'}
     root.parent.mkdir(parents=True, exist_ok=True)

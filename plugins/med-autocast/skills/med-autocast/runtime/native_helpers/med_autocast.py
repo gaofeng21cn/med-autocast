@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
-"""Read-only Med Auto Cast workspace inspection and deterministic preflight.
+"""Med Auto Cast workspace preparation, read-only inspection and deterministic preflight.
 
-These checks never authorize media quality, medical claims, publication or execution.
+Preparation ensures the external media dependency. Inspection and preflight do not approve media quality, medical claims or publication.
 """
 from __future__ import annotations
 import argparse
@@ -39,6 +39,18 @@ def mapping(path: Path, *, yaml_format: bool = False) -> dict:
     if not isinstance(data, dict):
         raise ContractError(f'期望对象：{path.name}')
     return data
+
+
+def prepare_workspace(root: Path) -> dict:
+    """Ensure the external media dependency before active MAC work, without replacing user data."""
+    config = mapping(local_path(root, 'workbench.yaml'), yaml_format=True)
+    if config.get('schema') != 'medical_video_workbench/v2':
+        raise ContractError('不支持的 workbench schema')
+    sys.path.insert(0, str(Path(__file__).resolve().parents[1] / 'workbench/scripts'))
+    from media_asset_library import ensure
+    return {'schema': 'med_autocast_workspace_preparation/v1', 'read_only': False,
+            'workspace_root': str(root), 'asset_library': ensure(root),
+            'blocks_production': False}
 
 
 def inspect_workspace(root: Path) -> dict:
@@ -274,7 +286,7 @@ def preflight(root: Path, delivery_ref: str, current_ref: str, review_ref: str) 
 def main():
     parser=argparse.ArgumentParser(description=__doc__)
     sub=parser.add_subparsers(dest='command',required=True)
-    for name in ('inspect','project-knowledge-locator','assets','preflight','tools','preflight-workbench'):
+    for name in ('prepare','inspect','project-knowledge-locator','assets','preflight','tools','preflight-workbench'):
         p=sub.add_parser(name);p.add_argument('--workspace',type=Path,required=True)
         if name=='project-knowledge-locator':
             p.add_argument('--series',required=True);p.add_argument('--episode',required=True)
@@ -298,7 +310,8 @@ def main():
     try:
         root=a.workspace.resolve()
         if not root.is_dir():raise ContractError('workspace 必须为现有目录')
-        if a.command=='inspect':result=inspect_workspace(root)
+        if a.command=='prepare':result=prepare_workspace(root)
+        elif a.command=='inspect':result=inspect_workspace(root)
         elif a.command=='project-knowledge-locator':result=project_knowledge_locator(root,a.series,a.episode)
         elif a.command=='assets':
             result = (query_animation_assets(root, a.query, a.kind, a.scope) if a.library == 'animation'

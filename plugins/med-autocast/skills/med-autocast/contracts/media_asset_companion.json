@@ -8,6 +8,10 @@
     "package_installation": "framework_required_dependency_closure",
     "workbench_entrypoint": "runtime/workbench/scripts/setup_workbench.sh",
     "tool": "media_asset_library ensure",
+    "before_active_work": "med_autocast.py prepare --workspace <workspace>",
+    "full_installer_payload": "excluded_install_after_core_ready",
+    "preferred_installer": "opl packages install mac-media-assets --json",
+    "framework_failure_policy": "diagnostic_without_parallel_git_retry",
     "existing_library": "reuse_without_fetch_or_overwrite",
     "access_failure": "diagnostic_then_continue_creative_work",
     "plugin_install_only": "use_framework_package_install_for_automatic_dependency_install"

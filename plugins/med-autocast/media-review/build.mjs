@@ -14,7 +14,7 @@ const ui = await build({
 });
 const script = ui.outputFiles[0].text.replace(/<\/script/gi, '<\\/script');
 const template = await readFile(resolve(root, 'template.html'), 'utf8');
-const css = await readFile(resolve(root, 'style.css'), 'utf8');
+const css = '/*\n' + await readFile(resolve(root, 'DSH-LICENSE.txt'), 'utf8') + '\n*/\n' + await readFile(resolve(root, 'dsh-theme.css'), 'utf8') + '\n' + await readFile(resolve(root, 'style.css'), 'utf8');
 await writeFile(resolve(root, 'index.html'), template
   .replace('/* STYLE */', () => css)
   .replace('/* SCRIPT */', () => script));

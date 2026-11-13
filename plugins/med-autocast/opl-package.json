@@ -101,7 +101,8 @@
       "presentation_mode": "dedicated_app",
       "entry_kind": "product_entry",
       "direct_entry": true,
-      "entry_view_id": "med-autocast.workspace.media"
+      "entry_view_id": "med-autocast.workspace.media",
+      "dedicated_resource_uri": "ui://med-autocast/media-review.html"
     }
   },
   "requires": [

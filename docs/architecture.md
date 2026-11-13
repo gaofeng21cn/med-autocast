@@ -72,3 +72,8 @@ OPL负责运行、阶段状态、生成接口、独立评测、包版本和激�
 原十阶段与六个 OPL 阶段的完整职责对应见 [制作 SOP](../agent/policies/production-policy.md)，实际工具和输入合同见 [工作台接入](workspace-adapter.md)。同一个专业 Skill 可以参与多个阶段；合成由成片打包 Skill 实现，不能只交给后端 Skill。
 
 媒体审看的加载、空态、错误和内容页都保留同一 OPL Apps 家族标题栏。家族标识与“媒体审看”标题同行；颜色、焦点、按钮和深浅主题遵循 App 持有的视觉契约，领域布局继续保留单集、镜头与审看意见的连续操作。
+
+
+### 媒体审看连续导航
+
+Package 声明专用 MCP App resource，供共享概览通过标准 `ui/open-link` 直达。初始 launcher 的选择参数通过 stdin 交给领域 adapter；UI 等待宿主发送结果，避免第二次无参数读取覆盖焦点。当前系列、单集和镜头通过 `structuredContent.navigation` 提供给宿主保存显示位置，重新打开重新校验 owner 当前数据，不恢复未保存意见或重放写操作。

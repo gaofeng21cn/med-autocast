@@ -33,7 +33,7 @@ function supportsUi(server) {
 }
 function invoke(operation, input) {
   return new Promise((resolvePromise, reject) => {
-    execFile('python3', [adapter, operation], { cwd: packageRoot, env: process.env, timeout: 120000, maxBuffer: 32 * 1024 * 1024 }, (error, stdout) => {
+    const child = execFile('python3', [adapter, operation], { cwd: packageRoot, env: process.env, timeout: 120000, maxBuffer: 32 * 1024 * 1024 }, (error, stdout) => {
       try {
         const result = JSON.parse(stdout || '{}');
         if (error || result.ok === false || result.state === 'unavailable') {
@@ -46,6 +46,8 @@ function invoke(operation, input) {
         reject(new Error('Med Auto Cast owner 返回不可解析结果，请重新读取当前工作区。'));
       }
     });
+    child.stdin.on('error', () => {});
+    child.stdin.end(JSON.stringify(input));
   });
 }
 function errorResult(error) {
@@ -55,13 +57,16 @@ function errorResult(error) {
 export function createMcpServer() {
   const server = new McpServer({ name: 'med-autocast-media-review', version: '0.1.1' }, { instructions: 'Use this MiniApp for dense media and shot review. Notes are human review material only; they never approve quality or publish a candidate.' });
   registerAppResource(server, 'Med Auto Cast media review', resourceUri, { _meta: { ui: { prefersBorder: true, csp: { connectDomains: [], resourceDomains: [] } } } }, async () => ({ contents: [{ uri: resourceUri, mimeType: RESOURCE_MIME_TYPE, text: html, _meta: { ui: { prefersBorder: true, csp: { connectDomains: [], resourceDomains: [] } } } }] }));
-  registerAppTool(server, 'open_media_review', { title: '打开 Med Auto Cast 媒体审看', description: '读取登记工作区的当前候选、镜头时码、交付审查和既有意见，并打开媒体审看 UI。只读。', inputSchema, annotations: { readOnlyHint: true, destructiveHint: false, openWorldHint: false }, _meta: { ui: { resourceUri, 'openai/outputTemplate': resourceUri } } }, async input => {
+  registerAppTool(server, 'open_media_review', { title: 'Med Auto Cast · 媒体审看', description: '查看当前视频候选，按镜头定位并记录审看意见。打开后选择单集，再选择要核对的镜头。', inputSchema, annotations: { readOnlyHint: true, destructiveHint: false, openWorldHint: false }, _meta: { ui: { resourceUri, 'openai/outputTemplate': resourceUri } } }, async input => {
     try {
       const focus = inputSchema.parse(input);
       const data = await invoke('media', focus);
       if (supportsUi(server)) return { content: [{ type: 'text', text: 'Med Auto Cast 媒体审看已准备就绪。' }], structuredContent: { data, focus, presentation: { mode: 'mcp-app', resource_uri: resourceUri } } };
       return { content: [{ type: 'text', text: JSON.stringify(data) }], structuredContent: { data, focus, presentation: { mode: 'structured-data' } } };
-    } catch (error) { return errorResult(error); }
+    } catch (error) {
+      if (supportsUi(server)) return { content: [{ type: 'text', text: error.message }], structuredContent: { data: { state: 'unavailable', reason: error.message }, focus: input, presentation: { mode: 'mcp-app', resource_uri: resourceUri } } };
+      return errorResult(error);
+    }
   });
   registerAppTool(server, 'media_review_note', { title: '记录媒体审看意见', description: '把当前版本的人工审看意见写入 Med Auto Cast 工作区；意见不是质量批准。', inputSchema: noteSchema, annotations: { readOnlyHint: false, destructiveHint: false, openWorldHint: false }, _meta: { ui: { resourceUri, visibility: ['app'] } } }, async input => {
     if (!supportsUi(server)) return errorResult(new Error('该意见操作需要媒体审看 UI。'));

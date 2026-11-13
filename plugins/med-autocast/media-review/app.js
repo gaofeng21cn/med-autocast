@@ -56,8 +56,9 @@ function render() {
   const items = Array.isArray(data.items) ? data.items.filter(item => item && typeof item === 'object') : [];
   const item = selectedItem();
   const shot = selectedShot(item);
+  if (result.state === 'unavailable' && !state.error) state.error = result.reason || '制作工作区读取失败';
   if (state.error) {
-    root.innerHTML = `<header class="topbar"><div class="family-heading"><h1>媒体审看</h1><span class="family-label">OPL Apps · Med Auto Cast</span></div></header><div class="error-state" role="alert"><div><strong>媒体审看读取失败</strong><p>${escape(state.error)}</p><button class="button" type="button" data-refresh>重新读取</button></div></div>`;
+    root.innerHTML = `<header class="topbar"><div class="family-heading"><h1>媒体审看</h1><span class="family-label">OPL Apps · Med Auto Cast</span></div></header><div class="error-state" role="alert"><div><strong>${state.error.includes('登记制作工作区') ? '尚未连接制作工作区' : '媒体审看读取失败'}</strong><p>${escape(state.error)}</p><button class="button" type="button" data-refresh>重新读取</button></div></div>`;
     root.querySelector('[data-refresh]')?.addEventListener('click', () => void refresh());
     return;
   }
@@ -95,7 +96,7 @@ function render() {
   root.querySelectorAll('[data-shot]').forEach(button => button.addEventListener('click', () => { state.selectedShotId = button.dataset.shot; render(); }));
   root.querySelector('#note')?.addEventListener('input', event => { state.note = event.target.value; });
   root.querySelector('.note-form')?.addEventListener('submit', event => { event.preventDefault(); void recordNote(item, shot); });
-  app.updateModelContext({ content: [{ type: 'text', text: `正在审看 ${item.title || item.id}${shot ? `，镜头 ${shot.id}` : ''}` }], structuredContent: { series_id: item.series_id, episode_id: item.episode_id, revision: item.revision, shot: shot || null } }).catch(() => {});
+  app.updateModelContext({ content: [{ type: 'text', text: `正在审看 ${item.title || item.id}${shot ? `，镜头 ${shot.id}` : ''}` }], structuredContent: { navigation: { series_id: item.series_id, episode_id: item.episode_id, ...(shot ? { shot_id: shot.id } : {}) }, series_id: item.series_id, episode_id: item.episode_id, revision: item.revision, shot: shot || null } }).catch(() => {});
 }
 async function refresh() {
   state.error = '';
@@ -104,6 +105,7 @@ async function refresh() {
     const result = await call('open_media_review', state.input);
     const payload = record(result);
     state.payload = payload;
+    if (state.input.shot_id) state.selectedShotId = state.input.shot_id;
     const item = selectedItem();
     if (item) { state.selectedId = `${item.series_id}/${item.episode_id}`; state.input = { series_id: item.series_id, episode_id: item.episode_id }; }
     render();
@@ -123,9 +125,9 @@ async function recordNote(item, shot) {
 app.ontoolresult = params => {
   if (params?.isError) { state.error = record(params.structuredContent?.error).message || '读取失败'; render(); return; }
   const payload = record(params?.structuredContent);
-  if (payload.data || payload.focus || payload.presentation) { state.payload = payload; const item = selectedItem(); if (item) state.selectedId = `${item.series_id}/${item.episode_id}`; render(); }
+  if (payload.data || payload.focus || payload.presentation) { state.payload = payload; state.input = record(payload.focus); if (state.input.series_id && state.input.episode_id) state.selectedId = `${state.input.series_id}/${state.input.episode_id}`; state.selectedShotId = state.input.shot_id || ''; const item = selectedItem(); if (item) state.selectedId = `${item.series_id}/${item.episode_id}`; render(); }
 };
 app.onhostcontextchanged = applyHostContext;
 await app.connect();
 applyHostContext(app.getHostContext?.() || {});
-if (!state.payload) await refresh();
+// Initial content is supplied by the host's read-only launcher result.

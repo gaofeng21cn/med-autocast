@@ -29,6 +29,16 @@ console.log(JSON.stringify({status:'projected',owner:'one-person-lab',generator:
 const carrierDescriptor=structuredClone(ownerManifest);
 carrierDescriptor.codex_surface.plugin_source_path='.';
 fs.writeFileSync(path.join(root,'plugins/med-autocast/opl-package.json'),JSON.stringify(carrierDescriptor,null,2)+'\n');
+const icon=ownerManifest.presentation.icon_ref;
+fs.mkdirSync(path.dirname(path.join(root,'plugins/med-autocast',icon)),{recursive:true});
+fs.copyFileSync(path.join(root,icon),path.join(root,'plugins/med-autocast',icon));
+for(const relative of ['plugin.json','.codex-plugin/plugin.json']){
+ const filename=path.join(root,'plugins/med-autocast',relative);
+ const plugin=JSON.parse(fs.readFileSync(filename,'utf8'));
+ const ui=relative.startsWith('.')?(plugin.interface??={}):(((plugin.extensions??={})['com.openai']??={}).interface??={});
+ ui.displayName=ownerManifest.display_name;ui.logo='./'+icon;ui.composerIcon='./'+icon;
+ fs.writeFileSync(filename,JSON.stringify(plugin,null,2)+'\n');
+}
 const adapter=JSON.parse(fs.readFileSync(path.join(root,'app-contribution-adapter.json'),'utf8'));
 for(const entry of [...Object.values(adapter.reads),...Object.values(adapter.actions)]){
  entry.argv=entry.argv.map(arg=>arg==='runtime/native_helpers/app_contribution.py'

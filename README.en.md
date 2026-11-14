@@ -2,11 +2,9 @@
   <img src="assets/branding/medautocast-logo.png" alt="Med Auto Cast logo" width="132" />
 </p>
 
-<p align="center">
-  <a href="./README.md">中文</a> | <a href="./README.en.md"><strong>English</strong></a>
-</p>
+<p align="center"><strong>English</strong> | <a href="./README.md">中文</a></p>
 
-# Med Auto Cast
+<h1 align="center">Med Auto Cast</h1>
 
 **Explain the medical evidence. Make the video work.**
 
@@ -73,7 +71,7 @@ Start a new task after installation and give Med Auto Cast a production folder, 
 
 Source changes and the in-repository plugin carrier reach ordinary installed users only after a subsequent OCI package release and installation. See [current capabilities and validation](docs/status.md) for the exact qualification boundary.
 
-## MAC Media Assets
+## Med Auto Cast Assets
 
 [mac-media-assets](https://github.com/gaofeng21cn/mac-media-assets) is MAC's separate medical explainer asset repository for cutouts, backgrounds, motion components, composition references, and BGM stems. Configure it through the workbench's `asset_library` section and query it with `assets --library external`. Local production can continue when the library is unavailable; asset review does not approve a new shot. Repository access is required.
 

@@ -1,0 +1,11 @@
+{
+  "strategy": "daily_patch",
+  "prepare": [
+    [
+      "node",
+      "scripts/project-carrier.mjs"
+    ]
+  ],
+  "verify": [],
+  "version_files": []
+}

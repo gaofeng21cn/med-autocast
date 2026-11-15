@@ -7,6 +7,8 @@ description: 使用 Med Auto Cast 规划、制作、修订和审查医学科普�
 
 新动画默认考虑角色表演与灵动性：先读作者档案的主角定位与表演方向，再由导演、素材、动画实现和视觉 QA 共同落实有来由的表情、视线、朝向、重心、手势及停顿。主角应能倾听、思考、解释和陪伴行动；已有姿态须实际接入镜头，固定立绘的平移或倾斜不替代角色表演。方法见 `runtime/workbench/docs/44_人物素材与画面尺度契约.md` 的“角色表演与灵动性”；补充能力不自动重做旧片。
 
+医学调研遵循 Progress First：以科普策划可直接使用的解释、事实、比较、患者问答和视觉参考推进进度。直接交给 `agent/professional_skills/medical-video-researcher/SKILL.md` 读原文、整理素材并解决关键问题，再由内容策划消费。来源登记、问题树、回执和审计只服务于内容；文件数、字段齐全、缺口清单或检查通过不构成研究完成。临床终审保留独立职责，研究员本可完成的取证和整理继续完成。方法见 `runtime/workbench/docs/46_医学科普独立调研SOP.md`。
+
 用当前请求确定系列、单集、工作区与交付范围。此智能体提供医学视频专业语义；OPL负责执行、状态、评测和包生命周期。
 
 主 Skill 与专业 Skill 是通用制作方法，不内置具体医生品牌。品牌名称、人物母版、参考声线和系列露出规则属于目标工作区的作者/系列档案；运行时读取并保持系列一致。示例作者不得成为新作者的默认身份。用户显式跳过人物形象或专用声线时分别记录，不从另一项推断。
@@ -19,7 +21,7 @@ description: 使用 Med Auto Cast 规划、制作、修订和审查医学科普�
 
 1. 以 `workspace_root` 定位制作工作台，读取 `workbench.yaml`、`workspace.manifest.json`（若存在）、`WORKSPACE.md`（若存在）、`runtime/workbench/docs/17_工作台目录结构与资产生命周期.md` 与当前选集制作单。用仓库的 `runtime/native_helpers/med_autocast.py inspect --workspace <绝对路径>` 只读检查可用路径和 `workspace_layout`；缺少布局标记时可调用 `init_workbench.py --upgrade` 或工作区 `setup_workbench.sh` 增量修复，不把它当成内容或质量硬门；不要把当前 cwd 当作制作工作区。
 2. 开始或恢复实际制作任务时，先运行 `python3 runtime/native_helpers/med_autocast.py prepare --workspace <绝对路径>`：检查外挂素材库，缺失时由 Framework 安装并回读可用路径；已有库、用户停用或自定义内容保持原样。所有 MAC 安装默认依赖轻量素材包，Full 同样集成小核心；已有旧安装仍可能需要这次补齐。单独只读检查使用 inspect，不触发 prepare。离线或安装失败保留诊断，继续可执行的制作。
-3. 新作者或新系列先由 `medical-video-series-producer` 核对作者表达基线、系列登记与完整样片依据；执行原 `workbench_config validate --series`。选题与证据交 `agent/professional_skills/medical-video-content-planner/SKILL.md`；故事、画面解释与时间轴交 `medical-video-director`；真实媒体缺口交 `medical-video-backends`。具体路径见 `agent/stages/manifest.json`。
+3. 新作者或新系列先由 `medical-video-series-producer` 核对作者表达基线、系列登记与完整样片依据；执行原 `workbench_config validate --series`。主题原文研究交 `medical-video-researcher`，选题与证据消费交 `agent/professional_skills/medical-video-content-planner/SKILL.md`；故事、画面解释与时间轴交 `medical-video-director`；真实媒体缺口交 `medical-video-backends`。具体路径见 `agent/stages/manifest.json`。
 4. S07/S08 由导演、后端与 `medical-video-release-packager` 共同完成配音、字幕、选段、品牌、混音和合成；具体工具见 `docs/workspace-adapter.md`。成片和候选交 `medical-video-visual-qa`，交付交 `medical-video-release-packager`，跨阶段恢复与资产沉淀交 `medical-video-series-producer`，均位于 `agent/professional_skills/`。
 4. 先复用已审资产和未变音轨。精简恢复原任务，保留单一 writer。每项通过状态必须对应真实证据；技术、静态、连续动态、完整听感、医学与上传分开。交付到 publish 表示审看入口，不能据此宣称已上传或可公开发布。
 

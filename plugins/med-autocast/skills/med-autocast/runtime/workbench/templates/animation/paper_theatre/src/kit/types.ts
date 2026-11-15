@@ -38,7 +38,37 @@ export type Beat = {
   start: number;
   end: number;
   events: Record<string, number>;
+  performance?: ActingCue[];
   styleId?: string;
+};
+export type ActingCue = {
+  actor_id: string;
+  asset_id: string;
+  event: string;
+  offset?: number;
+  pose: string;
+};
+export type ActingState = {
+  actor_id: string;
+  asset_id: string;
+  event: string;
+  pose: string;
+  previous_pose?: string;
+  transition: number;
+  elapsed: number;
+  previous_elapsed?: number;
+  frame?: number;
+  previous_frame?: number;
+  source_rect?: [number, number, number, number];
+  composition?: 'transparent_pose' | 'full_scene_cell';
+};
+export type ActingProfile = {
+  actor_id: string;
+  asset_id: string;
+  composition: 'transparent_pose' | 'full_scene_cell';
+  grid: { columns: number; rows: number; gutter?: number };
+  poses: Record<string, { frames: number[]; keys: number[] }>;
+  destination: { x: number; y: number; w: number; h: number };
 };
 export type Sound = {
   shot: string;
@@ -67,6 +97,8 @@ export type ShotContext = {
   t: number;
   globalTime: number;
   beat: Beat;
+  performanceStates: ActingState[];
+  actingProfiles: Record<string, ActingProfile>;
   clean: boolean;
 };
 export type Shot = {
@@ -99,6 +131,7 @@ declare global {
       shot: string;
       progress: number;
       events: Record<string, number>;
+      performance: ActingState[];
     };
     __layout: Layout;
     __score: Score;

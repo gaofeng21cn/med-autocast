@@ -613,6 +613,21 @@ class ProjectTests(unittest.TestCase):
         self.assertNotEqual(pp.read(p / "score.json")["cues"], score["cues"])
         self.assertEqual(len(list((p / "history").glob("*/score.json"))), 3)
 
+    def test_retime_preserves_acting_event_references_while_moving_their_actual_times(self):
+        p = self.root
+        config = {"score": "score.json", "voice": "voice.wav", "beat_shots": {"B01": "s1"}}
+        (p / "voice.wav").write_bytes(b"voice")
+        acting = [{"actor_id": "author", "asset_id": "acting_atlas", "event": "look_down", "pose": "read"}]
+        pp.save(p / "score.json", {"duration": 10, "shots": [{"id": "s1", "start": 0, "end": 10,
+            "events": {"look_down": 2}, "performance": acting}], "cues": []})
+        pp.save(p / "audio/narration_beats.json", {"duration": 6, "beats": [
+            {"id": "B01", "text": "看清成分。", "start": .32, "end": 5.3}]})
+        with patch.object(pp, "get_project", return_value=(p, config)):
+            pp.retime(argparse.Namespace(project=p, workspace=p, reference_score=None))
+        shot = pp.read(p / "score.json")["shots"][0]
+        self.assertEqual(shot["events"]["look_down"], 1.2)
+        self.assertEqual(shot["performance"], acting)
+
     def test_revision_edit_does_not_mutate_source(self):
         src = self.root / "v1"; src.mkdir()
         pp.save(src / "project.json", {"narration": "narration.json", "score": "score.json"})

@@ -122,17 +122,18 @@ try {
   await page.addStyleTag({content:'button, [role="button"] { visibility: hidden !important; }'});
   const motionStrips=[];
   for (let index=0;index<cuts.length-1;index++) {
-    const start=cuts[index],end=cuts[index+1],span=end-start,files=[];
+    const start=cuts[index],end=cuts[index+1],span=end-start,files=[],stateTrace=[];
     for (let pose=0;pose<12;pose++) {
       const time=Math.min(timeline.duration-1/30,start+span*(pose+.25)/12);
-      await page.evaluate(t=>window.__seek(t),time);
+      const runtimeState=await page.evaluate(t=>{window.__seek(t);return window.__state||null;},time);
       const filename=`strip-s${index+1}-${String(pose).padStart(2,'0')}.png`;
       await captureFilm(page,width,height,path.join(output,filename));
       files.push(filename);
+      stateTrace.push({time,shot:runtimeState?.shot||null,performance:runtimeState?.performance||[]});
     }
     const sheet=`strip-s${index+1}.jpg`;
     execFileSync('ffmpeg',['-y','-loglevel','error','-pattern_type','glob','-i',path.join(output,`strip-s${index+1}-*.png`),'-vf','scale=400:-1,tile=4x3:padding=8:margin=8:color=white','-frames:v','1',path.join(output,sheet)]);
-    motionStrips.push({scene:index+1,from:start,to:end,frames:files,sheet});
+    motionStrips.push({scene:index+1,from:start,to:end,frames:files,sheet,state_trace:stateTrace});
   }
   // Subsecond flashes, contact and release can fall between uniform strip poses.
   // Event images are inspection evidence, never semantic approval or a new gate.

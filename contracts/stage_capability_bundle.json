@@ -32,10 +32,11 @@
   "stage_binding_note": "prompt、policy、quality gate 与专业 Skill 的唯一逐阶段映射以 manifest 为准；本能力包补充工具和交接建议，不复制第二份绑定表。",
   "stages": {
     "evidence-plan": {
-      "work_packages": ["author_baseline", "patient_problem_map", "medical_evidence_bundle", "series_architecture"],
+      "work_packages": ["author_baseline", "patient_problem_map", "medical_source_research", "medical_evidence_bundle", "series_architecture"],
       "input_artifact_advisories": [{"kind": "request", "required": false, "purpose": "用户目标、受众和范围"}, {"kind": "workspace_profile", "required": false, "purpose": "作者、品牌、声音和工作区档案"}, {"kind": "source_material", "required": false, "purpose": "用户提供的指南、论文、病例或已有内容"}],
       "output_artifact_advisories": [
         {"kind": "author_baseline", "recommended_ref": "content/<topic>/author_baseline.yaml"},
+        {"kind": "research_report", "recommended_ref": "content/<topic>/research/06_research_report.md", "purpose": "可供内容策划直接使用的医学解释、比较、患者问答和视觉参考"},
         {"kind": "evidence_bundle", "recommended_ref": "content/<topic>/evidence/"},
         {"kind": "series_bible", "recommended_ref": "content/<topic>/series_bible.md"},
         {"kind": "episode_map", "recommended_ref": "content/<topic>/episode_map.yaml"}

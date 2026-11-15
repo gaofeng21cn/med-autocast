@@ -1,10 +1,11 @@
 import { Stage } from "./stage";
 import { brandMark, caption } from "./overlays";
 import { clamp } from "./motion";
-import type { Asset, Brand, Score, Shot, ShotContext } from "./types";
+import type { ActingProfile, Asset, Brand, Score, Shot, ShotContext } from "./types";
 import { foreground, paperWorld } from "./staging";
 export function mount(config: {
   assets: Asset[];
+  actingProfiles?: ActingProfile[];
   score: Score;
   shots: Shot[];
   brand?: Brand;
@@ -67,6 +68,8 @@ export function mount(config: {
       t: current - beat.start,
       globalTime: current,
       beat,
+      performanceStates: [],
+      actingProfiles: Object.fromEntries((config.actingProfiles || []).map(profile => [profile.asset_id, profile])),
       clean,
     };
     const camera = shot.camera?.(ctx) || {
@@ -104,6 +107,7 @@ export function mount(config: {
       shot: beat.id,
       progress: ctx.t / (beat.end - beat.start),
       events: beat.events,
+      performance: ctx.performanceStates,
     };
     window.__styleId = beat.styleId || score.style?.appliedStyleId;
     seek.value = String(current / score.duration);

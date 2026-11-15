@@ -6,6 +6,8 @@
 
 专业入口：`agent/professional_skills/medical-video-content-planner/SKILL.md`。
 
+医学调研任务同时使用 `agent/professional_skills/medical-video-researcher/SKILL.md`。Progress First：先取得并阅读适用原文，形成可供策划直接消费的机制、评估、管理比较、患者问答和视觉参考；问题树、来源登记和自动检查只服务于这些材料，不能代替材料本身。可回答部分应在本阶段继续完成，真实临床争议和个体处方再交临床终审。
+
 ## 原工作台职责与专业交接
 
 覆盖 S01—S04：作者表达基线、患者需求、事实库与引用、系列边界和代表样片。

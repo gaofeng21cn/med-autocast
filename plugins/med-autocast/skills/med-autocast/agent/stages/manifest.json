@@ -57,7 +57,8 @@
         "current_request",
         "skill-ref:agent/professional_skills/medical-video-series-producer/SKILL.md",
         "skill-ref:agent/professional_skills/medical-video-content-planner/SKILL.md",
-        "skill-ref:agent/professional_skills/medical-video-director/SKILL.md"
+        "skill-ref:agent/professional_skills/medical-video-director/SKILL.md",
+        "skill-ref:agent/professional_skills/medical-video-researcher/SKILL.md"
       ],
       "ensures": [
         "系列卡、证据表、单集目标与待核问题",
@@ -80,13 +81,15 @@
       "skill_refs": [
         "agent/professional_skills/medical-video-series-producer/SKILL.md",
         "agent/professional_skills/medical-video-content-planner/SKILL.md",
-        "agent/professional_skills/medical-video-director/SKILL.md"
+        "agent/professional_skills/medical-video-director/SKILL.md",
+        "agent/professional_skills/medical-video-researcher/SKILL.md"
       ],
       "policy_refs": [
         "agent/policies/production-policy.md",
         "docs/workspace-adapter.md",
         "runtime/workbench/docs/28_初版质量与高效返修流程.md",
-        "runtime/workbench/docs/29_医学视频资产库与初稿前置质量SOP.md"
+        "runtime/workbench/docs/29_医学视频资产库与初稿前置质量SOP.md",
+        "runtime/workbench/docs/46_医学科普独立调研SOP.md"
       ]
     },
     {

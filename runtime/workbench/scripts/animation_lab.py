@@ -11,6 +11,7 @@ import subprocess
 import sys
 import uuid
 from html import escape
+from scene_scale_contract import default_scale_contract
 
 BUNDLE = Path(__file__).resolve().parents[1]
 TEMPLATE = BUNDLE / 'templates/animation/paper_theatre'
@@ -39,7 +40,8 @@ def create(project, study='style_lab'):
             shutil.copy2(source,project/name)
     for name, destination in [('main.ts','src/main.ts'),('score.json','score.json'),('TREATMENT.md','TREATMENT.md')]:
         shutil.copy2(TEMPLATE/'examples'/study/name,project/destination)
-    save(project/'asset_manifest.json',{'schema':'medical_animation_assets/v1','assets':[],'shots':[]})
+    save(project/'asset_manifest.json',{'schema':'medical_animation_assets/v1',
+        'scale_contract': default_scale_contract(), 'assets':[],'shots':[]})
     # Existing tests exercise the basic template; the lab still carries a neutral brand file.
     save(project/'brand.json',{'enabled':False,'text':'','ink':'#304c49','accent':'#b97153','paper':'#f3e7cc'})
     html=(project/'index.html').read_text().replace('纸剧场动作样本','MAC 媒介动作实验室')

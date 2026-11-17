@@ -154,6 +154,34 @@ class AnimationWorkflowTests(unittest.TestCase):
         self.assertTrue(any(item['code'] == 'asset_admission_unresolved' for item in report['quality_debt']))
         self.assertIn('rejected', report['quality_debt'][0]['detail'])
 
+    def test_required_scale_contract_blocks_review_candidate_before_render(self):
+        human = {
+            'asset_id': 'patient', 'path': 'anatomy.png', 'source_type': 'authored_graphic',
+            'medical': False, 'visual_meaning': 'patient', 'must_not_imply': 'not a diagnosis',
+            'status': 'approved_direct_use', 'visual_layer': 'character',
+            'visual_review': {'status': 'pending'},
+            'human_scale': {'calibration': {'status': 'pending'}},
+        }
+        path = self.root / 'assets.json'
+        path.write_text(json.dumps({
+            'schema': 'medical_animation_assets/v1',
+            'scale_contract': {
+                'schema': 'medical_scene_scale_contract/v1', 'status': 'pending',
+                'enforcement': 'required', 'pixels_per_cm': 3,
+                'human_asset_ids': ['patient'], 'same_scene_test_fit': {'status': 'pending'},
+            },
+            'assets': [human], 'shots': [{'shot_id': 'B01', 'asset_ids': ['patient']}],
+        }))
+        args = ['renderer', '--project-root', str(self.root), '--asset-manifest', 'assets.json',
+                '--check-only', '--review-candidate']
+        output = io.StringIO()
+        with patch.object(sys, 'argv', args), patch('shutil.which', return_value='/fixture/tool'), redirect_stdout(output):
+            render_javascript_animation.main()
+        report = json.loads(output.getvalue())
+        self.assertEqual(report['status'], 'blocked')
+        self.assertIn('scale_contract', report['error'])
+        self.assertFalse((self.root / 'out').exists())
+
     def test_default_renderer_materializes_diagnostic_for_pending_assets(self):
         self.asset['status'] = 'pending_review'
         self.check()

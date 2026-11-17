@@ -65,10 +65,15 @@ def main() -> int:
 
     scenes = {}
     for i, shot in enumerate(score['shots']):
-        name = scene_of(shot['id'])
-        beat = beats.get(name, {})
+        # Prefer an exact shot id. Older stories used a suffix after the first
+        # underscore, but multiword shot ids made that lossy and silently
+        # dropped the directing text. Keep the suffix only as a compatibility
+        # fallback for legacy story sources.
+        name = shot['id']
+        beat = beats.get(name) or beats.get(scene_of(name), {})
         room = rooms[i] if i < len(rooms) else (rooms[-1] if rooms else 'consult')
         scenes[name] = {
+            'scene_label': scene_of(name),
             'space': room + ' 纸景房间（kit/rooms.ts paperRoom）',
             'text': beat.get('text', ''),
             'facts': beat.get('facts', []),

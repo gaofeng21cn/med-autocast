@@ -735,6 +735,30 @@ def use(workspace, project, identifier, explicit=None, asset_id=None):
             return {**result, 'quality_debt': ['所选媒体获取未完成；可离线预取、调整缓存或继续新创'],
                     'media_fetch': json.loads(completed.stdout) if completed.stdout.strip() else {'status': 'diagnostic'}}
         resolved_media = json.loads(completed.stdout)['resolved']
+    source_identifier = identifier
+    prepared_scale = None
+    prepare_tool = root / 'tools/prepare_media.py'
+    if prepare_tool.is_file() and not row.get('delivery'):
+        spec = config(workspace).get('asset_library') or {}
+        command = [sys.executable, '-B', str(prepare_tool), '--id', identifier]
+        if spec.get('cache_root'):
+            command.extend(['--cache', str(Path(spec['cache_root']).expanduser())])
+        if spec.get('offline') or spec.get('auto_fetch') is False:
+            command.append('--offline')
+        if spec.get('cache_limit_bytes') is not None:
+            command.extend(['--max-bytes', str(spec['cache_limit_bytes'])])
+        try:
+            prepared_run = subprocess.run(command, capture_output=True, text=True, timeout=240)
+            prepared = json.loads(prepared_run.stdout)
+        except (OSError, ValueError, subprocess.TimeoutExpired) as error:
+            return {**result, 'quality_debt': ['无损使用版准备未完成：' + type(error).__name__]}
+        if prepared_run.returncode:
+            return {**result, 'quality_debt': ['无损使用版准备未完成：' + prepared.get('reason', '请检查素材库处理工具')]}
+        if prepared.get('status') == 'prepared':
+            row, record = prepared['row'], prepared['record']
+            resolved_media = prepared['resolved']
+            identifier = row['id']
+            prepared_scale = prepared.get('human_scale')
     files = []
     for item in record['files']:
         exact_suffix = '/' + row['source_id'] + '/' + row['revision'] + '/' + item['path']
@@ -758,6 +782,8 @@ def use(workspace, project, identifier, explicit=None, asset_id=None):
         origin=read(root/'offline-installation.json').get('source_library_root')
         if origin:
             decision.update(external_library_root=origin,external_asset_id=row['delivery']['source_asset_id'])
+    if source_identifier != identifier:
+        decision['external_asset_id'] = source_identifier
     from animation_library import save_curation
     save_curation(local, identifier, decision)
     imported = reuse(workspace, local, project, record['id'], record['revision'], asset_id)
@@ -792,7 +818,7 @@ def use(workspace, project, identifier, explicit=None, asset_id=None):
         if record.get('kind') == 'motion_recipe':
             imported.update(motion_registration_readback(record, Path(imported['directory'])))
         scale_index = root / 'collections/character-scale.json'
-        scale = read(scale_index).get('assets', {}).get(identifier) if scale_index.is_file() else None
+        scale = prepared_scale or (read(scale_index).get('assets', {}).get(identifier) if scale_index.is_file() else None)
         if scale:
             payload_hashes = {item['sha256'] for item in record['files'] if item['path'] == record['entry']}
             if scale.get('source_asset_id') != identifier or scale.get('source_sha256') not in payload_hashes:

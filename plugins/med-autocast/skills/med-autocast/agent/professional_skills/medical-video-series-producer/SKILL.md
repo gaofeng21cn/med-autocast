@@ -114,3 +114,7 @@ H3按[调研策略](../../../runtime/workbench/docs/12_H3调研与制作策略.m
 用户交付采用系列展示名和“集号_标题”目录，英文 series_id/episode_id 留在内容、制作、Stage 交接和内部 manifest。系列规划时登记 delivery.display_name，首次交付登记 delivery.episode_dirs；已交付名称固定，正文或标题修订不自动改路径。总入口为 publish/观看与发布.html，各系列统一观看页与全季文案合集，不以制作批次、日期或版本组织用户目录。
 
 单集包器共享 delivery_layout.locations，更换后保持同一用户目录并刷新导航。publish_catalog 负责实际导航、只读链接检查和显式可恢复迁移；旧版与批次入口归 archive，指针和审看记录归 deliveries。缺少名字或导航仍保留有效候选与诊断，不升级审核状态，也不重编码未变媒体。方法见[用户交付目录与导航](../../../runtime/workbench/docs/30_用户交付目录与导航SOP.md)。
+
+制作、修订收尾和清理前按[媒体文件生命周期规范](../../../runtime/workbench/docs/50_媒体文件生命周期与存储治理规范.md)先判定保留必要性，再清理派生物或无损保留必要证据。源文件、来源/许可、当前输入、在制返修和问题单引用受保护；不可重建的唯一来源先保全。默认不跨集复制缓存、历史混音和整套审看片。
+
+初稿逐集消费[重拍经验与初稿进化](../../../runtime/workbench/docs/50_纸剧场重拍经验与初稿进化.md)：核对相邻集实际故事、构图与事件、手物接触、现实尺度和图解层；缺失或低质量主体用 ImageGen 补透明原件，并在浅、深、彩底实际合成看边缘；去除“非真实影像”等无医学作用文字。完成后填写[单集经验沉淀卡](../../../runtime/workbench/templates/series/09_episode_experience_note.md)，把真实证据、可复用范围和失败条件带入下一集。

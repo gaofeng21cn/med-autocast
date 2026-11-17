@@ -29,6 +29,21 @@ class ProjectTests(unittest.TestCase):
         self.addCleanup(self.tmp.cleanup)
         self.root = Path(self.tmp.name).resolve()
 
+    def test_story_source_locates_the_actual_episode_and_rejects_ambiguity(self):
+        (self.root / 'workbench.yaml').write_text('series:\n  s:\n    content_root: content/s\n')
+        story = self.root / 'content/s/episode_stories.yaml'
+        story.parent.mkdir(parents=True)
+        self.assertEqual(pp.story_source_for(self.root, 's', '02')['status'], 'pending_series_story_bible')
+        story.write_text("episodes:\n  - id: '01'\n    title: first\n  - id: '02'\n    title: second\n")
+        found = pp.story_source_for(self.root, 's', '02')
+        self.assertEqual((found['status'], found['series_episode_pointer']), ('ready', '#/episodes/1'))
+        self.assertIn('content_review_pending', found['evidence'])
+        self.assertEqual(pp.story_source_for(self.root, 's', '03')['status'], 'pending_episode_story_missing')
+        story.write_text("episodes:\n  - id: '02'\n  - id: '02'\n")
+        self.assertEqual(pp.story_source_for(self.root, 's', '02')['status'], 'pending_duplicate_episode_story')
+        story.write_text("episodes:\n  '02':\n    title: first\n  '02':\n    title: second\n")
+        self.assertEqual(pp.story_source_for(self.root, 's', '02')['status'], 'pending_invalid_series_story_bible')
+
     def test_preview_cli_keeps_locator_counts_and_reference_without_replaying_every_frame(self):
         full = {'status': 'previewed', 'preview_receipt': '/review/preview.json',
                 'quality_debt': [{'kind': 'text_subject_intersection', 'element': 'label',
@@ -167,6 +182,11 @@ class ProjectTests(unittest.TestCase):
         )
         pp.initialize(a)
         self.assertEqual(pp.read(a.project / "brand.json")["text"], "Series Brand")
+        project_metadata = pp.read(a.project / "project.json")
+        self.assertEqual(project_metadata["story_source"]["schema"], "paper_theatre_story_source/v1")
+        self.assertEqual(project_metadata["story_source"]["episode_story"], "preproduction/02_单集故事.md")
+        self.assertEqual(project_metadata["scale_contract"]["required_before"], "rough_animatic")
+        self.assertEqual(pp.read(a.project / "asset_manifest.json")["scale_contract"]["enforcement"], "required")
         score_style = pp.read(a.project / "score.json")["style"]
         self.assertEqual(score_style["styleId"], "user_defined_ink_style")
         self.assertEqual(score_style["renderer"], "svg")
@@ -633,8 +653,18 @@ class ProjectTests(unittest.TestCase):
         pp.save(src / "project.json", {"narration": "narration.json", "score": "score.json"})
         pp.save(src / "narration.json", {"beats": [{"id": "B01", "text": "原文"}]})
         pp.save(src / "score.json", {"cues": []})
+        # Similar names inside source assets remain editable originals; only
+        # generated audio buses and old mix snapshots belong to the prior run.
+        for name in ["assets/music-raw.wav", "assets/history/source.txt", "audio/narration.wav",
+                     "audio/music-raw.wav", "audio/mix-history/run/audio.wav"]:
+            item=src/name;item.parent.mkdir(parents=True,exist_ok=True);item.write_bytes(name.encode())
         target = self.root / "v2"
         pp.revise(argparse.Namespace(workspace=self.root, project=target, from_project=src))
+        self.assertTrue((target/"assets/music-raw.wav").is_file())
+        self.assertTrue((target/"assets/history/source.txt").is_file())
+        self.assertTrue((target/"audio/narration.wav").is_file())
+        self.assertFalse((target/"audio/music-raw.wav").exists())
+        self.assertFalse((target/"audio/mix-history").exists())
         (target / "narration.json").write_text("new")
         self.assertEqual(pp.read(src / "narration.json")["beats"][0]["text"], "原文")
 

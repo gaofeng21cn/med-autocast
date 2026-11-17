@@ -37,6 +37,7 @@ const server = createServer(async(req,res)=>{
 });
 server.listen(0,'127.0.0.1'); await once(server,'listening');
 let browser, encoder;
+const retainFrames = config.retain_render_frames === true;
 const errors = [];
 try {
   browser = await chromium.launch(browserLaunchOptions);
@@ -81,7 +82,7 @@ try {
     const png=await captureFilm(page,width,height);
     if(pipeError || encoder.exitCode!==null) throw Error(fferror||String(pipeError||'编码提前结束'));
     if(!encoder.stdin.write(png)) await once(encoder.stdin,'drain');
-    if(frame===0 || frame===Math.floor(frames/2) || frame===frames-1) await fs.writeFile(path.join(temp,`frame-${frame}.png`),png);
+    if(retainFrames && (frame===0 || frame===Math.floor(frames/2) || frame===frames-1)) await fs.writeFile(path.join(temp,`frame-${frame}.png`),png);
   }
   encoder.stdin.end();
   const [code] = await done;
@@ -96,11 +97,12 @@ try {
     audio: voice,
     config: { fps, width, height },
   });
-  const receipt={status:'rendered',output:target,frames,duration,fps,width,height,audio_encoding:{source_codec:audioStream.codec_name,mode:audioMode},evidence_directory:temp,renderer_runtime:rendererRuntime,style_sequence:styleSequence,runtime_receipt:runtimeReceipt,release_eligible:false};
-  await fs.writeFile(path.join(temp,'render.json'),JSON.stringify(receipt,null,2)+'\n');
+  const receipt={status:'rendered',output:target,frames,duration,fps,width,height,audio_encoding:{source_codec:audioStream.codec_name,mode:audioMode},evidence_directory:retainFrames?temp:null,storage_profile:{render_scratch:retainFrames?'retained_diagnostics':'temporary',policy:'necessity_first'},renderer_runtime:rendererRuntime,style_sequence:styleSequence,runtime_receipt:runtimeReceipt,release_eligible:false};
+  await fs.writeFile(target+'.runtime.json',JSON.stringify(receipt,null,2)+'\n');
   console.log(JSON.stringify(receipt));
 } finally {
   if(encoder && encoder.exitCode===null) encoder.kill();
   if(browser) await browser.close();
   server.close();
+  if(!retainFrames) await fs.rm(temp,{recursive:true,force:true});
 }

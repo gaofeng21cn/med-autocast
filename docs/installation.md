@@ -23,7 +23,7 @@ Med Auto Cast 是 OPL 官方标准智能体之一。App 从软件包目录和已
 
 ```bash
 # macOS 首次缺少系统工具时安装；已有工具可跳过
-brew install python node ffmpeg imagemagick
+brew install python node ffmpeg imagemagick webp flac
 bash runtime/workbench/scripts/setup_workbench.sh --workspace "$HOME/MedAutoCastWorkspace"
 ```
 
@@ -35,7 +35,7 @@ bash runtime/workbench/scripts/setup_workbench.sh --workspace "$HOME/MedAutoCast
 
 | 范围 | 需求 | 是否联网 |
 | --- | --- | --- |
-| 默认 JS 制作核心 | Python 3.11+、PyYAML、Pillow、Node.js 20+（推荐 LTS）、FFmpeg/ffprobe、ImageMagick、Playwright Chromium、中文字体 | 首次安装下载；素材齐备后本机渲染可离线 |
+| 默认 JS 制作核心 | Python 3.11+、PyYAML、Pillow、Node.js 20+（推荐 LTS）、FFmpeg/ffprobe、ImageMagick、cwebp（无损预览）、Playwright Chromium、中文字体 | 首次安装下载；素材齐备后本机渲染可离线 |
 | 无专用声线的保底 | 安装脚本包含 edge-tts；默认 zh-CN-XiaoyiNeural | 合成需要微软在线服务，安装成功不证明服务可用 |
 | 自有声线／Dr.咩 | 授权参考音频、独立 VoxCPM2 环境与模型、固定表达参数 | 权重齐备后可在本机推理；首次须短音频实测 |
 | 自动字幕对齐 | requirements-alignment.txt、Whisper 模型 | 模型首次下载；随后本机执行 |

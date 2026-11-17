@@ -1,5 +1,19 @@
 {
   "schema": "medical_animation_assets/v1",
+  "scale_contract": {
+    "schema": "medical_scene_scale_contract/v1",
+    "status": "not_applicable",
+    "enforcement": "required",
+    "pixels_per_cm": null,
+    "human_asset_ids": [],
+    "diagram_asset_ids": [],
+    "same_scene_test_fit": {
+      "status": "not_applicable",
+      "evidence_refs": [],
+      "required_views": ["original_size", "mobile_width", "motion_contact", "neighbor_shot"]
+    },
+    "basis": "新单集默认携带；无真实人物时保持not_applicable，加入真实人物后必须补齐共同场景标尺、姿态标定和同场试装。"
+  },
   "assets": [
     {
       "asset_id": "procedural-paper",

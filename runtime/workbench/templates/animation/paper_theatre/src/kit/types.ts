@@ -10,6 +10,10 @@ export type Camera = Point & { zoom: number; rotation?: number };
 export type Asset = {
   asset_id: string;
   path: string;
+  visual_layer?: 'character' | 'person' | 'human' | 'real_person' | 'medical_diagram' | string;
+  scale_scene_role?: 'real_person' | 'diagram_exception' | string;
+  scale_mode?: 'world_scale' | 'diagrammatic_structure' | 'magnified_detail' | 'data_visualization' | 'symbolic_metaphor' | 'document_flat' | 'screen_content' | string;
+  diagram_class?: string;
   registration?: {
     pivot?: Point;
     anchors?: Record<string, Point>;

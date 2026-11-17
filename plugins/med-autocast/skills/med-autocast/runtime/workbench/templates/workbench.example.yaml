@@ -4,6 +4,7 @@ active_profiles:
   author: profiles/authors/example_author.yaml
   media_backends: profiles/backends/example_deployment.yaml
 authorities:
+  media_lifecycle: docs/50_媒体文件生命周期与存储治理规范.md
   paper_theatre_baseline_standard: docs/38_纸剧场动画新标准总纲.md
   user_delivery_navigation: docs/30_用户交付目录与导航SOP.md
   workflow: docs/04_医学科普视频系列SOP.md
@@ -11,6 +12,8 @@ authorities:
   pronunciation: docs/27_中文配音发音控制与听辨SOP.md
   asset_library_sop: docs/29_医学视频资产库与初稿前置质量SOP.md
   character_and_scale_contract: docs/44_人物素材与画面尺度契约.md
+  same_scene_human_scale_contract: docs/48_人物同场真实尺度与图解层契约.md
+  visual_scale_classification: docs/49_示意图分类与跨层排景逻辑.md
 asset_library:
   mode: auto_install_optional_repo
   auto_install: true

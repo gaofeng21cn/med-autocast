@@ -189,3 +189,9 @@ python3 runtime/native_helpers/med_autocast.py assets \
 用户入口按主题和集名组织：publish/观看与发布.html 覆盖全部当前系列；展示名映射见 workbench.yaml.series.<series_id>.delivery，内部 series_id/episode_id 保持不变。publish_catalog 更新观看页与全季 TXT 文案合集，--check 只读检查实际链接；--migrate 配合显式选集进行可恢复迁移。单集更换从 delivery_layout.locations 定位，不重建英文目录，不重编码未变媒体，不改变审核和上传状态。标准方法见 runtime/workbench/docs/30_用户交付目录与导航SOP.md。
 
 音频防复发工具：`audit_narration_samples --workspace W --output work/narration-samples.json` 逐段检查 source take 与原始 narration PCM 的精确采样包含关系；`audit_audio_freshness --workspace W --output work/audio-freshness.json` 核对 source/timing/mix/render/publish 的当前 SHA 绑定。两者只生成定位诊断，不批准读音、语气、完整听感、动画表意或医学含义。发现失配先修最早断点，再只更新受影响下游；其他可消费 Stage 继续。
+
+## 媒体文件生命周期
+
+`plan_workspace_retention` 先读取当前工程、显式保护的在制修订和独立问题引用，输出必要性清单；`apply` 校验整份选集后清理派生物，对保留项做无损压缩。规范见[媒体文件生命周期](../runtime/workbench/docs/50_媒体文件生命周期与存储治理规范.md)。当前工作台有独立实现时从其同根脚本调用；随包可通过 `workbench_tool.py --workspace <工作区> --name plan_workspace_retention -- plan --workspace <工作区> --policy <本次策略.json> --output <清单.json>` 调用。`apply --plan <清单.json> --parts review_frame audio render_temporary --output <回执.json>` 才执行写入。清单和回执不批准视觉、声音或医学质量；发布视频不重编码。
+
+`compact_workspace_media.py plan` 只有格式库存，不再允许直接全量 apply。恢复仍可用原库存和同目录无损回执；历史源声恢复时使用回执中的 `flac -d --keep-foreign-metadata` 命令并核对 WAV SHA。源码与随包载体通过不代表已安装插件完成更新。

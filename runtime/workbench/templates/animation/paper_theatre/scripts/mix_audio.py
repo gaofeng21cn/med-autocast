@@ -7,9 +7,19 @@ import json
 import math
 import random
 import subprocess
+import tempfile
 import wave
 from pathlib import Path
 from sound_materials import material_sound
+
+
+INTERMEDIATE_WAVS = (
+    "foley.wav",
+    "music-raw.wav",
+    "music-prepared.wav",
+    "music-ducked.wav",
+    "premix.wav",
+)
 
 
 def run(args):
@@ -31,11 +41,16 @@ def normalize(source, output, rate, target=-16, peak=-1.2):
         ).format(**data)
     else:
         filter_text = "anull"
-    # A retained mix may intentionally use `.m4a`; raw PCM in that container
-    # truncates the target before FFmpeg reports an error. Keep the codec
-    # compatible with the registered output path.
+    # Keep the container and codec compatible with the registered audio path.
+    # A retained mix may intentionally use `.m4a`; asking FFmpeg to place raw
+    # PCM in that container truncates the target before returning an error.
     suffix = output.suffix.lower()
-    codec = ["-c:a", "pcm_s24le"] if suffix == ".wav" else ["-c:a", "aac", "-b:a", "256k"]
+    if suffix == ".wav":
+        codec = ["-c:a", "pcm_s24le"]
+    elif suffix == ".flac":
+        codec = ["-c:a", "flac"]
+    else:
+        codec = ["-c:a", "aac", "-b:a", "256k"]
     run(["ffmpeg", "-y", "-v", "error", "-i", str(source), "-af", filter_text,
          "-ar", str(rate), "-ac", "2", *codec, str(output)])
     return data
@@ -92,11 +107,25 @@ def foley(project, score, output, rate, *, return_unresolved=False):
             if 0 <= start + k < length:
                 mix[start + k] += value * event.get("gain", 1)
     pcm = array.array("h", (round(max(-1, min(1, v)) * 32767) for v in mix))
-    with wave.open(str(output), "wb") as f:
-        f.setnchannels(1)
-        f.setsampwidth(2)
-        f.setframerate(rate)
-        f.writeframes(pcm.tobytes())
+    output.parent.mkdir(parents=True, exist_ok=True)
+    if output.suffix.lower() == ".flac":
+        with tempfile.NamedTemporaryFile(suffix=".wav", dir=output.parent, delete=False) as handle:
+            temporary = Path(handle.name)
+        try:
+            with wave.open(str(temporary), "wb") as f:
+                f.setnchannels(1)
+                f.setsampwidth(2)
+                f.setframerate(rate)
+                f.writeframes(pcm.tobytes())
+            run(["ffmpeg", "-y", "-v", "error", "-i", str(temporary), "-c:a", "flac", str(output)])
+        finally:
+            temporary.unlink(missing_ok=True)
+    else:
+        with wave.open(str(output), "wb") as f:
+            f.setnchannels(1)
+            f.setsampwidth(2)
+            f.setframerate(rate)
+            f.writeframes(pcm.tobytes())
     return (resolved, unresolved) if return_unresolved else resolved
 
 
@@ -116,19 +145,19 @@ def music_bus(project, score, audio, rate, music=None, gain=.085, plan_path=None
         amount = float(track.get("gain", 1))
         filters.append(f"[{i}:a]aresample={rate},aformat=channel_layouts=stereo,volume={amount},apad=whole_dur={duration},atrim=end={duration}[t{i}]")
         receipt.append({**track, "resolved_path": str(path), "sha256": hashlib.sha256(path.read_bytes()).hexdigest()})
-    raw, prepared = audio / "music-raw.wav", audio / "music-prepared.wav"
+    raw, prepared = audio / "music-raw.flac", audio / "music-prepared.flac"
     if tracks:
         labels = "".join(f"[t{i}]" for i in range(len(tracks)))
         filters.append(labels + f"amix=inputs={len(tracks)}:normalize=0:duration=longest,highpass=f=80,lowpass=f=6500,equalizer=f=1900:t=q:w=1:g=-3.5,afade=t=in:d=1.1,afade=t=out:st={max(0, duration - 2.4)}:d=2.4[bus]")
-        command += ["-filter_complex", ";".join(filters), "-map", "[bus]", "-t", str(duration), "-c:a", "pcm_s24le", str(raw)]
+        command += ["-filter_complex", ";".join(filters), "-map", "[bus]", "-t", str(duration), "-c:a", "flac", str(raw)]
         run(command)
         # A plan may request a bus level; legacy single-track gain remains compatible.
         if plan.get("bus_lufs") is not None:
             normalize(raw, prepared, rate, float(plan["bus_lufs"]), -6)
         else:
-            run(["ffmpeg", "-y", "-v", "error", "-i", str(raw), "-c:a", "pcm_s24le", str(prepared)])
+            run(["ffmpeg", "-y", "-v", "error", "-i", str(raw), "-c:a", "flac", str(prepared)])
     else:
-        run(["ffmpeg", "-y", "-v", "error", "-f", "lavfi", "-i", f"anullsrc=r={rate}:cl=stereo", "-t", str(duration), "-c:a", "pcm_s24le", str(prepared)])
+        run(["ffmpeg", "-y", "-v", "error", "-f", "lavfi", "-i", f"anullsrc=r={rate}:cl=stereo", "-t", str(duration), "-c:a", "flac", str(prepared)])
     return prepared, receipt, plan.get("ducking", {})
 
 
@@ -141,6 +170,7 @@ def main():
     source.add_argument("--music-plan", type=Path, help="Stem paths relative to project root; gain and optional bus loudness")
     parser.add_argument("--music-gain", type=float, default=.085)
     parser.add_argument("--sample-rate", type=int, default=48000)
+    parser.add_argument("--retain-intermediates", action="store_true", help="诊断需要时保留无损分轨；默认在最终混音及回执校验后清理")
     parser.add_argument("--output", type=Path, required=True)
     args = parser.parse_args()
     project = args.project.resolve()
@@ -149,7 +179,7 @@ def main():
     audio.mkdir(exist_ok=True)
     args.output.parent.mkdir(parents=True, exist_ok=True)
     rate, duration = args.sample_rate, score["duration"]
-    events, unresolved_foley = foley(project, score, audio / "foley.wav", rate, return_unresolved=True)
+    events, unresolved_foley = foley(project, score, audio / "foley.flac", rate, return_unresolved=True)
     music, tracks, duck = music_bus(project, score, audio, rate, args.music, args.music_gain, args.music_plan)
     duck = {"threshold": .035, "ratio": 3., "attack_ms": 45, "release_ms": 480, **duck}
     compressor = f"threshold={float(duck['threshold'])}:ratio={float(duck['ratio'])}:attack={float(duck['attack_ms'])}:release={float(duck['release_ms'])}:detection=rms:link=average:makeup=1"
@@ -158,10 +188,10 @@ def main():
         f"[1:a][key]sidechaincompress={compressor},asplit=2[m][evidence];"
         f"[2:a]aformat=channel_layouts=stereo[f];[v][m][f]amix=inputs=3:normalize=0:duration=first[out]"
     )
-    premix = audio / "premix.wav"
-    run(["ffmpeg", "-y", "-v", "error", "-i", str(args.voice), "-i", str(music), "-i", str(audio / "foley.wav"),
-         "-filter_complex", filters, "-map", "[out]", "-t", str(duration), "-c:a", "pcm_s24le", str(premix),
-         "-map", "[evidence]", "-t", str(duration), "-c:a", "pcm_s24le", str(audio / "music-ducked.wav")])
+    premix = audio / "premix.flac"
+    run(["ffmpeg", "-y", "-v", "error", "-i", str(args.voice), "-i", str(music), "-i", str(audio / "foley.flac"),
+         "-filter_complex", filters, "-map", "[out]", "-t", str(duration), "-c:a", "flac", str(premix),
+         "-map", "[evidence]", "-t", str(duration), "-c:a", "flac", str(audio / "music-ducked.flac")])
     before = normalize(premix, args.output, rate)
     receipt = {
         "voice_source": str(args.voice.resolve()), "voice_resynthesized": False,
@@ -170,11 +200,26 @@ def main():
         "events": events, "unresolved_foley": unresolved_foley, "music": str(args.music) if args.music else None,
         "music_plan": str(args.music_plan) if args.music_plan else None,
         "music_tracks": tracks, "ducking": duck, "sample_rate": rate, "channels": 2,
+        "intermediate_audio_format": "flac_lossless",
+        "intermediate_audio": {
+            "foley": "audio/foley.flac",
+            "music_raw": "audio/music-raw.flac" if (audio / "music-raw.flac").is_file() else None,
+            "music_prepared": "audio/music-prepared.flac",
+            "music_ducked": "audio/music-ducked.flac",
+            "premix": "audio/premix.flac",
+        },
         "premix_measurement": before, "output_measurement": measure(args.output),
         "audio_sha256": hashlib.sha256(args.output.read_bytes()).hexdigest(),
         "full_listening": "pending", "tone_consistency": "unchanged_source_not_reapproved"
     }
     (audio / "mix-receipt.json").write_text(json.dumps(receipt, ensure_ascii=False, indent=2) + "\n")
+    if not args.retain_intermediates:
+        receipt['intermediate_audio_retained'] = False
+        receipt['storage_profile'] = {'policy':'necessity_first','retained':'final_mix_and_recipe_sources','intermediates':'rebuildable_pruned'}
+        for legacy in INTERMEDIATE_WAVS:
+            (audio / legacy).with_suffix('.flac').unlink(missing_ok=True)
+        receipt['intermediate_audio'] = {}
+        (audio / "mix-receipt.json").write_text(json.dumps(receipt, ensure_ascii=False, indent=2) + "\n")
     print(json.dumps({"output": str(args.output), "events": len(events), "unresolved_foley": len(unresolved_foley), "duration": duration,
                       "music_stems": len(tracks), "sample_rate": rate, "voice_resynthesized": False}))
 

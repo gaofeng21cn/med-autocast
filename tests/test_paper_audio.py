@@ -68,20 +68,28 @@ class PaperAudioTests(unittest.TestCase):
         write_signal(self.root / "music.wav", 530, .08, lambda _: True)
         plan = self.root / "music-plan.json"
         plan.write_text(json.dumps({"tracks": [{"id": "bed", "path": "music.wav", "gain": .5}]}))
-        receipt = self.mix("--music-plan", str(plan))
+        receipt = self.mix("--music-plan", str(plan), "--retain-intermediates")
         self.assertEqual(len(receipt["music_tracks"]), 1)
-        before = self.root / "audio/music-prepared.wav"
-        after = self.root / "audio/music-ducked.wav"
+        before = self.root / "audio/music-prepared.flac"
+        after = self.root / "audio/music-ducked.flac"
         self.assertLess(rms(after, 1.8, 2.8) / rms(before, 1.8, 2.8), .7)
         self.assertGreater(rms(after, 5.2, 5.8) / rms(before, 5.2, 5.8), .95)
 
     def test_voice_only_path_keeps_music_silent_and_encodes_stereo(self):
-        receipt = self.mix()
+        receipt = self.mix("--retain-intermediates")
         self.assertEqual(receipt["music_tracks"], [])
-        self.assertEqual(rms(self.root / "audio/music-ducked.wav", 1.8, 2.8), 0)
+        self.assertEqual(rms(self.root / "audio/music-ducked.flac", 1.8, 2.8), 0)
         self.assertGreater(rms(self.root / "mixed.wav", 1.8, 2.8), .01)
         info = json.loads(subprocess.check_output([
             "ffprobe", "-v", "error", "-show_streams", "-of", "json", str(self.root / "mixed.wav"),
         ]))["streams"][0]
         self.assertEqual(info["channels"], 2)
         self.assertEqual(info["sample_rate"], str(RATE))
+
+    def test_default_mix_discards_rebuildable_tracks_and_preserves_final_and_sources(self):
+        receipt = self.mix()
+        self.assertFalse(receipt["intermediate_audio_retained"])
+        self.assertEqual(receipt["intermediate_audio"], {})
+        self.assertEqual(list((self.root / "audio").glob("*.flac")), [])
+        self.assertEqual(hashlib.sha256((self.root / "mixed.wav").read_bytes()).hexdigest(), receipt["audio_sha256"])
+        self.assertGreater(rms(self.root / "mixed.wav", 1.8, 2.8), .01)

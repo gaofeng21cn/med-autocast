@@ -19,8 +19,8 @@ if (( check_only )); then
   exec "$python_command" -B "$source_root/scripts/environment_check.py" --workspace "$workbench_root" --pretty --strict
 fi
 # Check prerequisites before downloading dependencies. No implicit sudo or global package installation.
-for tool in node npm ffmpeg ffprobe magick; do
-  command -v "$tool" >/dev/null || { echo "缺少 $tool。macOS: brew install python node ffmpeg imagemagick；Linux 请安装同等工具。" >&2; exit 1; }
+for tool in node npm ffmpeg ffprobe magick cwebp; do
+  command -v "$tool" >/dev/null || { echo "缺少 $tool。macOS: brew install python node ffmpeg imagemagick webp flac；Linux 请安装同等工具。" >&2; exit 1; }
 done
 node -e 'if (Number(process.versions.node.split(".")[0]) < 20) { console.error("需要 Node.js 20+"); process.exit(1); }'
 if [[ ! -f "$workbench_root/workbench.yaml" ]]; then

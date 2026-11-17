@@ -233,6 +233,9 @@ def main() -> None:
     parser.add_argument("--check-only", action="store_true")
     parser.add_argument("--preview", action="store_true", help="Capture storyboard poses and contact sheet without encoding MP4")
     parser.add_argument("--preview-output", type=Path, help="Directory for preview evidence")
+    parser.add_argument("--compact-motion-strips", action="store_true", default=True,
+                        help="Keep strip sheets and key/event frames, omit individual strip source poses")
+    parser.add_argument("--retain-motion-strip-frames", action="store_false", dest="compact_motion_strips")
     parser.add_argument("--review-candidate", action="store_true",
                         help="Allow pending assets in a non-release review candidate; rejected or invalid assets produce a diagnostic")
     args = parser.parse_args()
@@ -250,7 +253,23 @@ def main() -> None:
         else project / "qa" / "preview" if args.preview else None
     )
     try:
-        admission = check_assets(project / args.asset_manifest)
+        # A required human-scale contract is a hard preflight before any
+        # preview frames are captured. Asset admission and review-candidate
+        # mode may carry visual review debt, but they cannot bypass an
+        # uncalibrated same-scene human layout.
+        from first_draft_preflight import preflight as first_draft_preflight
+        scale_report = first_draft_preflight(project, args.asset_manifest)
+        scale = (scale_report.get("manifest") or {}).get("scale_contract") or {}
+        if scale.get("enforcement_required") and not scale.get("ready"):
+            admission = {
+                "status": "blocked",
+                "manifest": str((project / args.asset_manifest).resolve()),
+                "error": "scale_contract 未完成：先完成真实人物标定与同场试装",
+                "scale_contract": scale,
+                "domain_quality_approved": False,
+            }
+        else:
+            admission = check_assets(project / args.asset_manifest)
     except (ValueError, OSError, TypeError, KeyError, AttributeError) as exc:
         admission = {
             "status": "blocked",
@@ -282,7 +301,8 @@ def main() -> None:
         motion_audit = run_motion_audit(project, output_dir / "motion-audit.json")
         config = {"project_root": str(project), "entry": args.html_entry,
                   "output": str(output_dir), "width": args.width, "height": args.height,
-                  "start": args.start, "end": args.end}
+                  "start": args.start, "end": args.end,
+                  "compact_motion_strips": args.compact_motion_strips}
         try:
             with tempfile.TemporaryDirectory(prefix="med-animation-preview-") as temporary:
                 config_path = Path(temporary) / "preview.json"

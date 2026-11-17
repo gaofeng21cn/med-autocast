@@ -29,10 +29,15 @@ class LocalRenderTests(unittest.TestCase):
 <script>
 const image = new Image(); image.src = 'paper.png';
 const ready = image.decode();
-window.__seek = async t => {await ready;
+window.__ready = ready;
+window.__total = .5;
+window.__cuts = [0, .5];
+window.__score = {shots:[{id:'B01', start:0, end:.5, events:{contact:.2}}], cues:[]};
+window.__seek = t => {
   const ctx = document.querySelector('canvas').getContext('2d');
   ctx.fillStyle = '#fafafa'; ctx.fillRect(0,0,320,180);
   ctx.drawImage(image,40+t*80,60,60,60);
+  window.__state = {shot:'B01', performance:[{actor_id:'doctor', pose:t<.25?'stand':'reach'}]};
 };
 window.__rendererId = 'canvas2d';
 window.__requestedStyleId = 'paper_collage';
@@ -72,8 +77,18 @@ window.__styleId = 'paper_collage';
         self.assertEqual(video['codec_name'], 'h264')
         self.assertTrue(any(s['codec_type'] == 'audio' for s in probe['streams']))
         from PIL import Image, ImageChops
-        frames = sorted(self.project.glob('.render-*/frame-*.png'), key=lambda p: int(p.stem.split('-')[1]))
-        with Image.open(frames[0]) as first, Image.open(frames[-1]) as last:
+        self.assertEqual(list(self.project.glob('.render-*')), [])
+        runtime = json.loads(Path(str(self.output) + '.runtime.json').read_text())
+        self.assertIsNone(runtime['evidence_directory'])
+        self.assertEqual(runtime['storage_profile']['render_scratch'], 'temporary')
+        # Inspect the completed video; no long-lived renderer cache is needed.
+        frame_paths = []
+        for index, second in enumerate((0, .4)):
+            frame = self.project / f'check-{index}.png'
+            subprocess.run(['ffmpeg','-v','error','-ss',str(second),'-i',str(self.output),
+                            '-frames:v','1',str(frame)],check=True)
+            frame_paths.append(frame)
+        with Image.open(frame_paths[0]) as first, Image.open(frame_paths[-1]) as last:
             self.assertTrue(any(high > low for low, high in first.convert('RGB').getextrema()))
             self.assertIsNotNone(ImageChops.difference(first.convert('RGB'), last.convert('RGB')).getbbox())
         receipt = json.loads(self.output.with_suffix('.receipt.json').read_text())
@@ -82,7 +97,7 @@ window.__styleId = 'paper_collage';
         self.assertTrue(receipt['renderer_selection']['style_match'])
         self.assertEqual(
             {item['code'] for item in receipt['quality_debt']},
-            {'asset_review_pending'},
+            {'asset_review_pending', 'motion_audit_unavailable'},
         )
         before = self.output.read_bytes()
         self.assertNotEqual(self.invoke().returncode, 0)
@@ -109,9 +124,29 @@ window.__styleId = 'paper_collage';
         self.assertEqual(receipt['renderer_selection']['actual_style_id'], 'paper_collage')
         self.assertEqual(
             {item['code'] for item in receipt['quality_debt']},
-            {'asset_review_pending', 'style_realization_mismatch', 'renderer_selection_mismatch'},
+            {'asset_review_pending', 'style_realization_mismatch', 'renderer_selection_mismatch', 'motion_audit_unavailable'},
         )
         self.assertTrue(all(not item['blocks_stage_progress'] for item in receipt['quality_debt']))
+
+    @unittest.skipUnless(shutil.which('cwebp'), 'compact previews require cwebp')
+    def test_compact_preview_keeps_event_frames_and_actual_acting_trace(self):
+        output = self.project / 'preview'
+        args = [sys.executable, '-B', str(SCRIPTS / 'render_javascript_animation.py'),
+                '--project-root', str(self.project), '--review-candidate', '--preview',
+                '--preview-output', str(output), '--width', '320', '--height', '180']
+        result = subprocess.run(args, env=self.env, text=True, capture_output=True, timeout=60)
+        self.assertEqual(result.returncode, 0, result.stderr)
+        report = json.loads((output / 'preview.json').read_text())
+        self.assertEqual(report['status'], 'previewed')
+        strip = report['motionStrips'][0]
+        self.assertFalse(strip['frames_retained'])
+        self.assertEqual(strip['frames'], [])
+        self.assertTrue((output / strip['sheet']).is_file())
+        self.assertEqual(len(strip['state_trace']), 12)
+        self.assertEqual({s['performance'][0]['pose'] for s in strip['state_trace']}, {'stand', 'reach'})
+        self.assertTrue(report['eventFrames'])
+        self.assertTrue(all((output / item['file']).is_file() for item in report['eventFrames']))
+        self.assertFalse(list(output.glob('strip-s1-*.webp')))
 
     def test_missing_css_resource_cannot_publish_video(self):
         (self.project / 'index.html').write_text(self.html.replace('</head>', '<link rel="stylesheet" href="missing.css"></head>'))

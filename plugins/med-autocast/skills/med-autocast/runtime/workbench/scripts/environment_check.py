@@ -123,9 +123,9 @@ def check(workspace: Path) -> dict:
         'python_3_11': {'state': 'ready' if sys.version_info >= (3, 11) else 'missing',
                         'version': platform.python_version(), 'interpreter': sys.executable, 'fix': '安装 Python 3.11+'},
     }
-    for name in ('ffmpeg', 'ffprobe', 'magick', 'node', 'npm'):
+    for name in ('ffmpeg', 'ffprobe', 'magick', 'node', 'npm', 'cwebp'):
         required[name] = command(name, ['--version'] if name in ('node', 'npm') else ['-version'])
-        required[name]['fix'] = 'macOS: brew install node ffmpeg imagemagick；Linux: 安装对应发行版软件包'
+        required[name]['fix'] = 'macOS: brew install node ffmpeg imagemagick webp flac；Linux: 安装对应发行版软件包'
     node = required['node']
     if node['state'] == 'ready':
         try:

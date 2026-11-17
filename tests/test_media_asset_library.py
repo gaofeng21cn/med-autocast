@@ -57,6 +57,44 @@ class MediaCompanionTests(unittest.TestCase):
         local.write(self.project/'project.json', {'series_id':'s','episode_id':'e'})
         local.write(self.project/'asset_manifest.json', {'assets':[]})
 
+    def test_automatic_lossless_preparation_preserves_lineage_scale_and_project_independence(self):
+        companion.ensure(self.workspace, repository=str(self.repo))
+        local.write(self.target/'collections/curation.json', {'assets':{}})
+        encoded_file = self.base/'new.webp'; encoded_file.write_bytes(b'lossless prepared image'); encoded_file.chmod(0o444)
+        prepared_root = self.base/'prepared'
+        archived = local.archive(prepared_root, {'id':'paper', 'kind':'image', 'entry':'files/paper.webp',
+            'reuse_scope':{'kind':'general'}, 'asset':{'asset_id':'paper','path':'files/paper.webp'},
+            'delivery':{'source_asset_id':self.row['id']}},
+            [{'source':str(encoded_file), 'path':'files/paper.webp'}])
+        record = local.read(prepared_root/archived['record'])
+        identifier = 'paper:paper@'+record['revision']
+        payload_path = 'payloads/paper-theatre/paper/'+record['revision']+'/files/paper.webp'
+        row = {**self.row, 'id':identifier, 'revision':record['revision'],
+               'delivery':{'source_asset_id':self.row['id'], 'encoding_review':'lossless_verified'},
+               'payload':[{**record['files'][0], 'path':payload_path}]}
+        scale = {'source_asset_id':identifier, 'source_sha256':record['files'][0]['sha256'],
+                 'calibration':{'status':'pending'}, 'design_height_cm':170}
+        prepared = {'status':'prepared', 'row':row, 'record':record,
+                    'resolved':{payload_path:str(encoded_file)}, 'human_scale':scale}
+        reply = self.target/'prepared-response.json'; local.write(reply, prepared)
+        (self.target/'tools/prepare_media.py').write_text(
+            "from pathlib import Path;print((Path(__file__).resolve().parents[1]/'prepared-response.json').read_text())")
+        used = companion.use(self.workspace, 'productions/s/e', self.row['id'])
+        self.assertEqual(used['status'], 'copied_and_verified')
+        self.assertTrue(used['entry'].endswith('.webp'))
+        self.assertEqual(local.read(self.project/'asset_manifest.json')['assets'][0]['human_scale'], scale)
+        decision = local.read(self.workspace/'assets/paper-theatre/curation.json')['assets'][identifier]
+        self.assertEqual(decision['external_asset_id'], self.row['id'])
+        self.assertEqual(decision['external_library_root'], str(self.target.resolve()))
+        again = companion.use(self.workspace, 'productions/s/e', self.row['id'])
+        self.assertEqual(again['status'], 'copied_and_verified')
+        self.assertEqual(len(local.read(self.workspace/'assets/paper-theatre/uses.json')['uses']), 1)
+        encoded_file.unlink()
+        self.assertEqual(Path(used['entry']).read_bytes(), b'lossless prepared image')
+        Path(used['entry']).write_bytes(b'project edit')
+        self.assertEqual((prepared_root/archived['record']).with_name('files').joinpath('paper.webp').read_bytes(), b'lossless prepared image')
+        self.assertEqual((self.target/self.row['payload'][0]['path']).read_bytes(), b'actual paper bytes')
+
     def test_complete_encoded_install_is_discovered_and_old_selection_resolves_to_its_new_record(self):
         import hashlib
         companion.ensure(self.workspace,repository=str(self.repo))

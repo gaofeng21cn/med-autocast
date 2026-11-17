@@ -15,6 +15,7 @@ import yaml
 
 BUNDLE = Path(__file__).resolve().parents[1] / "workbench"
 TOOLS = {
+    "plan_workspace_retention": ("read_or_explicit_write", "先判断媒体保留必要性，生成精确清单后清理派生物、无损保留必要证据及恢复回读"),
     "media_asset_library": ("read_or_explicit_write", "独立 MAC 资产库自动准备、只读查询和精确版本取用；允许适配和新创"),
 
     "publish_catalog": ("write", "中文主题与集名交付、总观看入口和文案合集；显式迁移、可恢复归档及只读链接回查"),

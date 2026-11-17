@@ -29,7 +29,7 @@
 
 ## 新集接入
 
-复制本模板，不复制 node_modules；安装锁定依赖。使用 `asset_manifest.json` 作为来源和绘图路径的同一入口，在单项的 `registration` 中登记 pivot、anchors 与可选 front 多边形（归一化图片坐标）。用 `score.json` 持有真实音轨时间、镜头边界、句级字幕和命名动作事件。`src/shots/<id>.ts` 持有逐镜构图、动作和相机；`src/main.ts` 只装配镜头。系列品牌从目标作者档案读取，单集快照注明原档案与基线。
+复制本模板，不复制 node_modules；安装锁定依赖。使用 `asset_manifest.json` 作为来源和绘图路径的同一入口，在单项的 `registration` 中登记 pivot、anchors 与可选 front 多边形（归一化图片坐标）。真实人物还必须在 manifest 的 `scale_contract` 中登记共同 `pixels_per_cm`、姿态身体段、载荷 SHA 和同场试装；`visual_layer=medical_diagram` 的器官/解剖图单独按解释职责定比例，不作为人物标尺。`scale_contract.enforcement=required` 且未完成时，工作台预检和 build 会停在粗动态之前。用 `score.json` 持有真实音轨时间、镜头边界、句级字幕和命名动作事件。`src/shots/<id>.ts` 持有逐镜构图、动作和相机；`src/main.ts` 只装配镜头。系列品牌从目标作者档案读取，单集快照注明原档案与基线。
 
 一镜一个 `Shot`，`render({stage,t,beat,clean})` 中 `t` 为本镜秒数；`camera(ctx)` 可选。`stage.group` 使用物件局部坐标；前袋、连接点随父物件整体变换。字幕由播放器在镜头变换之外绘制。自定义镜头可以直接调用 `stage.g`；需要布局定位时使用 `stage.bounds`。不要把故事翻译成通用 JSON 动画 DSL。
 

@@ -3,13 +3,21 @@ import {chromium, browserLaunchOptions} from './playwright_runtime.mjs';
 import {createServer} from 'node:http';
 import fs from 'node:fs/promises';
 import path from 'node:path';
+import os from 'node:os';
 import {execFileSync} from 'node:child_process';
 import {once} from 'node:events';
 import {observeLayout,observeCues} from './layout_observations.mjs';
 import {captureFilm} from './capture_frame.mjs';
 import {collectRuntimeReceipt} from './runtime_receipt.mjs';
 
+async function captureLosslessFrame(page,width,height,pngPath,webpPath) {
+  await captureFilm(page,width,height,pngPath);
+  execFileSync('cwebp',['-quiet','-lossless','-z','4','-mt',pngPath,'-o',webpPath]);
+  await fs.rm(pngPath,{force:true});
+}
+
 const config = JSON.parse(await fs.readFile(process.argv[2], 'utf8'));
+config.compact_motion_strips ??= true;
 const project = path.resolve(config.project_root);
 const output = path.resolve(config.output);
 const entry = config.entry || 'index.html';
@@ -29,6 +37,7 @@ const server = createServer(async (request, response) => {
 server.listen(0, '127.0.0.1');
 await once(server, 'listening');
 let browser;
+let temporaryMotionFrames;
 try {
   browser = await chromium.launch(browserLaunchOptions);
   const page = await browser.newPage({viewport:{width,height}, deviceScaleFactor:1});
@@ -73,6 +82,7 @@ try {
     for (const fraction of [0, .04, .25, .5, .75, .96]) points.push({scene:index+1, time:Math.min(timeline.duration-1/30,start+span*fraction)});
   }
   await fs.mkdir(output, {recursive:true});
+  temporaryMotionFrames = await fs.mkdtemp(path.join(os.tmpdir(), 'med-preview-frame-'));
   const frames = [];
   for (const [index, point] of points.entries()) {
     const state = await page.evaluate(time => { window.__seek(time); return {
@@ -80,8 +90,13 @@ try {
       renderer_id:window.__rendererId || null, style_id:window.__styleId || null,
       declared_texts:(()=>{ try { return typeof window.TEXTS==='function' ? window.TEXTS(time) : null; } catch(error) { return {status:'unavailable',error:String(error)}; } })(),
     }; }, point.time);
-    const filename = `${String(index).padStart(3,'0')}-s${point.scene}-${point.time.toFixed(2)}.png`;
-    await captureFilm(page,width,height,path.join(output,filename));
+    const stem = `${String(index).padStart(3,'0')}-s${point.scene}-${point.time.toFixed(2)}`;
+    const filename = `${stem}.webp`;
+    await captureLosslessFrame(
+      page,width,height,
+      path.join(temporaryMotionFrames,`${stem}.png`),
+      path.join(output,filename),
+    );
     const overlaps = [];
     const layout = state.layout;
     if (layout?.subtitle && Array.isArray(layout.subjects)) {
@@ -101,8 +116,13 @@ try {
     await page.waitForFunction(()=>!!window.__ready,null,{timeout:20000});
     await page.addStyleTag({content:'button, [role="button"] { visibility: hidden !important; }'});
     await page.evaluate(time => window.__seek(time), frame.time);
-    const cleanFile=`clean-${frame.file}`;
-    await captureFilm(page,width,height,path.join(output,cleanFile));
+    const cleanStem=`clean-${path.parse(frame.file).name}`;
+    const cleanFile=`${cleanStem}.webp`;
+    await captureLosslessFrame(
+      page,width,height,
+      path.join(temporaryMotionFrames,`${cleanStem}.png`),
+      path.join(output,cleanFile),
+    );
     const cleanState = await page.evaluate(()=>window.__layout||null);
     const subjects = Array.isArray(cleanState?.subjects) ? cleanState.subjects : [];
     const canvasArea = width*height;
@@ -121,19 +141,29 @@ try {
   await page.waitForFunction(()=>!!window.__ready,null,{timeout:20000});
   await page.addStyleTag({content:'button, [role="button"] { visibility: hidden !important; }'});
   const motionStrips=[];
+  // Normal-size diagnostic frames use lossless WebP. The 12 source poses for
+  // each contact strip always stay in an isolated scratch directory; compact
+  // mode omits their individual copies after the strip sheet is built.
   for (let index=0;index<cuts.length-1;index++) {
-    const start=cuts[index],end=cuts[index+1],span=end-start,files=[],stateTrace=[];
+    const start=cuts[index],end=cuts[index+1],span=end-start,files=[],sampleTimes=[],stateTrace=[];
     for (let pose=0;pose<12;pose++) {
       const time=Math.min(timeline.duration-1/30,start+span*(pose+.25)/12);
       const runtimeState=await page.evaluate(t=>{window.__seek(t);return window.__state||null;},time);
-      const filename=`strip-s${index+1}-${String(pose).padStart(2,'0')}.png`;
-      await captureFilm(page,width,height,path.join(output,filename));
-      files.push(filename);
       stateTrace.push({time,shot:runtimeState?.shot||null,performance:runtimeState?.performance||[]});
+      const stem=`strip-s${index+1}-${String(pose).padStart(2,'0')}`;
+      const scratch=path.join(temporaryMotionFrames,`${stem}.png`);
+      await captureFilm(page,width,height,scratch);
+      if (!config.compact_motion_strips) {
+        const filename=`${stem}.webp`;
+        execFileSync('cwebp',['-quiet','-lossless','-z','4','-mt',scratch,'-o',path.join(output,filename)]);
+        files.push(filename);
+      }
+      sampleTimes.push(time);
     }
     const sheet=`strip-s${index+1}.jpg`;
-    execFileSync('ffmpeg',['-y','-loglevel','error','-pattern_type','glob','-i',path.join(output,`strip-s${index+1}-*.png`),'-vf','scale=400:-1,tile=4x3:padding=8:margin=8:color=white','-frames:v','1',path.join(output,sheet)]);
-    motionStrips.push({scene:index+1,from:start,to:end,frames:files,sheet,state_trace:stateTrace});
+    execFileSync('ffmpeg',['-y','-loglevel','error','-start_number','0','-i',path.join(temporaryMotionFrames,`strip-s${index+1}-%02d.png`),'-frames:v','1','-vf','scale=400:-1,tile=4x3:padding=8:margin=8:color=white',path.join(output,sheet)]);
+    motionStrips.push({scene:index+1,from:start,to:end,frames:config.compact_motion_strips ? [] : files,
+      frames_retained:!config.compact_motion_strips,frame_format:'lossless_webp',sample_times:sampleTimes,sheet,state_trace:stateTrace});
   }
   // Subsecond flashes, contact and release can fall between uniform strip poses.
   // Event images are inspection evidence, never semantic approval or a new gate.
@@ -148,8 +178,13 @@ try {
       const time=Math.max(shot.start,Math.min(shot.end-1/30,at+offset));
       if(time<rangeStart || time>=rangeEnd) continue;
       await page.evaluate(t=>window.__seek(t),time);
-      const name=`event-${String(shot.id).replace(/[^\p{L}\p{N}_-]/gu,'_')}-${String(event).replace(/[^\p{L}\p{N}_-]/gu,'_')}-${phase}.png`;
-      await captureFilm(page,width,height,path.join(output,name));
+      const stem=`event-${String(shot.id).replace(/[^\p{L}\p{N}_-]/gu,'_')}-${String(event).replace(/[^\p{L}\p{N}_-]/gu,'_')}-${phase}`;
+      const name=`${stem}.webp`;
+      await captureLosslessFrame(
+        page,width,height,
+        path.join(temporaryMotionFrames,`${stem}.png`),
+        path.join(output,name),
+      );
       eventFrames.push({shot:shot.id,event,phase,time,file:name});
     }
    }
@@ -179,6 +214,7 @@ try {
     config: { width, height },
   });
   const report = {status:errors.length ? 'failed' : 'previewed', project, output, duration:timeline.duration, range:[rangeStart,rangeEnd], scenes:cuts.length-1, frames, motionStrips, eventFrames, errors, renderer_runtime:timeline.renderer_runtime, runtime_receipt:runtimeReceipt, contact_sheet:path.join(output,'contact.jpg'), release_eligible:false};
+  report.storage_profile={review_frames:'lossless_webp',motion_strips:'jpeg',motion_strip_source_frames:config.compact_motion_strips?'temporary':"lossless_webp"};
   report.text_observations=observeCues({cues:timeline.cues});
   report.primary_view=primaryView;
   report.primary_entry=entry;
@@ -201,4 +237,5 @@ try {
 } finally {
   if (browser) await browser.close();
   server.close();
+  if (temporaryMotionFrames) await fs.rm(temporaryMotionFrames, {recursive:true, force:true});
 }

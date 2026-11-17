@@ -51,14 +51,15 @@
     },
     "story-directing": {
       "work_packages": ["episode_blueprint", "visual_treatment", "beat_grid", "shot_plan", "animatic", "pronunciation_annotated_narration"],
-      "input_artifact_advisories": [{"kind": "series_bible", "required": false, "purpose": "系列共同世界和分集边界"}, {"kind": "evidence_bundle", "required": false, "purpose": "本集医学事实和不确定性"}, {"kind": "author_baseline", "required": false, "purpose": "人物、声音、品牌和风格基线"}],
+      "input_artifact_advisories": [{"kind": "series_bible", "required": false, "purpose": "系列共同世界和分集边界"}, {"kind": "series_story_source", "required": false, "purpose": "episode_stories.yaml 与本集故事交接；记录患者任务和独立节拍"}, {"kind": "evidence_bundle", "required": false, "purpose": "本集医学事实和不确定性"}, {"kind": "author_baseline", "required": false, "purpose": "人物、声音、品牌和风格基线"}],
       "output_artifact_advisories": [
         {"kind": "episode_blueprint", "recommended_ref": "productions/<series>/<episode>/episode_blueprint.yaml"},
         {"kind": "visual_treatment", "recommended_ref": "productions/<series>/<episode>/visual_treatment.md"},
         {"kind": "shot_plan", "recommended_ref": "productions/<series>/<episode>/shot_plan.json"},
         {"kind": "animatic", "recommended_ref": "productions/<series>/<episode>/review/animatic/"},
         {"kind": "executable_style_frame", "recommended_ref": "productions/<series>/<episode>/review/style-frame/", "purpose": "真实构图与 signature shot 短动作；可消费草稿，不是启动门"},
-        {"kind": "pronunciation_annotated_narration", "recommended_ref": "productions/<series>/<episode>/preproduction/narration.json", "purpose": "审定正文、语境读音与可执行配音输入；形式建议不阻断制作"}
+        {"kind": "pronunciation_annotated_narration", "recommended_ref": "productions/<series>/<episode>/preproduction/narration.json", "purpose": "审定正文、语境读音与可执行配音输入；形式建议不阻断制作"},
+        {"kind": "scale_contract", "recommended_ref": "productions/<series>/<episode>/asset_manifest.json#/scale_contract", "purpose": "真实人物共同pixels_per_cm、姿态标定、载荷SHA和同场试装；按scale_mode分类示意层，medical_diagram只是兼容标记"}
       ],
       "tool_refs": [
         {"tool_id": "media_asset_library", "surface": "workbench_tool", "purpose": "status/query 发现独立库并看原件；ensure 准备；use 复制精确版本后当前镜头重新审查，可适配、替换或新创", "effect": "read_or_explicit_write"},
@@ -75,7 +76,7 @@
     },
     "media-production": {
       "work_packages": ["asset_admission", "voice_and_timing", "subtitle_alignment", "renderer_build", "mix_and_candidate"],
-      "input_artifact_advisories": [{"kind": "episode_blueprint", "required": false, "purpose": "导演冻结的叙事与动作"}, {"kind": "shot_plan", "required": false, "purpose": "镜头和素材计划"}, {"kind": "asset_manifest", "required": false, "purpose": "已审素材和来源记录"}],
+      "input_artifact_advisories": [{"kind": "episode_blueprint", "required": false, "purpose": "导演冻结的叙事与动作"}, {"kind": "shot_plan", "required": false, "purpose": "镜头和素材计划"}, {"kind": "asset_manifest", "required": false, "purpose": "已审素材和来源记录"}, {"kind": "scale_contract", "required": false, "purpose": "正式制作前回读真实人物同场标尺和试装状态；未完成由工作台预检回路由"}],
       "output_artifact_advisories": [
         {"kind": "asset_manifest", "recommended_ref": "productions/<series>/<episode>/animation/asset_manifest.json"},
         {"kind": "audio_meta", "recommended_ref": "productions/<series>/<episode>/audio/audio_meta.json"},
@@ -92,14 +93,15 @@
         {"tool_id": "resolve_motion_audit", "surface": "workbench_tool", "purpose": "汇集现有 Score 声明供真实动作审看；不写 Score、不自动补反应/落定/方向或认证连续性", "effect": "write_when_authorized"},
         {"tool_id": "animation_lab", "surface": "workbench_tool", "purpose": "按需加载风格方法并实际看原创媒介动作样例；不覆盖现有单集", "effect": "write_when_authorized"},
         {"tool_id": "audit_pronunciation", "surface": "workbench_tool", "purpose": "按当前项目定位逐词注音、真实原音与听辨待审范围，不批准实际发音", "effect": "write_when_authorized"},
-        {"tool_id": "build_no_music_mix", "surface": "workbench_tool", "purpose": "导出当前旁白与拟音的无BGM审听音轨，保留正式混音", "effect": "write_when_authorized"}
+        {"tool_id": "build_no_music_mix", "surface": "workbench_tool", "purpose": "导出当前旁白与拟音的无BGM审听音轨，保留正式混音", "effect": "write_when_authorized"},
+        {"tool_id": "plan_workspace_retention", "surface": "workbench_tool", "purpose": "必要性计划先行；清理不需要的中间物，必要证据无损保留并回读", "effect": "read_or_explicit_write"}
       ],
       "route_back_targets": ["story-directing"],
       "review_scope": ["asset_currentness", "voice_consistency", "timeline_alignment", "renderer_reproducibility"]
     },
     "visual-review": {
       "work_packages": ["technical_review", "motion_review", "listening_review", "medical_visual_review", "subtitle_and_layout_review"],
-      "input_artifact_advisories": [{"kind": "render_candidate", "required": false, "purpose": "当前候选成片"}, {"kind": "timeline", "required": false, "purpose": "镜头、字幕和声音时间事实"}, {"kind": "asset_manifest", "required": false, "purpose": "实际使用素材和审核范围"}],
+      "input_artifact_advisories": [{"kind": "render_candidate", "required": false, "purpose": "当前候选成片"}, {"kind": "timeline", "required": false, "purpose": "镜头、字幕和声音时间事实"}, {"kind": "asset_manifest", "required": false, "purpose": "实际使用素材和审核范围"}, {"kind": "scale_contract", "required": false, "purpose": "按当前候选核对人物共同标尺、示意层分类、容器边界和同场试装范围"}],
       "output_artifact_advisories": [
         {"kind": "stage_review_report", "recommended_ref": "productions/<series>/<episode>/review/stage_review.json", "purpose": "当前候选对应的阶段审查结论；OPL formal review receipt 由 OPL 单独管理"},
         {"kind": "finding_set", "recommended_ref": "productions/<series>/<episode>/review/findings.json"},
@@ -113,7 +115,8 @@
         {"tool_id": "resolve_motion_audit", "surface": "workbench_tool", "purpose": "汇集现有 Score 声明供真实动作审看；不写 Score、不自动补反应/落定/方向或认证连续性", "effect": "write_when_authorized"},
         {"tool_id": "animation_lab", "surface": "workbench_tool", "purpose": "按需加载风格方法并实际看原创媒介动作样例；不覆盖现有单集", "effect": "write_when_authorized"},
         {"tool_id": "audit_pronunciation", "surface": "workbench_tool", "purpose": "按当前项目定位逐词注音、真实原音与听辨待审范围，不批准实际发音", "effect": "write_when_authorized"},
-        {"tool_id": "build_no_music_mix", "surface": "workbench_tool", "purpose": "导出当前旁白与拟音的无BGM审听音轨，保留正式混音", "effect": "write_when_authorized"}
+        {"tool_id": "build_no_music_mix", "surface": "workbench_tool", "purpose": "导出当前旁白与拟音的无BGM审听音轨，保留正式混音", "effect": "write_when_authorized"},
+        {"tool_id": "plan_workspace_retention", "surface": "workbench_tool", "purpose": "必要性计划先行；清理不需要的中间物，必要证据无损保留并回读", "effect": "read_or_explicit_write"}
       ],
       "route_back_targets": ["evidence-plan", "story-directing", "media-production"],
       "review_scope": ["technical", "visual", "continuous_motion", "full_listening", "medical"]
@@ -161,7 +164,8 @@
         {"tool_id": "package_review", "purpose": "组织当前单集审看包并回读字节", "effect": "write"},
         {"tool_id": "build_release_packages", "purpose": "匹配正式 final 合同的交付包", "effect": "write_when_authorized"},
         {"tool_id": "med_autocast.py preflight-workbench", "surface": "native_helper", "purpose": "交付前只读预检", "effect": "read_only"},
-        {"tool_id": "publish_catalog", "surface": "workbench_tool", "purpose": "统一主题与集名导航、文案合集、只读链接检查和显式可恢复目录迁移", "effect": "write_when_authorized"}
+        {"tool_id": "publish_catalog", "surface": "workbench_tool", "purpose": "统一主题与集名导航、文案合集、只读链接检查和显式可恢复目录迁移", "effect": "write_when_authorized"},
+        {"tool_id": "plan_workspace_retention", "surface": "workbench_tool", "purpose": "必要性计划先行；清理不需要的中间物，必要证据无损保留并回读", "effect": "read_or_explicit_write"}
       ],
       "route_back_targets": ["meta-review", "visual-review"],
       "review_scope": ["currentness", "package_integrity", "copy_fidelity", "handoff_usability"]
@@ -181,7 +185,8 @@
         {"tool_id": "build_keyframe_library", "surface": "workbench_tool", "purpose": "生成关键帧索引和可读投影", "effect": "write"},
         {"tool_id": "paper_project", "surface": "workbench_tool", "purpose": "library 只读检索；ingest-project / register 独立保管，refresh 完整看图库，use 精确版本复制及复用记录", "effect": "write_when_authorized"},
         {"tool_id": "med_autocast.py assets", "surface": "native_helper", "purpose": "--library animation 查询复用素材；默认保持关键帧查询，复用前实际审看原件与用途", "effect": "read_only"},
-        {"tool_id": "animation_lab", "surface": "workbench_tool", "purpose": "按需加载风格方法并实际看原创媒介动作样例；不覆盖现有单集", "effect": "write_when_authorized"}
+        {"tool_id": "animation_lab", "surface": "workbench_tool", "purpose": "按需加载风格方法并实际看原创媒介动作样例；不覆盖现有单集", "effect": "write_when_authorized"},
+        {"tool_id": "plan_workspace_retention", "surface": "workbench_tool", "purpose": "必要性计划先行；清理不需要的中间物，必要证据无损保留并回读", "effect": "read_or_explicit_write"}
       ],
       "route_back_targets": ["evidence-plan", "story-directing", "media-production", "visual-review"],
       "review_scope": ["source_traceability", "independent_storage", "identity_scope", "watchable_sample", "reuse_value", "review_scope", "lesson_generality"]

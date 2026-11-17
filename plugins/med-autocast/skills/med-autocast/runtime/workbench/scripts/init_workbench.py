@@ -36,6 +36,55 @@ def _ensure_asset_library_config(target: Path) -> dict:
     return {'path': str(config), 'created': True, 'status': 'added_optional_pointer'}
 
 
+def _ensure_quality_guides(target: Path) -> dict:
+    """Supply missing guides without replacing a workspace's existing copies."""
+    paths = (
+        'docs/48_人物同场真实尺度与图解层契约.md',
+        'docs/49_示意图分类与跨层排景逻辑.md',
+        'docs/50_纸剧场重拍经验与初稿进化.md',
+        'docs/50_媒体文件生命周期与存储治理规范.md',
+        'templates/series/09_episode_experience_note.md',
+    )
+    created = []
+    for relative in paths:
+        dest = target / relative
+        if not dest.exists():
+            dest.parent.mkdir(parents=True, exist_ok=True)
+            shutil.copyfile(SOURCE / relative, dest)
+            created.append(relative)
+    return {'created': created}
+
+
+def _ensure_scale_contract_authority(target: Path) -> dict:
+    """Make the same-scene human-scale contract a default workbench authority."""
+    config = target / 'workbench.yaml'
+    if not config.is_file():
+        return {'path': str(config), 'created': False, 'status': 'missing_workbench'}
+    text = config.read_text(encoding='utf-8')
+    marker = 'same_scene_human_scale_contract:'
+    classification = 'visual_scale_classification:'
+    if marker in text and classification in text:
+        return {'path': str(config), 'created': False, 'status': 'present'}
+    line = '  same_scene_human_scale_contract: docs/48_人物同场真实尺度与图解层契约.md\n'
+    classification_line = '  visual_scale_classification: docs/49_示意图分类与跨层排景逻辑.md\n'
+    if marker in text:
+        lines = text.splitlines(keepends=True)
+        for index, current in enumerate(lines):
+            if current.startswith('  same_scene_human_scale_contract:'):
+                lines.insert(index + 1, classification_line)
+                config.write_text(''.join(lines), encoding='utf-8')
+                return {'path': str(config), 'created': True, 'status': 'added_authority'}
+    anchor = '  character_and_scale_contract:'
+    lines = text.splitlines(keepends=True)
+    for index, current in enumerate(lines):
+        if current.startswith(anchor):
+            lines.insert(index + 1, line)
+            lines.insert(index + 2, classification_line)
+            config.write_text(''.join(lines), encoding='utf-8')
+            return {'path': str(config), 'created': True, 'status': 'added_authority'}
+    return {'path': str(config), 'created': False, 'status': 'authority_block_missing'}
+
+
 def _check_location(target: Path) -> Path:
     target = target.resolve()
     # A copied workbench owns its top-level scripts and may upgrade itself;
@@ -114,6 +163,8 @@ audio_mix:
     layout = ensure(target)
     first_draft = _ensure_first_draft_record(target)
     asset_library = _ensure_asset_library_config(target)
+    quality_guides = _ensure_quality_guides(target)
+    scale_contract = _ensure_scale_contract_authority(target)
     (target / 'README.md').write_text('''# 医学动画工作台
 
 先运行 `bash scripts/setup_workbench.sh --check`。告诉 Med Auto Cast 主题、受众和时长即可开始；首步先建立作者/医生形象、品牌识别和声音基线，再进入纸剧场分镜与素材准备。默认本机 JS 手绘拼贴；有授权参考声线时使用本机 VoxCPM2，Edge TTS 只在没有专用声线或用户明确跳过时保底。
@@ -127,7 +178,7 @@ audio_mix:
 
 用户交付从 `publish/观看与发布.html` 进入；主题与分集采用展示名称，英文 ID 留在内部登记。`publish_catalog` 维护观看页与文案合集，迁移已有目录须显式执行并保留归档。
 
-新单集顺序是“患者问题地图 -> 系列故事圣经 -> 资产库查询 -> episode_blueprint/beat grid -> 粗动态分镜 -> 透明分层素材准入 -> JS 实现 -> 连续预览 -> QA -> 编码”。角色、语气和医学审核从 pending 开始；不使用技术 smoke 代替质量样片。外部资产库由 `workbench.yaml.asset_library` 指向；库不可用时继续本地缓存或新创候选，不把同步失败当成启动门。
+新单集顺序是“患者问题地图 -> 系列故事圣经/episode_stories.yaml -> 资产库查询 -> episode_blueprint/beat grid -> 真实人物同场尺度合同与试装 -> 粗动态分镜 -> 透明分层素材准入 -> JS 实现 -> 连续预览 -> QA -> 编码”。真实人物进入同场前必须在 `asset_manifest.json.scale_contract` 登记共同 `pixels_per_cm`、载荷 SHA、姿态身体段和原尺寸/移动端试装；结构图解、放大细节、数据图和符号隐喻按解释职责独立定比例，纸张或屏幕容器仍按物理关系排景。`enforcement=required` 且合同未齐时，不进入粗动态或 build。角色、语气和医学审核从 pending 开始；不使用技术 smoke 代替质量样片。外部资产库由 `workbench.yaml.asset_library` 指向；库不可用时继续本地缓存或新创候选，不把同步失败当成启动门。
 
 初稿复核入口是 `work/first-draft-review.md` 和 `docs/28_初版质量与高效返修流程.md`。先做代表镜头与完整代表集，检查真实 alpha、认知比例、去文字事件、动作弧、承接物、阅读停留和首句/术语整段声音；源码更新后重新 build/preview，再 render 并回读实际媒体。纸剧场按 `docs/42_paper-collage-mv制作方法适配.md` 先做道具状态图和完整小戏，动作快慢服务内容。resolve_motion_audit 只读汇集声明，不补反应/落定、方向或跨镜证据。预览与正式渲染自动附带 `motion_audit` 和 `medical_animation_runtime_receipt/v1`；整季或大批量复核先运行 `scripts/build_episode_review_queue.py --workspace <目录>`，长任务按 `scripts/rebuild_current_episodes.py` 的文件回执续跑，再逐集消费声音链与视觉证据。队列、动作审计和运行回执只定位质量债，不批准成片、不阻断其他可消费工作。欠项保留候选和可用成果，不作为表单启动门。
 ''', encoding='utf-8')
@@ -144,6 +195,8 @@ audio_mix:
             'layout': layout,
             'first_draft_review': first_draft,
             'asset_library': asset_library,
+            'quality_guides': quality_guides,
+            'scale_contract': scale_contract,
             'next': '运行 scripts/setup_workbench.sh；首次创作先确定作者形象与声音基线，再查询资产库'}
 
 
@@ -155,12 +208,16 @@ def upgrade(target: Path) -> dict:
     layout = ensure(target)
     first_draft = _ensure_first_draft_record(target)
     asset_library = _ensure_asset_library_config(target)
+    quality_guides = _ensure_quality_guides(target)
+    scale_contract = _ensure_scale_contract_authority(target)
     return {
-        'status': 'upgraded' if layout['created'] or first_draft['created'] or asset_library['created'] else 'already_present',
+        'status': 'upgraded' if layout['created'] or first_draft['created'] or asset_library['created'] or quality_guides['created'] or scale_contract['created'] else 'already_present',
         'workspace': str(target),
         'layout': layout,
         'first_draft_review': first_draft,
         'asset_library': asset_library,
+        'quality_guides': quality_guides,
+        'scale_contract': scale_contract,
         'next': '运行 scripts/environment_check.py --workspace <目录> --pretty；缺项是可修复诊断，不代表内容或发布通过',
     }
 
@@ -168,7 +225,7 @@ def upgrade(target: Path) -> dict:
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--workspace', required=True, type=Path)
-    parser.add_argument('--upgrade', action='store_true', help='为已有工作区补齐缺失目录和入口标记，不复制或覆盖文件')
+    parser.add_argument('--upgrade', action='store_true', help='为已有工作区补齐缺失目录、指南和入口标记，不覆盖现有文件')
     args = parser.parse_args()
     try:
         result = upgrade(args.workspace) if args.upgrade else initialize(args.workspace)

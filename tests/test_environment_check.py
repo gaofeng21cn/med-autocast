@@ -48,6 +48,18 @@ class EnvironmentTests(unittest.TestCase):
         again = upgrade(self.root)
         self.assertEqual(again['status'], 'already_present')
 
+    def test_upgrade_adds_missing_scale_guide_without_overwriting_custom_guides(self):
+        initialize(self.root)
+        custom = self.root / 'docs/48_人物同场真实尺度与图解层契约.md'
+        custom.write_text('用户定制')
+        missing = self.root / 'docs/49_示意图分类与跨层排景逻辑.md'
+        missing.unlink()
+        report = upgrade(self.root)
+        self.assertEqual(report['status'], 'upgraded')
+        self.assertEqual(custom.read_text(), '用户定制')
+        self.assertTrue(missing.is_file())
+        self.assertIn('docs/49_示意图分类与跨层排景逻辑.md', report['quality_guides']['created'])
+
     def test_existing_workspace_never_overwritten(self):
         initialize(self.root)
         config = self.root / 'workbench.yaml'

@@ -25,3 +25,5 @@
 本阶段的自然语言交接可放 `deliveries/<series>/stages/review-handoff/`，机器 manifest 放 `deliveries/<series>/<episode>/manifest.json`。历史交付移到 `archive/deliveries/`，不放在 publish 中。用户入口里只保留直接可观看、可转存、可发布使用的文件与简明状态；正文不堆内部日志和工程信息。
 
 用户入口按主题和集名组织：publish/观看与发布.html 覆盖全部当前系列；展示名映射见 workbench.yaml.series.<series_id>.delivery，内部 series_id/episode_id 保持不变。publish_catalog 更新观看页与全季 TXT 文案合集，--check 只读检查实际链接；--migrate 配合显式选集进行可恢复迁移。单集更换从 delivery_layout.locations 定位，不重建英文目录，不重编码未变媒体，不改变审核和上传状态。标准方法见 runtime/workbench/docs/30_用户交付目录与导航SOP.md。
+
+本阶段结束时按 `runtime/workbench/docs/50_媒体文件生命周期与存储治理规范.md` 判断文件必要性，保全当前输入和真实审核引用，仅对保留项无损压缩；清理可重建中间物并留下回执。

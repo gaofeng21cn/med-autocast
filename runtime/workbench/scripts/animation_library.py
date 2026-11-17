@@ -12,6 +12,8 @@ import os
 from pathlib import Path
 import re
 import shutil
+import subprocess
+import sys
 import tempfile
 import threading
 
@@ -144,9 +146,31 @@ def archive(root, metadata, files):
     with (root / ".library.lock").open("a+") as lock:
         fcntl.flock(lock.fileno(), fcntl.LOCK_EX)
         try:
-            return _archive_unlocked(root, metadata, files)
+            result = _archive_unlocked(root, metadata, files)
         finally:
             fcntl.flock(lock.fileno(), fcntl.LOCK_UN)
+    # The lowest-level direct writer also notifies the repository owner. A
+    # repository-wide build sweep recovers writes that bypass this function.
+    if (root.name == 'paper-theatre' and root.parent.name == 'assets'
+            and (metadata.get('reuse_scope') or {}).get('kind') in {'general', 'topic'}
+            and not metadata.get('delivery')):
+        workspace = root.parent.parent
+        config_path = workspace / 'workbench.yaml'
+        if config_path.is_file():
+            spec = (yaml.safe_load(config_path.read_text()) or {}).get('asset_library') or {}
+            reference = spec.get('root') or spec.get('repo')
+            if reference and spec.get('auto_ingest', True):
+                repository = (workspace / Path(reference).expanduser()).resolve()
+                tool = repository / 'tools/repository_media.py'
+                if tool.is_file():
+                    try:
+                        completed = subprocess.run([sys.executable, '-B', str(tool), 'reconcile',
+                            '--root', str(repository), '--source-library', str(root),
+                            '--source-record', str(root / result['record'])], capture_output=True, text=True, timeout=240)
+                        result['repository_ingestion'] = json.loads(completed.stdout)
+                    except (OSError, ValueError, subprocess.TimeoutExpired) as error:
+                        result['repository_ingestion'] = {'status':'blocked', 'errors':[type(error).__name__]}
+    return result
 
 
 def ingest_project(workspace, root, project, selected=None, notes=None):
@@ -399,7 +423,10 @@ def _reuse_unlocked(workspace, root, project, identifier, revision=None, asset_i
         original = within(source, item["path"])
         target = within(destination, item["path"])
         target.parent.mkdir(parents=True, exist_ok=True)
-        shutil.copy2(original, target)
+        if not target.exists():
+            shutil.copy2(original, target)
+        # Project files are independent editable copies of read-only cache bytes.
+        target.chmod(target.stat().st_mode | 0o200)
         if digest(target) != item["sha256"]:
             raise ValueError("复用复制字节不一致")
     write(destination / "library-record.json", {key: value for key, value in record.items() if key != "resolved_path"})

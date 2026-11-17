@@ -10,8 +10,27 @@ from workbench_config import load_author_profile
 from delivery_layout import locations, install
 from build_release_packages import platform_text
 from render_javascript_animation import renderer_selection_report
+from scene_scale_contract import default_scale_contract, fresh_contract_for_manifest
 
 BUNDLE = Path(__file__).resolve().parents[1]
+
+
+class UniqueStoryKeyLoader(yaml.SafeLoader):
+    """Reject duplicate mappings so an episode cannot silently replace another."""
+
+
+def _unique_story_mapping(loader, node, deep=False):
+    loader.flatten_mapping(node)
+    result = {}
+    for key_node, value_node in node.value:
+        key = loader.construct_object(key_node, deep=deep)
+        if key in result:
+            raise yaml.constructor.ConstructorError(None, None, "duplicate mapping key", key_node.start_mark)
+        result[key] = loader.construct_object(value_node, deep=deep)
+    return result
+
+
+UniqueStoryKeyLoader.add_constructor(yaml.resolver.BaseResolver.DEFAULT_MAPPING_TAG, _unique_story_mapping)
 
 
 def read(p):
@@ -22,6 +41,59 @@ def save(p, v):
     p = Path(p)
     p.parent.mkdir(parents=True, exist_ok=True)
     p.write_text(json.dumps(v, ensure_ascii=False, indent=2) + "\n")
+
+
+def story_source_for(workspace: Path, series_id: str, episode_id: str, *, workbench_data=None) -> dict:
+    """Locate this episode in its series story source; content still needs review."""
+    data = workbench_data if workbench_data is not None else yaml.safe_load((workspace / "workbench.yaml").read_text()) or {}
+    row = (data.get("series") or {}).get(series_id) or {}
+    content_root = row.get("content_root", f"content/{series_id}")
+    series_stories = Path(content_root) / "episode_stories.yaml"
+    story_path = workspace / series_stories
+    status = "pending_series_story_bible"
+    pointer = None
+    if story_path.is_file():
+        try:
+            source = yaml.load(story_path.read_text(encoding="utf-8"), Loader=UniqueStoryKeyLoader)
+            episodes = source.get("episodes") if isinstance(source, dict) else None
+            if isinstance(episodes, list):
+                matches = [(i, item) for i, item in enumerate(episodes)
+                           if isinstance(item, dict) and item.get("id") == episode_id]
+                if len(matches) > 1:
+                    status = "pending_duplicate_episode_story"
+                elif not matches:
+                    status = "pending_episode_story_missing"
+                elif not any(value for key, value in matches[0][1].items() if key != "id"):
+                    status = "pending_invalid_episode_story"
+                else:
+                    status = "ready"
+                    pointer = f"#/episodes/{matches[0][0]}"
+            elif isinstance(episodes, dict):
+                entry = episodes.get(episode_id)
+                if episode_id not in episodes:
+                    status = "pending_episode_story_missing"
+                elif not isinstance(entry, dict) or entry.get("id", episode_id) != episode_id or not any(
+                    value for key, value in entry.items() if key != "id"
+                ):
+                    status = "pending_invalid_episode_story"
+                else:
+                    status = "ready"
+                    escaped = episode_id.replace("~", "~0").replace("/", "~1")
+                    pointer = f"#/episodes/{escaped}"
+            else:
+                status = "pending_invalid_series_story_bible"
+        except (OSError, UnicodeError, TypeError, yaml.YAMLError):
+            status = "pending_invalid_series_story_bible"
+    return {
+        "schema": "paper_theatre_story_source/v1",
+        "series_stories": series_stories.as_posix(),
+        "series_episode_pointer": pointer,
+        "series_episode_id": episode_id,
+        "episode_story": "preproduction/02_单集故事.md",
+        "required": True,
+        "status": status,
+        "evidence": "episode_identity_location_only; story_content_review_pending",
+    }
 
 
 def sha(p):
@@ -122,6 +194,11 @@ def adopt(a):
     for f in ["score.json", "asset_manifest.json", "index.html", "package.json"]:
         if not (p / f).is_file():
             raise ValueError(f"缺少 {f}")
+    manifest_path = p / "asset_manifest.json"
+    manifest = read(manifest_path)
+    if "scale_contract" not in manifest:
+        manifest["scale_contract"] = fresh_contract_for_manifest(manifest)
+        save(manifest_path, manifest)
     score = read(p / "score.json")
     score_style = score.get("style", {})
     score_style = score_style if isinstance(score_style, dict) else {}
@@ -152,6 +229,7 @@ def adopt(a):
     beats = read(narration).get("beats", []) if narration.exists() else []
     c = {
         "schema": "paper_project/v1",
+        "storage_profile": {"policy": "necessity_first", "review_frames": "lossless_selected_evidence", "strip_sources": "temporary", "mix_intermediates": "temporary", "history_audio": "flac_exact_restore"},
         "series_id": a.series,
         "episode_id": a.episode,
         "title": a.title or a.episode,
@@ -164,6 +242,11 @@ def adopt(a):
         "style_id": style_id,
         "renderer_id": renderer_id,
         "style_profile_ref": style_profile_ref,
+        "story_source": story_source_for(a.workspace, a.series, a.episode),
+        "scale_contract": {
+            "manifest": "asset_manifest.json",
+            "required_before": "rough_animatic",
+        },
         "beat_shots": {b["id"]: s["id"] for b, s in zip(beats, score["shots"])},
         "kit_version": read(p / "package.json").get("version", "1.0.0"),
     }
@@ -241,8 +324,14 @@ def initialize(a):
     if not (p / "asset_manifest.json").exists():
         save(
             p / "asset_manifest.json",
-            {"schema": "medical_animation_assets/v1", "assets": [], "shots": []},
+            {"schema": "medical_animation_assets/v1",
+             "scale_contract": default_scale_contract(), "assets": [], "shots": []},
         )
+    else:
+        manifest = read(p / "asset_manifest.json")
+        if "scale_contract" not in manifest:
+            manifest["scale_contract"] = fresh_contract_for_manifest(manifest)
+            save(p / "asset_manifest.json", manifest)
     if not (p / "score.json").exists():
         raise ValueError("模板缺少 score.json")
     (p / "preproduction").mkdir(exist_ok=True)
@@ -339,6 +428,13 @@ def inspect(a):
 
 def build(a):
     p, c = get_project(a)
+    manifest = read(p / c["assets"])
+    scale_contract = manifest.get("scale_contract") or {}
+    if scale_contract.get("enforcement") == "required":
+        from first_draft_preflight import preflight
+        scale_report = preflight(p)
+        if scale_report.get("status") == "blocked":
+            raise ValueError("scale_contract 未完成：先完成真实人物标定与同场试装，再 build")
     if not (p / "node_modules/typescript").exists():
         run(["npm", "ci", "--no-audit", "--no-fund"], p, a.workspace)
     run(["npm", "run", "build"], p, a.workspace)
@@ -378,8 +474,16 @@ def revise(a):
     if target.exists():
         raise ValueError("修订目标已存在；请恢复现有修订或选择新的明确路径")
     config = read(source / "project.json")
-    shutil.copytree(source, target, ignore=shutil.ignore_patterns(
-        "out", "qa", "dist", "history", "node_modules", "__pycache__"))
+    def revision_ignore(directory, names):
+        relative = Path(directory).relative_to(source)
+        omitted = {name for name in names if name in {"node_modules", "__pycache__"}}
+        if relative == Path("."):
+            omitted |= set(names) & {"out", "qa", "dist", "history", "work"}
+        if relative == Path("audio"):
+            omitted |= {name for name in names if name == "mix-history" or
+                        Path(name).stem in {"foley", "premix", "music-raw", "music-prepared", "music-ducked"}}
+        return omitted
+    shutil.copytree(source, target, ignore=revision_ignore)
     evidence = source / "qa/asset-reviews"
     if evidence.is_dir():
         shutil.copytree(evidence, target / "qa/asset-reviews")
@@ -709,6 +813,10 @@ def preview(a):
         style_selection["renderer_id"],
         "--review-candidate",
     ]
+    if getattr(a, "compact_motion_strips", True):
+        command.append("--compact-motion-strips")
+    else:
+        command.append("--retain-motion-strip-frames")
     run(command, p, a.workspace)
     preview_report_path = out / "preview.json"
     renderer_selection = None
@@ -1418,6 +1526,10 @@ def main():
     s.add_argument("--start", type=float)
     s.add_argument("--end", type=float)
     s.add_argument("--clean", action="store_true")
+    s.add_argument("--compact-motion-strips", action="store_true", default=True,
+                   help="保留动作条带与关键/事件帧，省去条带的逐张源帧")
+    s.add_argument("--retain-motion-strip-frames", action="store_false", dest="compact_motion_strips",
+                   help="本次动作诊断确需时保留逐张源帧；默认仅保留条带")
     s.add_argument("--output", type=Path)
     s.add_argument("--width", type=int, default=1280)
     s.add_argument("--height", type=int, default=720)

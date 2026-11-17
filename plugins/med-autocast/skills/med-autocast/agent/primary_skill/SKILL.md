@@ -54,6 +54,8 @@ description: 使用 Med Auto Cast 规划、制作、修订和审查医学科普�
 
 尺寸按当前观看任务分主焦点、支持组和背景：复杂核心给近景或拆解，小图只承担简单轮廓或已解释归档内容。以实际内容、对比、运动和画面重量排景，人物、椅面、投影与道具共同变换；用原尺寸、手机宽预览、动作极值和邻镜确认关系。统一观看原则，各集独立导演，不统一图片外框或构图；详细方法见 `runtime/workbench/docs/44_人物素材与画面尺度契约.md`。
 
+真实人物同场必须先建立共同真实世界标尺：本集 `asset_manifest.json.scale_contract` 记录 `pixels_per_cm`、人物载荷 SHA、身体段/姿态标定和同场试装。新独立单集 `enforcement=required` 时，未标定人物不得进入粗动态；半身人物必须由桌椅或明确裁切承托。示意层不只包括器官/解剖图：`scale_mode=diagrammatic_structure|magnified_detail|data_visualization|symbolic_metaphor` 可按解释职责定比例；`document_flat` 与 `screen_content` 仍要把纸张/屏幕容器按物理关系排景。统一规则见 `runtime/workbench/docs/49_示意图分类与跨层排景逻辑.md`。这些图解层不参与人物身体标尺。方法见 `runtime/workbench/docs/48_人物同场真实尺度与图解层契约.md`。
+
 纸剧场的视觉丰富度与配乐先从导演阶段联合设计，方法见 `runtime/workbench/docs/22_纸面舞台与声音导演.md`。完整环境板建立纸面空间，透明主体负责可见事件，前景提供真实遮挡；通用 scene 模块控制层序与布局，镜头保留创作自由。音乐支持曲库、明确许可的生成或本地原创演奏，现有 `paper_project mix --music-plan` 可混分轨并按实际旁白压低音乐。素材、声音与邻镜状态的 Review 持续进行，不增加脚本启动门；品牌动机、医生形象和声线仍从工作区读取。
 
 Manifest 的六阶段路线是 `evidence-plan -> story-directing -> media-production -> visual-review -> meta-review -> review-handoff`；`asset-curation` 是交付后的可选集中沉淀，素材策展能力也贯穿制作。导演准备先查库并看实际原件/动作，制作中独立保存有价值的纸件、组件、声音与来源；清理前保全。由 `medical-video-asset-curator` 使用 `paper_project library` 的只读查询、独立版本包、看图库和精确版本复用；作者/声线母版仍在作者档案，医学、动态和听感状态不因入库升级。方法见 `runtime/workbench/docs/23_可复用素材保管与策展.md`。每个 Stage 的 prompt、专业 Skill、quality gate、工具和推荐产物可由 `contracts/stage_capability_bundle.json` 查询，动画风格与渲染器可由 `contracts/animation_style_registry.json` 查询。
@@ -90,6 +92,8 @@ Stage 返回尽量引用真实产物与版本/来源信息，给出质量债务�
 中文旁白先由内容/导演按语境确定多音字与术语读音，再由后端原生发音控制执行。VoxCPM2 的 `tts_text` 与正文分离，注音变化纳入缓存；已明确拒用的旧 take 不得复用。首句与高风险词所在整段、场景接缝及最终混音分别听辨；普通 ASR 同字转写、响度和注音输入成功不等于发音通过。听辨缺项保留候选与质量债，不伪造审核。见 `runtime/workbench/docs/27_中文配音发音控制与听辨SOP.md`。
 
 提高初版质量优先在 story-directing 交接按语境注音的配音稿（正文与 tts_text 分离），用首句/术语整段和代表镜头小样尽早发现问题。后端按真实模型词表转换 model_text；返修用 paper_project revise 保存独立文件，retime 保留语义断句。audit_pronunciation 已登记为随包工具，按系列当前项目逐词定位覆盖，不能批准发音。具体方法见 `runtime/workbench/docs/28_初版质量与高效返修流程.md`。
+
+逐集首稿须消费 `runtime/workbench/docs/45_初稿质量经验与前置检查.md` 的“本轮重拍的前置判断”：核对相邻集的实际构图与事件、真实手物接触、人物物理尺度和图解层；缺失或低质量主体用 ImageGen 补充透明原件并在浅/深/彩底真实合成检查；删除“非真实影像”等无医学作用的画面标签。长任务确认实际随包入口支持后按需用紧凑预览保存证据并控制缓存；每集回写已验证经验，不能以标签、字段或技术完成代替语义审看。
 
 初稿质量的默认做法见 `runtime/workbench/docs/28_初版质量与高效返修流程.md` 和 `runtime/workbench/docs/45_初稿质量经验与前置检查.md`：患者任务与可见事件先行，先运行 `scripts/first_draft_preflight.py --project <单集工程> --pretty` 定位人物完整性、姿态标尺、复杂对象阅读面积和动画参考接线，再验证代表镜头及完整代表集，最后扩展同类制作；复用技法而非统一构图。实际检查单件 alpha、多底色边缘、内容比例和按语境注音的首句/术语整段小样。源码或素材改变后统一 paper_project build/preview/render 并回读真实帧及当前母版，成功退出可能只保存诊断。初始化/增量升级会补 `work/first-draft-review.md`，已有记录不覆盖；它是工作记录而非状态权威或启动门。经验回到最早 Stage 提示、专业 Skill 与复用库，病例、品牌和声线参数留目标工作区。尚未完成的连续动态、实际听感和医学复核不因批量编码升级。
 
@@ -132,3 +136,5 @@ python3 runtime/native_helpers/med_autocast.py assets --workspace <workspace> --
 三个公开动作支持多集，`execution_scope.kind: none`，只召回已授权的产品、用户或团队、主题知识。单集 direct Skill 先运行 `med_autocast.py project-knowledge-locator --workspace <workspace-root> --series <series> --episode <episode>`，核对 workbench 原登记、`project.json` 身份与正式 inventory。缺登记时由 `opl workspace adopt --agent med-autocast --workspace <workspace-root> --project-id <稳定项目ID> --project-root <真实单集目录> --apply` 接入，再回读定位；具体步骤见 `docs/workspace-adapter.md` 的“单集知识登记”。只有定位 `ready` 才给 prepare 加 `--project <真实单集目录>`（这里传路径，不传 ID）。每集单独冻结上下文；未登记时报告项目知识缺口，继续不依赖该知识的制作，不猜 `projects/<id>`、不读取其他集私有知识。
 
 经验提案使用 `source_refs`、`target_scope: {kind, id}`、`content_kind`、`proposed_rule_or_mechanism`、`evidence_class`、`review_requirement`，经有权维护者接受后调用 Framework 共用机制写回原文。MAC 持有医学、制作与复用语义判断；私人作者资料和单集结论不自动进入产品规则。来源漂移、过期或撤回时按任务必要性处理缺口；媒体生成和发布前重新核对影响行动的作者授权与关键约束。遵循 Framework 的知识来源与记忆政策，本领域落位见 `docs/architecture.md`。
+
+媒体数据先判定必要性，再处置：当前输入、源码、故事/导演/分镜、来源/许可、素材母版、当前与历史交付保全；无独立用途的渲染暂存、逐帧缓存与可重建混音中间轨按精确计划删除，仍需审看的定位帧和历史音轨通过像素/还原字节核验后无损保留。文件清单与自动生成的输入引用不是永久保留理由；问题单引用、在制返修和未知来源不能一并清除。当前性来自制作单、current 与交付指针。每次制作结束或切换修订时执行选择性治理，保留删除/压缩回执并回读交付。详见 `runtime/workbench/docs/50_媒体文件生命周期与存储治理规范.md`。

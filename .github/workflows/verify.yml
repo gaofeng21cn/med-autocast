@@ -12,5 +12,9 @@ jobs:
       - uses: actions/setup-python@v6
         with:
           python-version: '3.11'
+      - name: Install lossless media tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install --yes --no-install-recommends webp flac
       - run: python -m pip install -r runtime/workbench/requirements.txt
       - run: scripts/verify.sh fast

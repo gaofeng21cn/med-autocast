@@ -34,6 +34,8 @@
 
 落座、靠桌或伸手等镜头先在分镜或风格帧写明机位、人物躯干与腿的朝向、座椅与桌沿的前后层、动作中需要露出的脸和手。扩展镜头前用实际素材试装接近、承重、落定及遮挡最重处，在现有 `same_scene_test_fit` 引用短预览。
 
+走路、对坐、翻页和入袋先试装动作结果。座椅随身体朝向，脚底和家具共用地面，纸件按实际开口对齐并在脱离遮挡后显字。缺连续步态可用完整姿态接剪或用实际物件表现进展。见初稿质量经验与前置检查。
+
 优先沿用用户在 workflow input 的 `style_selection`；没有显式选择时才读取系列作者档案和 `animation_style_registry.json` 默认值。把 `style_id`（艺术语言）和 `renderer`（实现后端）分开。未知风格先保留原请求、设计视觉处理并记录能力债务，不因目录不认识该值而退回默认风格或停止导演工作。
 
 执行入口及质量边界见 `agent/professional_skills/medical-video-director/SKILL.md`、`agent/knowledge/domain_boundary.md`。

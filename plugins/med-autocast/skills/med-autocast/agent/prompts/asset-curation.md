@@ -27,4 +27,4 @@
 
 先读 `agent/policies/production-policy.md` 的阶段映射；按 `docs/workspace-adapter.md` 选择实际工具和原输入合同。后续补充或返修从受影响职责继续，不为六阶段顺序重复制作。
 
-本阶段结束时按 `runtime/workbench/docs/50_媒体文件生命周期与存储治理规范.md` 判断文件必要性，保全当前输入和真实审核引用，仅对保留项无损压缩；清理可重建中间物并留下回执。
+本阶段结束时按 `runtime/workbench/docs/50_媒体文件生命周期与存储治理规范.md` 运行单集 `paper_project prune` / `plan_workspace_retention check` 判断文件必要性，保全当前输入、唯一素材和真实审核引用，确认项目级 `node_modules` 与残留渲染暂存已清理并留下回执。

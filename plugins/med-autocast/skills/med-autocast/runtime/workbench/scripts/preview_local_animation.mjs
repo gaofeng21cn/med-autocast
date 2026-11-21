@@ -18,6 +18,7 @@ async function captureLosslessFrame(page,width,height,pngPath,webpPath) {
 
 const config = JSON.parse(await fs.readFile(process.argv[2], 'utf8'));
 config.compact_motion_strips ??= true;
+config.compact_numbered_frames ??= config.compact_motion_strips;
 const project = path.resolve(config.project_root);
 const output = path.resolve(config.output);
 const entry = config.entry || 'index.html';
@@ -84,6 +85,7 @@ try {
   await fs.mkdir(output, {recursive:true});
   temporaryMotionFrames = await fs.mkdtemp(path.join(os.tmpdir(), 'med-preview-frame-'));
   const frames = [];
+  const contactSourceFiles = [];
   for (const [index, point] of points.entries()) {
     const state = await page.evaluate(time => { window.__seek(time); return {
       state:window.__state || null, layout:window.__layout || null,
@@ -92,19 +94,22 @@ try {
     }; }, point.time);
     const stem = `${String(index).padStart(3,'0')}-s${point.scene}-${point.time.toFixed(2)}`;
     const filename = `${stem}.webp`;
-    await captureLosslessFrame(
-      page,width,height,
-      path.join(temporaryMotionFrames,`${stem}.png`),
-      path.join(output,filename),
-    );
+    const scratchPng = path.join(temporaryMotionFrames, `${stem}.png`);
+    await captureFilm(page, width, height, scratchPng);
+    contactSourceFiles.push(scratchPng);
     const overlaps = [];
     const layout = state.layout;
     if (layout?.subtitle && Array.isArray(layout.subjects)) {
       const a = layout.subtitle;
       for (const b of layout.subjects) if (a.x < b.x+b.w && a.x+a.w > b.x && a.y < b.y+b.h && a.y+a.h > b.y) overlaps.push(b.name || 'subject');
     }
-    frames.push({...point, file:filename, ...state, subtitleOverlaps:overlaps,
-      layout_findings:observeLayout(layout,width,height)});
+    const layoutFindings = observeLayout(layout, width, height);
+    const retainFrame = !config.compact_numbered_frames || overlaps.length > 0 || layoutFindings.length > 0;
+    if (retainFrame) {
+      execFileSync('cwebp', ['-quiet', '-lossless', '-z', '4', '-mt', scratchPng, '-o', path.join(output, filename)]);
+    }
+    frames.push({...point, file:filename, ...(retainFrame ? {} : {file_state:'omitted_in_compact_mode'}), ...state, subtitleOverlaps:overlaps,
+      layout_findings:layoutFindings});
   }
   // Richness debt: the same frame is captured without captions and short labels.
   // If a clean frame carries almost no subject area, the shot is carrying its
@@ -203,18 +208,18 @@ try {
     randomAccessChecks.push({scene,time:first.time,passed});
     if (!passed) errors.push(`乱序 seek 不确定: ${first.time.toFixed(3)}s`);
   }
-  // Output folders retain earlier inspection evidence. Only this run's frames
-  // may enter its contact sheet; a glob would silently include stale times.
-  const contactInputs = path.join(output,'contact-frames.ffconcat');
-  await fs.writeFile(contactInputs, 'ffconcat version 1.0\n' + frames.map(frame => `file '${frame.file}'\n`).join(''));
-  execFileSync('ffmpeg', ['-y','-loglevel','error','-f','concat','-safe','1','-i',contactInputs,'-vf',`scale=400:-1,tile=5x${Math.ceil(frames.length/5)}:padding=8:margin=8:color=white`,'-frames:v','1',path.join(output,'contact.jpg')]);
+  // Build the contact sheet from this run's temporary full-resolution captures
+  // so compact mode never leaves redundant numbered frames or ffconcat files in qa/.
+  const contactInputs = path.join(temporaryMotionFrames, 'contact-frames.ffconcat');
+  await fs.writeFile(contactInputs, 'ffconcat version 1.0\n' + contactSourceFiles.map(file => `file '${file.replace(/'/g, "'\\''")}'\n`).join(''));
+  execFileSync('ffmpeg', ['-y','-loglevel','error','-f','concat','-safe','0','-i',contactInputs,'-vf',`scale=400:-1,tile=5x${Math.ceil(frames.length/5)}:padding=8:margin=8:color=white`,'-frames:v','1',path.join(output,'contact.jpg')]);
   const runtimeReceipt = await collectRuntimeReceipt({
     project,
     entry,
     config: { width, height },
   });
   const report = {status:errors.length ? 'failed' : 'previewed', project, output, duration:timeline.duration, range:[rangeStart,rangeEnd], scenes:cuts.length-1, frames, motionStrips, eventFrames, errors, renderer_runtime:timeline.renderer_runtime, runtime_receipt:runtimeReceipt, contact_sheet:path.join(output,'contact.jpg'), release_eligible:false};
-  report.storage_profile={review_frames:'lossless_webp',motion_strips:'jpeg',motion_strip_source_frames:config.compact_motion_strips?'temporary':"lossless_webp"};
+  report.storage_profile={review_frames:'lossless_webp',numbered_frames:config.compact_numbered_frames?'findings_only_contact_preserved':'lossless_webp',motion_strips:'jpeg',motion_strip_source_frames:config.compact_motion_strips?'temporary':'lossless_webp'};
   report.text_observations=observeCues({cues:timeline.cues});
   report.primary_view=primaryView;
   report.primary_entry=entry;

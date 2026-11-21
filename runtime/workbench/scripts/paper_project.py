@@ -111,16 +111,38 @@ def safe_id(s):
     return s
 
 
-def run(cmd, cwd, workspace):
+def clone_or_copy(src, dst):
+    """Copy a file using APFS CoW clone on macOS (independent inode, zero extra blocks); fallback to copy2."""
+    src_path, dst_path = Path(src), Path(dst)
+    if sys.platform == "darwin" and not src_path.is_symlink():
+        try:
+            import ctypes
+            lib = ctypes.CDLL("/usr/lib/libSystem.B.dylib")
+            clonefile = lib.clonefile
+            clonefile.argtypes = [ctypes.c_char_p, ctypes.c_char_p, ctypes.c_uint32]
+            clonefile.restype = ctypes.c_int
+            if dst_path.exists() or dst_path.is_symlink():
+                dst_path.unlink()
+            if clonefile(os.fsencode(src_path), os.fsencode(dst_path), 0) == 0:
+                return str(dst_path)
+        except OSError:
+            pass
+    return shutil.copy2(src_path, dst_path)
+
+
+def run(cmd, cwd, workspace, *, extra_env=None):
+    env = dict(
+        os.environ,
+        MED_AUTOCAST_WORKSPACE_ROOT=str(workspace),
+        PYTHONDONTWRITEBYTECODE="1",
+    )
+    if extra_env:
+        env.update(extra_env)
     subprocess.run(
         [str(x) for x in cmd],
         cwd=cwd,
         check=True,
-        env=dict(
-            os.environ,
-            MED_AUTOCAST_WORKSPACE_ROOT=str(workspace),
-            PYTHONDONTWRITEBYTECODE="1",
-        ),
+        env=env,
     )
 
 
@@ -229,7 +251,15 @@ def adopt(a):
     beats = read(narration).get("beats", []) if narration.exists() else []
     c = {
         "schema": "paper_project/v1",
-        "storage_profile": {"policy": "necessity_first", "review_frames": "lossless_selected_evidence", "strip_sources": "temporary", "mix_intermediates": "temporary", "history_audio": "flac_exact_restore"},
+        "storage_profile": {
+            "policy": "necessity_first",
+            "build_deps": "shared_lockfile_pool",
+            "review_frames": "lossless_selected_evidence",
+            "numbered_frames": "findings_only_contact_preserved",
+            "strip_sources": "temporary",
+            "mix_intermediates": "temporary",
+            "history_audio": "flac_exact_restore",
+        },
         "series_id": a.series,
         "episode_id": a.episode,
         "title": a.title or a.episode,
@@ -317,10 +347,11 @@ def initialize(a):
                 f,
                 p / name,
                 ignore=shutil.ignore_patterns("node_modules", "__pycache__"),
+                copy_function=clone_or_copy,
                 dirs_exist_ok=True,
             )
         elif f.is_file():
-            shutil.copy2(f, p / name)
+            clone_or_copy(f, p / name)
     if not (p / "asset_manifest.json").exists():
         save(
             p / "asset_manifest.json",
@@ -422,6 +453,7 @@ def inspect(a):
             "mix",
             "render",
             "package",
+            "prune",
         ],
     }
 
@@ -435,9 +467,9 @@ def build(a):
         scale_report = preflight(p)
         if scale_report.get("status") == "blocked":
             raise ValueError("scale_contract 未完成：先完成真实人物标定与同场试装，再 build")
-    if not (p / "node_modules/typescript").exists():
-        run(["npm", "ci", "--no-audit", "--no-fund"], p, a.workspace)
-    run(["npm", "run", "build"], p, a.workspace)
+    from shared_node_deps import build_env_for_project
+    build_env, deps_pool = build_env_for_project(p, a.workspace)
+    run(["npm", "run", "build"], p, a.workspace, extra_env=build_env)
     inputs = {
         str(f.relative_to(p)): sha(f)
         for folder in ["src", "scripts"]
@@ -460,9 +492,18 @@ def build(a):
             inputs[f] = sha(p / f)
     save(
         p / "dist/build-receipt.json",
-        {"inputs": inputs, "bundle_sha256": sha(p / "dist/film.js")},
+        {
+            "inputs": inputs,
+            "bundle_sha256": sha(p / "dist/film.js"),
+            "shared_deps_fingerprint": deps_pool["fingerprint"],
+        },
     )
-    return {"status": "built", "project": str(p), "entry": c["entry"]}
+    return {
+        "status": "built",
+        "project": str(p),
+        "entry": c["entry"],
+        "shared_deps_fingerprint": deps_pool["fingerprint"],
+    }
 
 
 def revise(a):
@@ -483,10 +524,10 @@ def revise(a):
             omitted |= {name for name in names if name == "mix-history" or
                         Path(name).stem in {"foley", "premix", "music-raw", "music-prepared", "music-ducked"}}
         return omitted
-    shutil.copytree(source, target, ignore=revision_ignore)
+    shutil.copytree(source, target, ignore=revision_ignore, copy_function=clone_or_copy)
     evidence = source / "qa/asset-reviews"
     if evidence.is_dir():
-        shutil.copytree(evidence, target / "qa/asset-reviews")
+        shutil.copytree(evidence, target / "qa/asset-reviews", copy_function=clone_or_copy)
     for name in ("project.json", config["narration"], config["score"]):
         if (target / name).is_file() and os.path.samefile(source / name, target / name):
             raise ValueError("修订文件没有隔离；未注册为当前版本")
@@ -817,6 +858,8 @@ def preview(a):
         command.append("--compact-motion-strips")
     else:
         command.append("--retain-motion-strip-frames")
+    if getattr(a, "retain_numbered_frames", False):
+        command.append("--retain-numbered-frames")
     run(command, p, a.workspace)
     preview_report_path = out / "preview.json"
     renderer_selection = None
@@ -924,6 +967,79 @@ def attach_mix(project, config):
     (project / "audio/needs-remix.json").unlink(missing_ok=True)
 
 
+def _archive_mix_audio(audio: Path, history: Path) -> tuple[str, dict]:
+    """Archive prior mix WAV as exact-restore lossless FLAC when possible; fallback to CoW clone."""
+    source_sha = sha(audio)
+    if audio.suffix.lower() == ".wav" and shutil.which("flac"):
+        try:
+            with audio.open("rb") as handle:
+                header = handle.read(4)
+            if header == b"RIFF":
+                flac_target = history / "audio.flac"
+                temp_flac = history / f".audio.{os.getpid()}.tmp.flac"
+                temp_wav = history / f".audio.{os.getpid()}.verify.wav"
+                try:
+                    subprocess.run(
+                        ["flac", "-s", "--verify", "--keep-foreign-metadata", "-8",
+                         "-f", str(audio), "-o", str(temp_flac)],
+                        check=True,
+                        stdout=subprocess.DEVNULL,
+                        stderr=subprocess.DEVNULL,
+                    )
+                    subprocess.run(
+                        ["flac", "-s", "-d", "--keep-foreign-metadata", "-f",
+                         str(temp_flac), "-o", str(temp_wav)],
+                        check=True,
+                        stdout=subprocess.DEVNULL,
+                        stderr=subprocess.DEVNULL,
+                    )
+                    if sha(temp_wav) == source_sha:
+                        os.replace(temp_flac, flac_target)
+                        compressed_sha = sha(flac_target)
+                        stat = audio.stat()
+                        flac_stat = flac_target.stat()
+                        save(history / "storage-compaction.json", {
+                            "schema": "medical_video_storage_compaction_group/v1",
+                            "directory": str(history),
+                            "kind": "audio_retained",
+                            "policy": "lossless_flac_exact_wav_bytes_recoverable",
+                            "records": [{
+                                "source": str(history / "audio.wav"),
+                                "target": str(flac_target),
+                                "kind": "audio_retained",
+                                "source_sha256": source_sha,
+                                "restored_wav_sha256": source_sha,
+                                "target_sha256": compressed_sha,
+                                "size": stat.st_size,
+                                "allocated_bytes": stat.st_blocks * 512,
+                                "target_size": flac_stat.st_size,
+                                "target_allocated_bytes": flac_stat.st_blocks * 512,
+                            }],
+                        })
+                        return "audio.flac", {
+                            "source": str(audio),
+                            "sha256": source_sha,
+                            "format": "flac_lossless",
+                            "compressed_file": "audio.flac",
+                            "compressed_sha256": compressed_sha,
+                            "restore": {
+                                "source": "audio.flac",
+                                "command": "flac -d --keep-foreign-metadata audio.flac -o audio.wav",
+                                "expected_wav_sha256": source_sha,
+                            },
+                        }
+                finally:
+                    temp_flac.unlink(missing_ok=True)
+                    temp_wav.unlink(missing_ok=True)
+        except (OSError, subprocess.CalledProcessError):
+            pass
+    name = "audio" + audio.suffix
+    clone_or_copy(audio, history / name)
+    if sha(history / name) != source_sha:
+        raise ValueError("旧混音保全校验失败：" + str(audio))
+    return name, {"source": str(audio), "sha256": source_sha}
+
+
 def preserve_mix(project, config):
     """Keep exact prior audio and honest input snapshots before any overwrite."""
     audio = project / config["audio"]
@@ -939,7 +1055,6 @@ def preserve_mix(project, config):
         "mix-receipt.json": receipt_path,
         "timing-receipt.json": project / "audio/timing-receipt.json",
         "current-render.json": project / "out/current.json",
-        "audio" + audio.suffix: audio,
     }
     for name, source in sources.items():
         if source.is_file():
@@ -947,6 +1062,9 @@ def preserve_mix(project, config):
             files[name] = {"source": str(source), "sha256": sha(history / name)}
             if files[name]["sha256"] != sha(source):
                 raise ValueError("旧混音保全校验失败：" + str(source))
+    if audio.is_file():
+        archived_name, archived_meta = _archive_mix_audio(audio, history)
+        files[archived_name] = archived_meta
     receipt = read(receipt_path) if receipt_path.is_file() else {}
     matches = {}
     for key, field in (("audio_sha256", "audio"), ("score_sha256", "score"), ("voice_sha256", "voice")):
@@ -994,7 +1112,7 @@ def reuse_mix(a, project, config):
     target_audio.parent.mkdir(parents=True, exist_ok=True)
     with tempfile.TemporaryDirectory(dir=target_audio.parent, prefix=".reuse-mix-") as temp:
         copied = Path(temp) / "audio"
-        shutil.copyfile(source / source_config["audio"], copied)
+        clone_or_copy(source / source_config["audio"], copied)
         if sha(copied) != receipt["audio_sha256"]:
             raise ValueError("原混音复制校验失败")
         os.replace(copied, target_audio)
@@ -1358,9 +1476,9 @@ def package(a):
         user = Path(folder) / 'publish'
         record = Path(folder) / 'record'
         user.mkdir(); record.mkdir()
-        shutil.copy2(source, user / 'video.mp4')
-        shutil.copy2(p / c['score'], record / 'score.json')
-        shutil.copy2(p / c['narration'], record / 'narration.json')
+        clone_or_copy(source, user / 'video.mp4')
+        clone_or_copy(p / c['score'], record / 'score.json')
+        clone_or_copy(p / c['narration'], record / 'narration.json')
         (user / 'subtitles.srt').write_text(
             "\n\n".join(f"{i + 1}\n{tc(q['start'])} --> {tc(q['end'])}\n{q['text']}"
                          for i, q in enumerate(score['cues'])) + "\n", encoding='utf-8')
@@ -1400,7 +1518,7 @@ def package(a):
             ('preproduction/music-plan.json', 'music-plan.json', 'music_plan'),
         ]:
             if (p / src).is_file():
-                shutil.copy2(p / src, record / name)
+                clone_or_copy(p / src, record / name)
                 attachments[key] = name
         preview_ref = evidence.get('review_scope', {}).get('preview')
         render_receipt = Path(r.get('render_receipt', '_missing_'))
@@ -1459,6 +1577,44 @@ def package(a):
             'manifest': pointer['manifest'], 'previous_delivery': pointer['previous_delivery'],
             'quality_debt': debt, 'release_eligible': False,
             'navigation': pointer.get('navigation')}
+
+
+def prune(a):
+    """Project-scoped lifecycle closeout: plan or apply verified pruning without full-workspace scans."""
+    p, _c = get_project(a)
+    import plan_workspace_retention as retention
+    parts = set(getattr(a, "parts", None) or ["node_modules", "review_frame", "audio", "render_temporary"])
+    policy = {
+        "protected_projects": [str(p.relative_to(a.workspace))] if getattr(a, "keep_wip", False) else [],
+        "scope": "single_project",
+        "project": str(p.relative_to(a.workspace)),
+    }
+    plan_data = retention.plan(a.workspace, policy, project_filter=[p])
+    output_path = (
+        a.output.resolve()
+        if getattr(a, "output", None)
+        else p / "qa" / ("lifecycle-apply.json" if getattr(a, "apply", False) else "lifecycle-plan.json")
+    )
+    if not getattr(a, "apply", False):
+        retention.write(output_path, plan_data)
+        return {
+            "status": "planned",
+            "project": str(p),
+            "plan": str(output_path),
+            "summary": plan_data["summary"],
+        }
+    plan_path = output_path.with_name(output_path.stem + "-plan.json")
+    retention.write(plan_path, plan_data)
+    retention.apply(plan_path, output_path, parts=parts)
+    receipt = read(output_path)
+    return {
+        "status": "pruned",
+        "project": str(p),
+        "plan": str(plan_path),
+        "receipt": str(output_path),
+        "parts": sorted(parts),
+        "summary": receipt["summary"],
+    }
 
 
 def main():
@@ -1530,6 +1686,8 @@ def main():
                    help="保留动作条带与关键/事件帧，省去条带的逐张源帧")
     s.add_argument("--retain-motion-strip-frames", action="store_false", dest="compact_motion_strips",
                    help="本次动作诊断确需时保留逐张源帧；默认仅保留条带")
+    s.add_argument("--retain-numbered-frames", action="store_true", default=False,
+                   help="除疑点帧外额外保留全部编号帧；默认仅留 contact.jpg 与疑点定位帧")
     s.add_argument("--output", type=Path)
     s.add_argument("--width", type=int, default=1280)
     s.add_argument("--height", type=int, default=720)
@@ -1544,6 +1702,12 @@ def main():
     s = sub.add_parser("package")
     s.add_argument("--output", type=Path)
     s.add_argument("--review", type=Path)
+    s = sub.add_parser("prune")
+    s.add_argument("--apply", action="store_true", help="按精确计划执行单集收尾清理与无损归档；默认只输出计划")
+    s.add_argument("--keep-wip", action="store_true", help="将该单集按在制返修保护（仍清理编号帧、动作条源帧与项目级 node_modules）")
+    s.add_argument("--parts", nargs="+", choices=["node_modules", "review_frame", "audio", "render_temporary"],
+                   default=["node_modules", "review_frame", "audio", "render_temporary"])
+    s.add_argument("--output", type=Path)
     a = p.parse_args()
     a.workspace = a.workspace.resolve()
     if not a.project and a.command != "library":

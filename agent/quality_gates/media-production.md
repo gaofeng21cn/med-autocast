@@ -18,4 +18,4 @@ JS 动画的每个医学主体是否有已查看的素材、医学参考、来�
 
 混音前后重新计算当前旁白整轨与 `score.json` 的 SHA-256，并与 `mix-receipt.json` 的 `voice_sha256`/`score_sha256` 比对；任一失配都标为 `mix_lineage_mismatch`，必须重混并按新时长 retime、build、render。源轨边界扫描或 `source_timeline_bound` 通过不能替代最终 MP4 的段首听辨；每段首词、接缝和结尾都要从实际交付 MP4 音轨听辨，无听辨则保持 `final_mp4_headword`/`full_listening=pending`。
 
-透明请求不能代替实际alpha和多底色复核；环境与运动层分别判断。源码/素材/Score变更后的build、当前preview实际帧、精确current母版及编码回执是否一致；退出码不能批准缺失输出或旧bundle。发现工程漂移修最小原因并继续独立工作，不补填动态或听辨通过。代码统计和哈希仅定位，不按分数决定合格；代表集和批量重渲染不能替代逐集复核。每集已知表意/声音缺陷不得标 passed/ready 或混入用户最新版。方法见 `runtime/workbench/docs/39_逐集表意与段首完整性验收.md`。
+透明请求不能代替实际alpha和多底色复核；环境与运动层分别判断。源码/素材/Score变更后的build统一经 `paper_project build` 复用工作区共享依赖池，不得在单集目录留存项目级 `node_modules`；当前preview实际帧、精确current母版及编码回执是否一致；退出码不能批准缺失输出或旧bundle。发现工程漂移修最小原因并继续独立工作，不补填动态或听辨通过。代码统计和哈希仅定位，不按分数决定合格；代表集和批量重渲染不能替代逐集复核。每集已知表意/声音缺陷不得标 passed/ready 或混入用户最新版。收尾前运行单集 `paper_project prune --apply` 清理可重建缓存并留存回执。方法见 `runtime/workbench/docs/39_逐集表意与段首完整性验收.md` 与 `runtime/workbench/docs/50_媒体文件生命周期与存储治理规范.md`。

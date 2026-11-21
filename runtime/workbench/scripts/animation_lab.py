@@ -23,9 +23,9 @@ def save(path, data):
     path.write_text(json.dumps(data, ensure_ascii=False, indent=2)+'\n')
 
 
-def run(command, project):
+def run(command, project, *, env=None):
     print(json.dumps({'running':command[0], 'operation':command[1] if len(command)>1 else ''}), flush=True)
-    subprocess.run(command, cwd=project, check=True)
+    subprocess.run(command, cwd=project, check=True, env=env)
 
 
 def create(project, study='style_lab'):
@@ -51,9 +51,11 @@ def create(project, study='style_lab'):
 
 
 def build(project):
-    if not (project/'node_modules/.bin/tsc').is_file():
-        run(['npm','ci','--ignore-scripts','--no-audit','--no-fund'],project)
-    run(['npm','run','build'],project)
+    from shared_node_deps import build_env_for_project
+    workspace_env = os.environ.get('MED_AUTOCAST_WORKSPACE_ROOT', '').strip()
+    workspace = Path(workspace_env).resolve() if workspace_env else None
+    env, _pool = build_env_for_project(project, workspace)
+    run(['npm','run','build'],project,env=env)
 
 
 def audio(project):
@@ -82,7 +84,8 @@ def capture(project, command):
         output.parent.mkdir(parents=True,exist_ok=True)
         render_target=output.parent/f'.style-study-{uuid.uuid4().hex}.mp4'
     config={'project_root':str(project),'output':str(render_target),'entry':'index.html','width':1280,'height':720,
-        'fps':score['fps'],'audio':str(project/'audio/study.wav')}
+        'fps':score['fps'],'audio':str(project/'audio/study.wav'),
+        **({'compact_numbered_frames':False} if command=='preview' else {})}
     config_path=project/f'{command}-config.json';save(config_path,config)
     runner='preview_local_animation.mjs' if command=='preview' else 'render_local_animation.mjs'
     result=subprocess.run(['node',str(BUNDLE/'scripts'/runner),str(config_path)],cwd=project,

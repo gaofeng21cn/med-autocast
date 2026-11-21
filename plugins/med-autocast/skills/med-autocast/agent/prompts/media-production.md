@@ -68,4 +68,4 @@
 
 五小时级全季优化按单集保存 `retime/build/preview/mix/render/package` 回执和当前 Score/MP4 指针。中断后先读最近完整回执、当前 `out/current.json`、mix lineage 与 publish manifest，从最深未完成阶段继续；不重复生成已经绑定的旁白，不用旧目录或修改时间猜当前版本。第一次 animatic 后查看实际动作，再决定本集如何继续；resolve_motion_audit 仅只读汇集声明。按 runtime/workbench/docs/42_paper-collage-mv制作方法适配.md 先做道具各状态与局部完整小戏，用接触锚点、不同缓动和停顿落实导演；不靠字段/动作量清零扩展全季。
 
-本阶段结束时按 `runtime/workbench/docs/50_媒体文件生命周期与存储治理规范.md` 判断文件必要性，保全当前输入和真实审核引用，仅对保留项无损压缩；清理可重建中间物并留下回执。
+构建统一通过 `paper_project build` 使用工作区共享构建依赖池（`.cache/node-deps/<fingerprint>`），禁止在单集或修订目录单独运行 `npm ci` / `npm install` 生成项目级 `node_modules`。本阶段结束或切换修订时按 `runtime/workbench/docs/50_媒体文件生命周期与存储治理规范.md` 运行单集 `paper_project prune --apply`（或 `plan_workspace_retention`）判断文件必要性，保全当前输入和真实审核引用，仅对保留项无损压缩，清理项目级 `node_modules`、渲染暂存与可重建中间物并留下回执。

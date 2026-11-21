@@ -236,6 +236,8 @@ def main() -> None:
     parser.add_argument("--compact-motion-strips", action="store_true", default=True,
                         help="Keep strip sheets and key/event frames, omit individual strip source poses")
     parser.add_argument("--retain-motion-strip-frames", action="store_false", dest="compact_motion_strips")
+    parser.add_argument("--retain-numbered-frames", action="store_true", default=False,
+                        help="Retain all numbered per-scene frames alongside contact.jpg; default keeps only frames with layout/subtitle findings")
     parser.add_argument("--review-candidate", action="store_true",
                         help="Allow pending assets in a non-release review candidate; rejected or invalid assets produce a diagnostic")
     args = parser.parse_args()
@@ -302,7 +304,8 @@ def main() -> None:
         config = {"project_root": str(project), "entry": args.html_entry,
                   "output": str(output_dir), "width": args.width, "height": args.height,
                   "start": args.start, "end": args.end,
-                  "compact_motion_strips": args.compact_motion_strips}
+                  "compact_motion_strips": args.compact_motion_strips,
+                  "compact_numbered_frames": args.compact_motion_strips and not args.retain_numbered_frames}
         try:
             with tempfile.TemporaryDirectory(prefix="med-animation-preview-") as temporary:
                 config_path = Path(temporary) / "preview.json"

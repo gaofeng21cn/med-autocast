@@ -183,7 +183,7 @@ audio_mix:
 初稿复核入口是 `work/first-draft-review.md` 和 `docs/28_初版质量与高效返修流程.md`。先做代表镜头与完整代表集，检查真实 alpha、认知比例、去文字事件、动作弧、承接物、阅读停留和首句/术语整段声音；源码更新后重新 build/preview，再 render 并回读实际媒体。纸剧场按 `docs/42_paper-collage-mv制作方法适配.md` 先做道具状态图和完整小戏，动作快慢服务内容。resolve_motion_audit 只读汇集声明，不补反应/落定、方向或跨镜证据。预览与正式渲染自动附带 `motion_audit` 和 `medical_animation_runtime_receipt/v1`；整季或大批量复核先运行 `scripts/build_episode_review_queue.py --workspace <目录>`，长任务按 `scripts/rebuild_current_episodes.py` 的文件回执续跑，再逐集消费声音链与视觉证据。队列、动作审计和运行回执只定位质量债，不批准成片、不阻断其他可消费工作。欠项保留候选和可用成果，不作为表单启动门。
 ''', encoding='utf-8')
     (target / '.gitignore').write_text(
-        '.venv/\nnode_modules/\n__pycache__/\n*.pyc\n.env\n.DS_Store\n'
+        '.venv/\n.cache/\nnode_modules/\n__pycache__/\n*.pyc\n.env\n.DS_Store\n'
         '# 可重建批量输出和临时文件；work/ 可能包含恢复回执，保留其可追踪性\n'
         'output/\ntmp/\n',
         encoding='utf-8',

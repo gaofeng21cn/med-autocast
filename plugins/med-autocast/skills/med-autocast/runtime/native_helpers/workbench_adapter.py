@@ -15,7 +15,8 @@ import yaml
 
 BUNDLE = Path(__file__).resolve().parents[1] / "workbench"
 TOOLS = {
-    "plan_workspace_retention": ("read_or_explicit_write", "先判断媒体保留必要性，生成精确清单后清理派生物、无损保留必要证据及恢复回读"),
+    "plan_workspace_retention": ("read_or_explicit_write", "先判断媒体与项目构建依赖的保留必要性，生成精确清单后清理派生物/项目级 node_modules、无损保留必要证据及恢复回读，支持 check 健康巡检"),
+    "shared_node_deps": ("read_or_explicit_write", "按 package-lock.json 依赖指纹维护工作区共享 Node 构建依赖池，避免单集目录重复安装 node_modules"),
     "media_asset_library": ("read_or_explicit_write", "独立 MAC 资产库自动准备、只读查询和精确版本取用；允许适配和新创"),
 
     "publish_catalog": ("write", "中文主题与集名交付、总观看入口和文案合集；显式迁移、可恢复归档及只读链接回查"),
@@ -78,7 +79,7 @@ TOOLS = {
 }
 
 
-CANONICAL_TOOLS = {"media_asset_library", "publish_catalog", "animation_lab", "paper_project", "render_narration", "render_series_tts", "configure_voice", "environment_check", "render_javascript_animation", "audit_pronunciation", "audit_audio_freshness", "audit_narration_samples", "audit_paper_captions", "audit_text_layout", "audit_label_contract", "build_no_music_mix", "resolve_motion_audit"}
+CANONICAL_TOOLS = {"media_asset_library", "publish_catalog", "animation_lab", "paper_project", "plan_workspace_retention", "shared_node_deps", "render_narration", "render_series_tts", "configure_voice", "environment_check", "render_javascript_animation", "audit_pronunciation", "audit_audio_freshness", "audit_narration_samples", "audit_paper_captions", "audit_text_layout", "audit_label_contract", "build_no_music_mix", "resolve_motion_audit"}
 
 
 def resolve_tool(root: Path, name: str, bundled=False) -> tuple[Path, Path]:

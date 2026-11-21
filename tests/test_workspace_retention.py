@@ -436,6 +436,85 @@ class RetentionTests(unittest.TestCase):
             self.assertEqual(pr['snapshots_kept'], 1)
             self.assertEqual([p.name for p in (root / 'archive/deliveries/s/e').iterdir()], ['20261120T000000Z'])
 
+    def test_expanded_health_check_and_one_command_optimize_loop(self):
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp).resolve()
+            lib_png = root / 'assets/paper-theatre/entries/desk/desk.png'
+            lib_png.parent.mkdir(parents=True)
+            payload = bytes([i % 251 for i in range(90000)])
+            lib_png.write_bytes(payload)
+            dup_copy = root / 'assets/copy_desk.bin'
+            dup_copy.write_bytes(payload)
+
+            v1 = root / 'productions/s/e/v1'
+            v2 = root / 'productions/s/e/v2'
+            for proj in (v1, v2):
+                (proj / 'src').mkdir(parents=True)
+                (proj / 'src/scene.ts').write_text('export const x = 1;\n')
+                (proj / 'out').mkdir(parents=True)
+                life.write(proj / 'project.json', {
+                    'schema': 'paper_project/v1', 'series_id': 's', 'episode_id': 'e',
+                    'score': 'score.json', 'narration': 'narration.json',
+                    'audio': 'audio.wav', 'voice': 'audio/narration-normalized.wav',
+                })
+                life.write(proj / 'score.json', {'shots': []})
+                life.write(proj / 'narration.json', {'beats': []})
+            (v2 / 'node_modules').symlink_to(root / 'nonexistent_nm')
+            (v1 / 'entries/dup').mkdir(parents=True)
+            (v1 / 'entries/dup/a.txt').write_text('mirror')
+            write_valid_wav(v2 / 'audio.wav')
+            write_valid_wav(v2 / 'audio/mix-history/m1/audio.wav')
+            pub_v = root / 'publish/s/e/video.mp4'
+            pub_v.parent.mkdir(parents=True)
+            pub_v.write_bytes(b'pub-mp4')
+            cur_mp4 = v2 / 'out/final.mp4'
+            cur_mp4.write_bytes(b'pub-mp4')
+            life.write(v2 / 'out/current.json', {'path': str(cur_mp4), 'sha256': life.sha(cur_mp4)})
+            deliv_m = root / 'deliveries/s/e/manifest.json'
+            deliv_m.parent.mkdir(parents=True)
+            life.write(deliv_m, {'project': str(v2)})
+            (root / 'workbench.yaml').write_text(
+                "delivery_policy:\n  archive_keep_latest: 1\nseries:\n  s:\n    publish_root: publish/s\n    episodes:\n      e:\n        project: productions/s/e/v2\n"
+            )
+            for ts in ('20261101T000000Z', '20261110T000000Z'):
+                p = root / 'archive/deliveries/s/e' / ts / 'publish'
+                p.mkdir(parents=True)
+                (p / 'video.mp4').write_bytes(ts.encode())
+            done_work = root / 'work/done-batch'
+            done_work.mkdir(parents=True)
+            (done_work / 'notes.md').write_text('# keep me\n')
+            (done_work / 'cache.png').write_bytes(b'png-cache')
+            active_work = root / 'work/active-batch'
+            active_work.mkdir(parents=True)
+            life.write(active_work / 'episode-queue.json', [{'id': 'e1', 'status': 'pending'}])
+            (active_work / 'keep.png').write_bytes(b'active-png')
+
+            before = life.check_health(root)
+            codes = {f['code'] for f in before['findings']}
+            self.assertEqual(before['status'], 'attention_needed')
+            self.assertTrue({
+                'dangling_node_modules_symlinks',
+                'misplaced_entries_mirrors',
+                'unsealed_published_episodes',
+                'retired_revisions_present',
+                'excess_archived_deliveries',
+            }.issubset(codes))
+
+            with patch.object(life, 'assert_idle'):
+                opt = plc.optimize_workspace(root, include_work_prune=True, apply=True)
+
+            self.assertEqual(opt['after']['health_status'], 'clean')
+            self.assertEqual(opt['after']['findings'], [])
+            self.assertFalse((v2 / 'node_modules').is_symlink())
+            self.assertFalse(v1.exists())
+            self.assertTrue((v2 / 'storage-hydration.json').is_file())
+            self.assertTrue((done_work / 'notes.md').is_file())
+            self.assertFalse((done_work / 'cache.png').exists())
+            self.assertTrue((active_work / 'keep.png').is_file())
+            self.assertIn('cow_dedup', opt['stages'])
+            rep = plc.storage_report(root)
+            self.assertGreater(rep['total_files'], 0)
+
 
 if __name__ == '__main__':
     unittest.main()

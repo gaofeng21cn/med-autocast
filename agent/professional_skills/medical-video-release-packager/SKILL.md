@@ -97,3 +97,9 @@ video.mp4
 用户交付采用系列展示名和“集号_标题”目录，英文 series_id/episode_id 留在内容、制作、Stage 交接和内部 manifest。系列规划时登记 delivery.display_name，首次交付登记 delivery.episode_dirs；已交付名称固定，正文或标题修订不自动改路径。总入口为 publish/观看与发布.html，各系列统一观看页与全季文案合集，不以制作批次、日期或版本组织用户目录。
 
 单集包器共享 delivery_layout.locations，更换后保持同一用户目录并刷新导航。publish_catalog 负责实际导航、只读链接检查和显式可恢复迁移；旧版与批次入口归 archive，指针和审看记录归 deliveries。缺少名字或导航仍保留有效候选与诊断，不升级审核状态，也不重编码未变媒体。方法见[用户交付目录与导航](../../../runtime/workbench/docs/30_用户交付目录与导航SOP.md)。
+
+## 交付后存储封存与生命周期收尾
+
+- 每次 `delivery_layout.install()` 在原子切换指针后，自动将移入 `archive/deliveries/` 的旧备份 WAV 经双向 SHA-256 校验转为无损 FLAC，并按 `delivery_policy.archive_keep_latest`（默认每集最新 `1` 份）自动裁剪超龄旧备份。
+- 单集交付回读确认 `out/current.json` 与 `publish/.../video.mp4` 字节一致后，执行 `paper_project seal --apply` 转入定稿封存态（清理已定稿 `mix-history` 与无引用重图 `qa/`、无损 FLAC 归档混音与分段、库素材与成品副本写入 `storage-hydration.json` 脱水；后续任意编辑/构建/`revise` 会自动解冻还原）。未与 `publish/` 同步的在制集会被自动跳过保护。
+- 系列或批次交付结案时，运行 `project_lifecycle optimize --apply`（一键串行执行断链与常规清理、退役修订谱系归档退场、批量定稿封存、APFS CoW 物理块去重及可选 `--include-work-prune`）并运行 `plan_workspace_retention check` 确认 `status == "clean"`。规范见[媒体文件生命周期与存储治理规范](../../../runtime/workbench/docs/50_媒体文件生命周期与存储治理规范.md)。

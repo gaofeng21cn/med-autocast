@@ -389,6 +389,7 @@ def plan(workspace, policy, *, project_filter=None):
     archive_work_wavs = {p for p in files if is_archivable_wav(p, workspace)}
     render_paths = {p for p in files if is_render_scratch(p, workspace)}
 
+    # Identify candidate superseded renders (non-current MP4 in projects with verified current.json)
     current_render_map = {}
     superseded_mp4_paths = set()
     for cur_path in (p for p in files if p.name == 'current.json' and p.parent.name == 'out'):
@@ -410,6 +411,7 @@ def plan(workspace, policy, *, project_filter=None):
         except (OSError, ValueError, TypeError):
             continue
 
+    # Identify candidate orphan audio segment takes not referenced by project's narration_beats.json
     narration_beats_map = {}
     orphan_take_paths = set()
     for nb_path in (p for p in files if p.name == 'narration_beats.json' and p.parent.name == 'audio'):
@@ -569,6 +571,8 @@ def plan(workspace, policy, *, project_filter=None):
         if project is None:
             continue
         if path in orphan_take_paths and not refs.get(path) and project not in wip:
+            # Tracked separately under explicit `orphan_take` category so default `--parts audio`
+            # never deletes source takes unexpectedly while allowing explicit orphan cleanup.
             nb_path, _used = narration_beats_map[project]
             meta_p = path.with_suffix('.json')
             rejected = False
@@ -598,6 +602,7 @@ def plan(workspace, policy, *, project_filter=None):
         elif project in active or project in wip:
             action, reason = 'keep_operational', 'active_audio_input_or_explicit_reference'
         else:
+            # Retired revision WAVs are losslessly archived to exact-restore FLAC without losing bytes.
             action, reason = 'keep_compressed', 'frozen_revision_source_or_mix_for_restoration'
         row = record(
             path, workspace, sha_cache,
@@ -978,6 +983,7 @@ def apply(plan_path, output, *, parts):
                 except OSError:
                     pass
 
+    # Auto-compress bulky process journals (>256 KiB) to prevent lifecycle receipts from bloating work/.
     if journal.is_file() and journal.stat().st_size > 256 * 1024:
         compress_log_file(journal)
 
@@ -1107,10 +1113,104 @@ def check_health(workspace):
                 fc, _sz, al = directory_stats(child)
                 pools.append({'fingerprint': child.name, 'files': fc, 'allocated_bytes': al})
 
+    # Three-state lifecycle drift checks: dangling symlinks, misplaced entries mirrors,
+    # unsealed published episodes, retired flat revisions, and excess archived deliveries.
+    dangling_nm_symlinks = 0
+    misplaced_entries_dirs = 0
+    misplaced_entries_alloc = 0
+    retired_revisions = 0
+    retired_revisions_alloc = 0
+    unsealed_published = 0
+    excess_archived_deliveries = 0
+    excess_archived_alloc = 0
+
+    wb_path = workspace / 'workbench.yaml'
+    wb_cfg = yaml.safe_load(wb_path.read_text(encoding='utf-8')) if wb_path.is_file() else {}
+    keep_latest_arch = int(((wb_cfg or {}).get('delivery_policy') or {}).get('archive_keep_latest', 1))
+
+    # Build in-flight unregistered successor protection matching project_lifecycle.retire_revisions
+    ver_re = re.compile(r'^v(\d+)$')
+    in_flight_successors = set()
+    for cur in active:
+        m = ver_re.match(cur.name)
+        if m and cur.parent.is_dir():
+            cur_n = int(m.group(1))
+            for sib in cur.parent.iterdir():
+                sm = ver_re.match(sib.name)
+                if sib.is_dir() and sm and int(sm.group(1)) > cur_n:
+                    if (sib / 'dist/build-receipt.json').is_file() and not (sib / 'out/current.json').is_file():
+                        in_flight_successors.add(sib.resolve())
+
+    prod_root = workspace / 'productions'
+    if prod_root.is_dir():
+        for dp, dns, fns in os.walk(prod_root, followlinks=False):
+            for name in list(dns) + list(fns):
+                if name == 'node_modules':
+                    cand = Path(dp) / name
+                    if cand.is_symlink() and not cand.exists():
+                        dangling_nm_symlinks += 1
+        for pj in prod_root.glob('*/*/*/project.json'):
+            proj = pj.parent.resolve()
+            ent = proj / 'entries'
+            if ent.is_dir() and not ent.is_symlink():
+                misplaced_entries_dirs += 1
+                _, _, eal = directory_stats(ent)
+                misplaced_entries_alloc += eal
+            if proj not in active and proj not in in_flight_successors:
+                retired_revisions += 1
+                _, _, ral = directory_stats(proj)
+                retired_revisions_alloc += ral
+
+    if wb_cfg and (wb_cfg.get('series') or {}):
+        import delivery_layout as dl
+        for sid, srow in (wb_cfg.get('series') or {}).items():
+            for eid, ep in (srow.get('episodes') or {}).items():
+                proj_rel = ep.get('project')
+                if not proj_rel:
+                    continue
+                proj = (workspace / proj_rel).resolve()
+                cur_j = proj / 'out/current.json'
+                if not cur_j.is_file() or (proj / 'storage-hydration.json').is_file():
+                    continue
+                try:
+                    loc = dl.locations(workspace, sid, eid, config=wb_cfg)
+                    pub_v = loc['user'] / 'video.mp4'
+                    if not (pub_v.is_file() and (loc['record'] / 'manifest.json').is_file()):
+                        continue
+                    cur_data = read(cur_j)
+                    if cur_data.get('sha256') == sha(pub_v):
+                        # Published & byte-identical yet still carrying unsealed working artifacts
+                        has_unsealed_audio = (proj / 'audio.wav').is_file() and (proj / 'audio.wav').read_bytes()[:4] == b'RIFF'
+                        has_mix_hist = (proj / 'audio/mix-history').is_dir() and any((proj / 'audio/mix-history').iterdir())
+                        if has_unsealed_audio or has_mix_hist:
+                            unsealed_published += 1
+                except (OSError, ValueError, TypeError):
+                    continue
+
+    arch_root = workspace / 'archive/deliveries'
+    if arch_root.is_dir() and keep_latest_arch >= 0:
+        for sdir in arch_root.iterdir():
+            if not sdir.is_dir() or sdir.name.startswith('_'):
+                continue
+            for edir in sdir.iterdir():
+                if not edir.is_dir():
+                    continue
+                snaps = sorted([d for d in edir.iterdir() if d.is_dir()], key=lambda x: x.name)
+                if len(snaps) > keep_latest_arch:
+                    stale = snaps[: len(snaps) - keep_latest_arch] if keep_latest_arch > 0 else snaps
+                    for st_dir in stale:
+                        excess_archived_deliveries += 1
+                        _, _, sal = directory_stats(st_dir)
+                        excess_archived_alloc += sal
+
     vfs = os.statvfs(workspace)
     findings = []
     if nm_dirs:
         findings.append({'code': 'project_node_modules_present', 'count': len(nm_dirs), 'allocated_bytes': nm_alloc})
+    if dangling_nm_symlinks:
+        findings.append({'code': 'dangling_node_modules_symlinks', 'count': dangling_nm_symlinks, 'allocated_bytes': 0})
+    if misplaced_entries_dirs:
+        findings.append({'code': 'misplaced_entries_mirrors', 'count': misplaced_entries_dirs, 'allocated_bytes': misplaced_entries_alloc})
     if render_scratch_files:
         findings.append({'code': 'render_scratch_present', 'count': render_scratch_files, 'allocated_bytes': render_scratch_alloc})
     if numbered_or_strip_files:
@@ -1125,6 +1225,12 @@ def check_health(workspace):
         findings.append({'code': 'work_cache_uncompressed_wavs', 'count': work_wavs, 'allocated_bytes': work_wav_alloc})
     if big_lifecycle_logs:
         findings.append({'code': 'uncompressed_large_lifecycle_logs', 'count': big_lifecycle_logs, 'allocated_bytes': big_lifecycle_log_alloc})
+    if unsealed_published:
+        findings.append({'code': 'unsealed_published_episodes', 'count': unsealed_published, 'allocated_bytes': 0})
+    if retired_revisions:
+        findings.append({'code': 'retired_revisions_present', 'count': retired_revisions, 'allocated_bytes': retired_revisions_alloc})
+    if excess_archived_deliveries:
+        findings.append({'code': 'excess_archived_deliveries', 'count': excess_archived_deliveries, 'allocated_bytes': excess_archived_alloc})
 
     return {
         'schema': 'medical_video_storage_health/v1',
@@ -1133,6 +1239,8 @@ def check_health(workspace):
         'status': 'clean' if not findings else 'attention_needed',
         'shared_node_deps_pools': pools,
         'project_node_modules': {'directories': len(nm_dirs), 'allocated_bytes': nm_alloc},
+        'dangling_node_modules_symlinks': {'count': dangling_nm_symlinks},
+        'misplaced_entries_mirrors': {'directories': misplaced_entries_dirs, 'allocated_bytes': misplaced_entries_alloc},
         'render_scratch': {'files': render_scratch_files, 'allocated_bytes': render_scratch_alloc},
         'redundant_preview_frames': {'files': numbered_or_strip_files, 'allocated_bytes': numbered_or_strip_alloc},
         'uncompressed_mix_history_wavs': {'files': mix_history_wavs, 'allocated_bytes': mix_history_alloc},
@@ -1140,6 +1248,9 @@ def check_health(workspace):
         'archive_delivery_uncompressed_wavs': {'files': archive_wavs, 'allocated_bytes': archive_wav_alloc},
         'work_cache_uncompressed_wavs': {'files': work_wavs, 'allocated_bytes': work_wav_alloc},
         'uncompressed_large_lifecycle_logs': {'files': big_lifecycle_logs, 'allocated_bytes': big_lifecycle_log_alloc},
+        'unsealed_published_episodes': {'count': unsealed_published},
+        'retired_revisions_present': {'directories': retired_revisions, 'allocated_bytes': retired_revisions_alloc},
+        'excess_archived_deliveries': {'snapshots': excess_archived_deliveries, 'allocated_bytes': excess_archived_alloc},
         'findings': findings,
         'disk_free_bytes': vfs.f_bavail * vfs.f_frsize,
     }

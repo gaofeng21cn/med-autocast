@@ -174,7 +174,8 @@ audio_mix:
 - assets：工作台本地缓存、兼容入口和已登记的稳定可分层素材；跨工作区统一资产库由 `workbench.yaml.asset_library` 指向。
 - productions：按系列/单集保存分镜、素材、JS、候选、QA 和 final。
 - publish：面向用户的唯一最新版；直接取视频、封面和平台文案，不放版本子目录。
-- deliveries：内部 Stage 交接与机器清单；archive/deliveries：交付旧版；work/output/tmp：运行态、批量输出和可重建临时文件。
+- deliveries：内部 Stage 交接与机器清单；archive/deliveries：交付旧版（默认每集保留最新 1 份回滚备份，WAV 自动无损 FLAC 归档）；work/output/tmp：运行态、批量输出和可重建临时文件。
+- .cache/node-deps：工作区共享 Node 构建依赖池（严禁在单集目录单独 `npm ci`）。单集收尾用 `paper_project prune/seal --apply`，批次结束用 `project_lifecycle optimize --apply` 与 `plan_workspace_retention check` 维持存储最优（详见 `docs/50_媒体文件生命周期与存储治理规范.md`）。
 
 用户交付从 `publish/观看与发布.html` 进入；主题与分集采用展示名称，英文 ID 留在内部登记。`publish_catalog` 维护观看页与文案合集，迁移已有目录须显式执行并保留归档。
 

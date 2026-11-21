@@ -11,3 +11,5 @@
 平台稿是否可独立读懂当前问题、解释及行动，是否仅剩两三句摘要；标题、正文、话题和置顶评论是否与本集事实及当前视频一致。稿件过薄交内容策划补写，保留已有媒体和真实待审状态，不按字数或固定章节裁决质量。
 
 用户入口按主题和集名组织：publish/观看与发布.html 覆盖全部当前系列；展示名映射见 workbench.yaml.series.<series_id>.delivery，内部 series_id/episode_id 保持不变。publish_catalog 更新观看页与全季 TXT 文案合集，--check 只读检查实际链接；--migrate 配合显式选集进行可恢复迁移。单集更换从 delivery_layout.locations 定位，不重建英文目录，不重编码未变媒体，不改变审核和上传状态。标准方法见 runtime/workbench/docs/30_用户交付目录与导航SOP.md。
+
+交付收尾同步核查存储与生命周期健康：单集交付并核对字节一致后应转入封存态（`paper_project seal --apply`），不得遗留项目级 `node_modules`、失效软链接、渲染暂存、`mix-history` 或超龄多代交付备份；系列/批次结案后运行 `project_lifecycle optimize --apply` 与 `plan_workspace_retention check`，核对膨胀项归零并留存回执，不以清理或封存替代内容或医学审核通过。

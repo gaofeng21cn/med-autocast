@@ -29,4 +29,5 @@ delivery_policy:
   layout: latest_only
   index: 观看与发布.html
   batch_directories: false
+  archive_keep_latest: 1
 series: {}

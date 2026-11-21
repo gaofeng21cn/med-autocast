@@ -26,4 +26,6 @@
 
 用户入口按主题和集名组织：publish/观看与发布.html 覆盖全部当前系列；展示名映射见 workbench.yaml.series.<series_id>.delivery，内部 series_id/episode_id 保持不变。publish_catalog 更新观看页与全季 TXT 文案合集，--check 只读检查实际链接；--migrate 配合显式选集进行可恢复迁移。单集更换从 delivery_layout.locations 定位，不重建英文目录，不重编码未变媒体，不改变审核和上传状态。标准方法见 runtime/workbench/docs/30_用户交付目录与导航SOP.md。
 
-本阶段结束时按 `runtime/workbench/docs/50_媒体文件生命周期与存储治理规范.md` 判断文件必要性，保全当前输入和真实审核引用，仅对保留项无损压缩；清理可重建中间物并留下回执。
+本阶段结束时按 `runtime/workbench/docs/50_媒体文件生命周期与存储治理规范.md` 执行三态生命周期收尾：
+- 单集交付回读确认 `out/current.json` 与 `publish/.../video.mp4` 逐字节一致后，运行 `paper_project seal --apply` 将已定稿单集转入封存态（退场过程 `mix-history` 与无引用高清 `qa/` 截帧、无损 FLAC 归档混音与分段、库素材与成品副本按 `storage-hydration.json` 脱水，后续编辑/构建/`revise` 自动解冻）；`delivery_layout` 会在替换交付时自动将旧备份 WAV 转 FLAC 并按 `archive_keep_latest`（默认 1 份）裁剪超龄备份。
+- 系列或批次交付结束后，运行 `project_lifecycle optimize --apply`（含退役修订谱系 `.tar.gz` 归档退场、批量定稿封存、APFS CoW 物理块去重、可选 `--include-work-prune` 清理已结案批次过程媒体缓存）与 `plan_workspace_retention check`，确认健康状态为 `clean` 并留下回执。

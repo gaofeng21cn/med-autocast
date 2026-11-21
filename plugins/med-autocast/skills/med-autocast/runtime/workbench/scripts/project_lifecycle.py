@@ -9,12 +9,14 @@ re-hydration whenever a sealed episode is edited, built, rendered, or revised.
 from __future__ import annotations
 
 import argparse
+import collections
 import ctypes
 import hashlib
 import json
 import os
 import re
 import shutil
+import struct
 import subprocess
 import sys
 import tarfile
@@ -28,6 +30,14 @@ SCHEMA_HYDRATION = "medical_video_project_hydration/v1"
 HYDRATION_FILE = "storage-hydration.json"
 VERSION_RE = re.compile(r"^v(\d+)$")
 SKIP_DIRS = {".git", "node_modules", "__pycache__", ".venv", ".cache"}
+F_LOG2PHYS = 49
+COW_SCAN_DIRS = ("assets", "productions", "publish", "deliveries", "archive/deliveries", "work")
+WORK_PRUNABLE_MEDIA_EXTS = {
+    ".png", ".webp", ".jpg", ".jpeg", ".mp4", ".mov",
+    ".wav", ".flac", ".mp3", ".m4a", ".aac", ".ffconcat",
+}
+WORK_PROTECTED_PREFIXES = ("disk-lifecycle-", "disk-cleanup-")
+WORK_PROTECTED_NAMES = {"historical-interaction-review"}
 QA_PRUNABLE_IMAGE_EXTS = {".png", ".webp"}
 QA_KEEP_FILENAMES = {"contact.jpg"}
 QA_KEEP_STRIP_RE = re.compile(r"^strip-s\d+(?:-r\d+)?\.jpg$")
@@ -784,6 +794,460 @@ def seal_all_published(workspace: Path, *, apply: bool = False, workers: int = 6
     }
 
 
+def _devoff_of(path: Path) -> int | None:
+    if sys.platform != "darwin":
+        return None
+    import fcntl
+    try:
+        fd = os.open(path, os.O_RDONLY)
+        try:
+            res = fcntl.fcntl(fd, F_LOG2PHYS, struct.pack("<Iqq", 0, 0, 0))
+            _flags, _contig, devoff = struct.unpack("<Iqq", res)
+            return devoff if devoff > 0 else None
+        finally:
+            os.close(fd)
+    except OSError:
+        return None
+
+
+def storage_report(workspace: Path) -> dict:
+    """Fast read-only dual-metric storage report: logical du vs unique APFS physical blocks."""
+    workspace = workspace.resolve()
+    seen_global: set[tuple[int, int]] = set()
+    per_top: dict[str, list[int]] = collections.defaultdict(lambda: [0, 0, 0])
+    total_files = total_logical = total_unique_phys = 0
+
+    for entry in sorted(workspace.iterdir(), key=lambda p: p.name):
+        top = entry.name
+        seen_top: set[tuple[int, int]] = set()
+        if entry.is_symlink():
+            continue
+        if entry.is_file():
+            try:
+                al = entry.lstat().st_blocks * 512
+            except OSError:
+                continue
+            per_top[top][0] += 1
+            per_top[top][1] += al
+            per_top[top][2] += al
+            total_files += 1
+            total_logical += al
+            total_unique_phys += al
+            continue
+        for dp, dns, fns in os.walk(entry, followlinks=False):
+            dns[:] = [d for d in dns if not (Path(dp) / d).is_symlink()]
+            for fn in fns:
+                p = Path(dp) / fn
+                if p.is_symlink():
+                    continue
+                try:
+                    al = p.lstat().st_blocks * 512
+                except OSError:
+                    continue
+                per_top[top][0] += 1
+                per_top[top][1] += al
+                total_files += 1
+                total_logical += al
+                devoff = _devoff_of(p) if al > 0 else None
+                key = (devoff, al) if devoff is not None else None
+                if key is None or key not in seen_top:
+                    if key is not None:
+                        seen_top.add(key)
+                    per_top[top][2] += al
+                if key is None or key not in seen_global:
+                    if key is not None:
+                        seen_global.add(key)
+                    total_unique_phys += al
+
+    vfs = os.statvfs(workspace)
+    return {
+        "schema": "medical_video_storage_report/v1",
+        "created_at": stamp(),
+        "workspace": str(workspace),
+        "platform": sys.platform,
+        "total_files": total_files,
+        "total_logical_alloc_bytes": total_logical,
+        "total_logical_alloc_gib": round(total_logical / 1024**3, 2),
+        "total_unique_physical_bytes": total_unique_phys,
+        "total_unique_physical_gib": round(total_unique_phys / 1024**3, 2),
+        "disk_free_bytes": vfs.f_bavail * vfs.f_frsize,
+        "by_top_dir": {
+            k: {
+                "files": v[0],
+                "logical_bytes": v[1],
+                "logical_gib": round(v[1] / 1024**3, 2),
+                "unique_phys_bytes": v[2],
+                "unique_phys_gib": round(v[2] / 1024**3, 2),
+            }
+            for k, v in sorted(per_top.items(), key=lambda x: -x[1][1])
+            if v[1] >= 1024 * 1024
+        },
+    }
+
+
+def cow_dedup(workspace: Path, *, min_size: int = 65536, apply: bool = False) -> dict:
+    """Safe atomic APFS Copy-on-Write (clonefile) physical block deduplication."""
+    workspace = workspace.resolve()
+    if sys.platform != "darwin":
+        return {"status": "skipped_unsupported_platform", "platform": sys.platform}
+    import plan_workspace_retention as retention
+
+    if apply:
+        retention.assert_idle(workspace)
+
+    libc = ctypes.CDLL("/usr/lib/libSystem.B.dylib")
+    clonefile_fn = libc.clonefile
+    clonefile_fn.argtypes = [ctypes.c_char_p, ctypes.c_char_p, ctypes.c_uint32]
+    clonefile_fn.restype = ctypes.c_int
+
+    by_size: dict[int, list[tuple[Path, int]]] = collections.defaultdict(list)
+    scanned = 0
+    for rel_root in COW_SCAN_DIRS:
+        root = workspace / rel_root
+        if not root.exists():
+            continue
+        for dp, dns, fns in os.walk(root, followlinks=False):
+            dns[:] = [d for d in dns if d not in SKIP_DIRS and not (Path(dp) / d).is_symlink()]
+            for fn in fns:
+                p = Path(dp) / fn
+                if p.is_symlink():
+                    continue
+                try:
+                    st = p.lstat()
+                except OSError:
+                    continue
+                scanned += 1
+                if st.st_size >= min_size and st.st_nlink == 1:
+                    by_size[st.st_size].append((p, st.st_blocks * 512))
+
+    candidates = [p for items in by_size.values() if len(items) > 1 for p, _ in items]
+    sha_map: dict[Path, str] = {}
+    if candidates:
+        with ThreadPoolExecutor(max_workers=8) as pool:
+            for p, digest in zip(candidates, pool.map(sha256_file, candidates)):
+                sha_map[p] = digest
+
+    groups: dict[tuple[int, str], list[Path]] = collections.defaultdict(list)
+    for sz, items in by_size.items():
+        if len(items) <= 1:
+            continue
+        for p, _ in items:
+            digest = sha_map.get(p)
+            if digest:
+                groups[(sz, digest)].append(p)
+
+    deduped = already_shared = reclaimed_bytes = 0
+    errors = []
+    for (sz, expected_sha), paths in groups.items():
+        if len(paths) <= 1:
+            continue
+        paths.sort(key=lambda p: (0 if p.relative_to(workspace).parts[0] == "assets" else 1, str(p)))
+        canonical = paths[0]
+        canon_devoff = _devoff_of(canonical)
+        if canon_devoff is None:
+            continue
+        for target in paths[1:]:
+            try:
+                cur_devoff = _devoff_of(target)
+                if cur_devoff == canon_devoff:
+                    already_shared += 1
+                    continue
+                st_before = target.lstat()
+                if st_before.st_size != sz or st_before.st_nlink != 1:
+                    continue
+                alloc = st_before.st_blocks * 512
+                if not apply:
+                    deduped += 1
+                    reclaimed_bytes += alloc
+                    continue
+                tmp = target.with_name(f".{target.name}.{os.getpid()}.cowtmp")
+                try:
+                    rc = clonefile_fn(os.fsencode(canonical), os.fsencode(tmp), 0)
+                    if rc != 0:
+                        raise OSError(f"clonefile failed rc={rc}")
+                    if sha256_file(tmp) != expected_sha:
+                        raise RuntimeError("cloned SHA mismatch")
+                    if os.path.samefile(canonical, tmp) or tmp.lstat().st_nlink != 1:
+                        raise RuntimeError("clone unexpectedly shared inode or hardlinked")
+                    os.chmod(tmp, st_before.st_mode & 0o7777)
+                    os.utime(tmp, ns=(st_before.st_atime_ns, st_before.st_mtime_ns))
+                    os.replace(tmp, target)
+                finally:
+                    if tmp.exists() or tmp.is_symlink():
+                        tmp.unlink(missing_ok=True)
+                if _devoff_of(target) != canon_devoff:
+                    raise RuntimeError("devoff did not converge")
+                deduped += 1
+                reclaimed_bytes += alloc
+            except Exception as exc:
+                errors.append({"path": str(target), "error": str(exc)})
+
+    return {
+        "schema": "medical_video_apfs_cow_dedup/v1",
+        "status": "deduped" if apply else "planned",
+        "created_at": stamp(),
+        "scanned_files": scanned,
+        "hashed_candidates": len(candidates),
+        "deduped_files": deduped,
+        "already_shared_files": already_shared,
+        "reclaimed_physical_bytes": reclaimed_bytes,
+        "reclaimed_physical_gib": round(reclaimed_bytes / 1024**3, 2),
+        "errors": errors,
+    }
+
+
+def _has_active_pending_queue(directory: Path) -> bool:
+    for q in directory.glob("*queue*.json"):
+        try:
+            data = read_json(q)
+            items = data if isinstance(data, list) else (
+                data.get("episodes") or data.get("items") or data.get("queue") or []
+            )
+            if isinstance(items, list) and len(items) > 0:
+                return True
+        except (OSError, ValueError, TypeError):
+            continue
+    return False
+
+
+def prune_work_caches(
+    workspace: Path,
+    *,
+    targets: list[str] | None = None,
+    all_completed: bool = False,
+    prune_root_scratch: bool = False,
+    apply: bool = False,
+) -> dict:
+    """Prune transient binary media caches in completed work/ campaigns while keeping all scripts/docs/queues."""
+    workspace = workspace.resolve()
+    import plan_workspace_retention as retention
+
+    if apply:
+        retention.assert_idle(workspace)
+
+    work_root = workspace / "work"
+    selected_dirs: list[Path] = []
+    skipped_protected: list[str] = []
+
+    if work_root.is_dir():
+        if targets:
+            for name in targets:
+                cand = (work_root / name).resolve()
+                if not cand.is_relative_to(work_root) or not cand.is_dir():
+                    raise ValueError(f"Invalid work target directory: {name}")
+                selected_dirs.append(cand)
+        elif all_completed:
+            for child in sorted(work_root.iterdir()):
+                if not child.is_dir() or child.is_symlink():
+                    continue
+                if child.name in WORK_PROTECTED_NAMES or child.name.startswith(WORK_PROTECTED_PREFIXES):
+                    skipped_protected.append(child.name)
+                    continue
+                if _has_active_pending_queue(child):
+                    skipped_protected.append(child.name)
+                    continue
+                selected_dirs.append(child)
+
+    records = []
+    total_files = total_alloc = 0
+    for root_dir in selected_dirs:
+        fc = al = 0
+        for dp, dns, fns in os.walk(root_dir, topdown=False, followlinks=False):
+            for fn in fns:
+                p = Path(dp) / fn
+                if p.is_symlink() or not p.is_file():
+                    continue
+                if p.suffix.lower() in WORK_PRUNABLE_MEDIA_EXTS or p.name == ".DS_Store":
+                    al += p.lstat().st_blocks * 512
+                    fc += 1
+                    if apply:
+                        p.unlink()
+            for dn in dns:
+                sub = Path(dp) / dn
+                if sub.is_dir() and not sub.is_symlink():
+                    if dn == "__pycache__":
+                        sfc, sal = dir_stats(sub)
+                        fc += sfc
+                        al += sal
+                        if apply:
+                            shutil.rmtree(sub)
+                    elif apply:
+                        try:
+                            sub.rmdir()
+                        except OSError:
+                            pass
+        if fc > 0:
+            total_files += fc
+            total_alloc += al
+            records.append({
+                "path": str(root_dir.relative_to(workspace)),
+                "files": fc,
+                "allocated_bytes": al,
+            })
+
+    if prune_root_scratch:
+        wb_text = (workspace / "workbench.yaml").read_text(encoding="utf-8") if (workspace / "workbench.yaml").is_file() else ""
+        for rname in ("qa", "out", "tmp", "review"):
+            rd = workspace / rname
+            if rd.is_dir() and not rd.is_symlink() and f": {rname}" not in wb_text:
+                fc, al = dir_stats(rd)
+                if fc > 0:
+                    total_files += fc
+                    total_alloc += al
+                    records.append({"path": rname, "files": fc, "allocated_bytes": al, "kind": "root_scratch"})
+                    if apply:
+                        shutil.rmtree(rd)
+
+    return {
+        "schema": "medical_video_work_cache_prune/v1",
+        "status": "pruned" if apply else "planned",
+        "created_at": stamp(),
+        "skipped_protected_dirs": skipped_protected,
+        "total_files": total_files,
+        "total_allocated_bytes": total_alloc,
+        "total_allocated_gib": round(total_alloc / 1024**3, 2),
+        "records": records,
+    }
+
+
+def clean_dangling_node_modules_symlinks(workspace: Path, *, apply: bool = False) -> dict:
+    """Detect and optionally remove broken legacy node_modules symlinks inside productions/."""
+    workspace = workspace.resolve()
+    prod_root = workspace / "productions"
+    found = []
+    if prod_root.is_dir():
+        for dp, dns, fns in os.walk(prod_root, followlinks=False):
+            for name in list(dns) + list(fns):
+                if name != "node_modules":
+                    continue
+                p = Path(dp) / name
+                if p.is_symlink() and not p.exists():
+                    found.append({"path": str(p.relative_to(workspace)), "broken_target": os.readlink(p)})
+                    if apply:
+                        p.unlink()
+    return {
+        "status": "cleaned" if apply else "planned",
+        "count": len(found),
+        "samples": found[:20],
+    }
+
+
+def optimize_workspace(
+    workspace: Path,
+    *,
+    keep_latest_deliveries: int | None = None,
+    include_retire: bool = True,
+    include_seal: bool = True,
+    include_cow_dedup: bool = True,
+    include_work_prune: bool = False,
+    prune_root_scratch: bool = False,
+    apply: bool = False,
+    output_dir: Path | None = None,
+) -> dict:
+    """One-command autonomous storage optimization orchestrating all lifecycle stages with receipts."""
+    workspace = workspace.resolve()
+    import plan_workspace_retention as retention
+
+    if apply:
+        retention.assert_idle(workspace)
+
+    wb_path = workspace / "workbench.yaml"
+    wb_config = yaml.safe_load(wb_path.read_text(encoding="utf-8")) if wb_path.is_file() else {}
+    if keep_latest_deliveries is None:
+        keep_latest_deliveries = int((wb_config.get("delivery_policy") or {}).get("archive_keep_latest", 1))
+
+    if output_dir is None:
+        output_dir = workspace / f"work/disk-lifecycle-{time.strftime('%Y%m%d')}"
+    output_dir = output_dir.resolve()
+
+    before_report = storage_report(workspace)
+    before_health = retention.check_health(workspace)
+
+    stages: dict[str, dict] = {}
+    stages["dangling_symlinks"] = clean_dangling_node_modules_symlinks(workspace, apply=apply)
+
+    # Retention plan + apply (node_modules, render_temporary, review_frame, audio, orphan_take, superseded_render)
+    ret_plan = retention.plan(workspace, {"protected_projects": []})
+    actionable_parts = sorted({
+        r["category"]
+        for r in ret_plan["decisions"]
+        if r["category"] in {"node_modules", "render_temporary", "review_frame", "audio", "orphan_take", "superseded_render"}
+        and (r["decision"].startswith("delete") or r.get("target"))
+    })
+    if apply and actionable_parts:
+        output_dir.mkdir(parents=True, exist_ok=True)
+        plan_gz = output_dir / "optimize-retention-plan.json.gz"
+        apply_gz = output_dir / "optimize-retention-apply.json.gz"
+        retention.write(plan_gz, ret_plan)
+        retention.apply(plan_gz, apply_gz, parts=set(actionable_parts))
+        stages["retention"] = {
+            "status": "applied",
+            "parts": actionable_parts,
+            "summary": retention.read(apply_gz)["summary"],
+        }
+    else:
+        stages["retention"] = {
+            "status": "planned" if actionable_parts else "clean",
+            "parts": actionable_parts,
+            "summary": ret_plan["summary"],
+        }
+
+    # Compress bulky > 2 MiB plain-text lifecycle logs under work/disk-lifecycle-*
+    big_logs = []
+    if (workspace / "work").is_dir():
+        for d in sorted((workspace / "work").glob("disk-lifecycle-*")):
+            if not d.is_dir():
+                continue
+            for p in sorted(d.rglob("*")):
+                if p.is_file() and not p.is_symlink() and p.suffix in {".json", ".jsonl"} and p.stat().st_size > 2 * 1024 * 1024:
+                    big_logs.append(p)
+                    if apply:
+                        retention.compress_log_file(p)
+    stages["lifecycle_logs"] = {"status": "compressed" if apply else "planned", "files": len(big_logs)}
+
+    stages["delivery_archives"] = prune_archived_deliveries(workspace, keep_latest=keep_latest_deliveries, apply=apply)
+    if include_retire:
+        stages["retire_revisions"] = retire_revisions(workspace, apply=apply)
+    if include_seal:
+        stages["seal_published"] = seal_all_published(workspace, apply=apply)
+    if include_work_prune or prune_root_scratch:
+        stages["work_caches"] = prune_work_caches(
+            workspace, all_completed=include_work_prune, prune_root_scratch=prune_root_scratch, apply=apply
+        )
+    if include_cow_dedup:
+        stages["cow_dedup"] = cow_dedup(workspace, apply=apply)
+
+    after_health = retention.check_health(workspace) if apply else before_health
+    after_report = storage_report(workspace) if apply else before_report
+
+    result = {
+        "schema": "medical_video_workspace_optimize/v1",
+        "created_at": stamp(),
+        "mode": "apply" if apply else "dry_run",
+        "workspace": str(workspace),
+        "before": {
+            "logical_gib": before_report["total_logical_alloc_gib"],
+            "unique_physical_gib": before_report["total_unique_physical_gib"],
+            "total_files": before_report["total_files"],
+            "health_status": before_health["status"],
+            "findings_count": len(before_health["findings"]),
+        },
+        "after": {
+            "logical_gib": after_report["total_logical_alloc_gib"],
+            "unique_physical_gib": after_report["total_unique_physical_gib"],
+            "total_files": after_report["total_files"],
+            "health_status": after_health["status"],
+            "findings_count": len(after_health["findings"]),
+            "findings": after_health["findings"],
+        },
+        "stages": stages,
+    }
+    if apply:
+        output_dir.mkdir(parents=True, exist_ok=True)
+        write_json(output_dir / "optimize-receipt.json", result)
+    return result
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     sub = parser.add_subparsers(dest="command", required=True)
@@ -813,6 +1277,35 @@ def main() -> None:
     p.add_argument("--apply", action="store_true")
     p.add_argument("--output", type=Path)
 
+    p = sub.add_parser("cow-dedup")
+    p.add_argument("--workspace", type=Path, required=True)
+    p.add_argument("--min-size", type=int, default=65536)
+    p.add_argument("--apply", action="store_true")
+    p.add_argument("--output", type=Path)
+
+    p = sub.add_parser("prune-work")
+    p.add_argument("--workspace", type=Path, required=True)
+    p.add_argument("--target", action="append", help="Explicit work/<subdir> name(s) to prune binary media caches from")
+    p.add_argument("--all-completed", action="store_true", help="Prune completed non-protected work/ subdirs without active pending queues")
+    p.add_argument("--prune-root-scratch", action="store_true")
+    p.add_argument("--apply", action="store_true")
+    p.add_argument("--output", type=Path)
+
+    p = sub.add_parser("report")
+    p.add_argument("--workspace", type=Path, required=True)
+    p.add_argument("--output", type=Path)
+
+    p = sub.add_parser("optimize")
+    p.add_argument("--workspace", type=Path, required=True)
+    p.add_argument("--keep-latest-deliveries", type=int)
+    p.add_argument("--no-retire", action="store_true")
+    p.add_argument("--no-seal", action="store_true")
+    p.add_argument("--no-cow-dedup", action="store_true")
+    p.add_argument("--include-work-prune", action="store_true")
+    p.add_argument("--prune-root-scratch", action="store_true")
+    p.add_argument("--apply", action="store_true")
+    p.add_argument("--output", type=Path)
+
     args = parser.parse_args()
     ws = args.workspace.resolve()
     if args.command == "seal":
@@ -823,8 +1316,31 @@ def main() -> None:
         res = seal_all_published(ws, apply=args.apply, workers=args.workers)
     elif args.command == "retire-revisions":
         res = retire_revisions(ws, archive_path=args.archive, apply=args.apply)
-    else:
+    elif args.command == "prune-delivery-archives":
         res = prune_archived_deliveries(ws, keep_latest=args.keep_latest, apply=args.apply)
+    elif args.command == "cow-dedup":
+        res = cow_dedup(ws, min_size=args.min_size, apply=args.apply)
+    elif args.command == "prune-work":
+        res = prune_work_caches(
+            ws,
+            targets=args.target,
+            all_completed=args.all_completed,
+            prune_root_scratch=args.prune_root_scratch,
+            apply=args.apply,
+        )
+    elif args.command == "report":
+        res = storage_report(ws)
+    else:
+        res = optimize_workspace(
+            ws,
+            keep_latest_deliveries=args.keep_latest_deliveries,
+            include_retire=not args.no_retire,
+            include_seal=not args.no_seal,
+            include_cow_dedup=not args.no_cow_dedup,
+            include_work_prune=args.include_work_prune,
+            prune_root_scratch=args.prune_root_scratch,
+            apply=args.apply,
+        )
 
     if getattr(args, "output", None):
         write_json(args.output, res)

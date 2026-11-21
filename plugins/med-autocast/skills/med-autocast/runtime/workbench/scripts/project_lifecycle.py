@@ -39,7 +39,7 @@ WORK_PRUNABLE_MEDIA_EXTS = {
 WORK_PROTECTED_PREFIXES = ("disk-lifecycle-", "disk-cleanup-")
 WORK_PROTECTED_NAMES = {"historical-interaction-review"}
 QA_PRUNABLE_IMAGE_EXTS = {".png", ".webp"}
-QA_KEEP_FILENAMES = {"contact.jpg"}
+QA_KEEP_FILENAMES = {"contact.jpg", "cut-pairs.jpg", "mobile-360.jpg"}
 QA_KEEP_STRIP_RE = re.compile(r"^strip-s\d+(?:-r\d+)?\.jpg$")
 LINEAGE_TEXT_EXTS = {
     ".ts", ".tsx", ".js", ".mjs", ".cjs", ".css", ".html", ".svg",

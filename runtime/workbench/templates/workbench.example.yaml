@@ -14,6 +14,7 @@ authorities:
   character_and_scale_contract: docs/44_人物素材与画面尺度契约.md
   same_scene_human_scale_contract: docs/48_人物同场真实尺度与图解层契约.md
   visual_scale_classification: docs/49_示意图分类与跨层排景逻辑.md
+  first_draft_motion_craft: docs/51_初稿动态表现与跨镜状态规范.md
 asset_library:
   mode: auto_install_optional_repo
   auto_install: true

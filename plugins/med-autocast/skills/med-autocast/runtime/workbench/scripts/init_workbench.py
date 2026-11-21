@@ -43,6 +43,7 @@ def _ensure_quality_guides(target: Path) -> dict:
         'docs/49_示意图分类与跨层排景逻辑.md',
         'docs/50_纸剧场重拍经验与初稿进化.md',
         'docs/50_媒体文件生命周期与存储治理规范.md',
+        'docs/51_初稿动态表现与跨镜状态规范.md',
         'templates/series/09_episode_experience_note.md',
     )
     created = []

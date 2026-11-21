@@ -147,6 +147,77 @@ window.__styleId = 'paper_collage';
         self.assertTrue(report['eventFrames'])
         self.assertTrue(all((output / item['file']).is_file() for item in report['eventFrames']))
         self.assertFalse(list(output.glob('strip-s1-*.webp')))
+        self.assertEqual(report['mobile_review_width_px'], 360)
+        self.assertTrue(Path(report['mobile_sheet']).is_file())
+        self.assertIn('font_observations', report)
+        self.assertEqual(len(report['motion_profiles']), 1)
+
+    @unittest.skipUnless(shutil.which('cwebp'), 'compact previews require cwebp')
+    def test_multi_shot_preview_generates_cut_pairs_mobile_360_and_motion_profiles(self):
+        html = '''<!doctype html><html><head><link rel="icon" href="data:,"></head>
+<body style="margin:0"><canvas id="film" width="320" height="180"></canvas>
+<script>
+const image = new Image(); image.src = 'paper.png';
+const ready = image.decode();
+window.__ready = ready;
+window.__total = 5.0;
+window.__fps = 24;
+window.__cuts = [0, 1.5, 5.0];
+window.__score = {
+  fps: 24,
+  shots: [
+    {id: 'S01', start: 0, end: 1.5, events: {arrive: 0.6}},
+    {id: 'S02', start: 1.5, end: 5.0, events: {}}
+  ],
+  cues: []
+};
+window.__seek = t => {
+  const ctx = document.querySelector('canvas').getContext('2d');
+  ctx.fillStyle = '#fafafa'; ctx.fillRect(0, 0, 320, 180);
+  if (t < 1.5) {
+    ctx.drawImage(image, 20 + t * 120, 50, 60, 60);
+    window.__state = {shot: 'S01', performance: [{actor_id: 'doctor', pose: t < 0.7 ? 'enter' : 'point'}]};
+  } else {
+    ctx.fillStyle = '#2d5a52'; ctx.fillRect(90, 40, 140, 100);
+    window.__state = {shot: 'S02', performance: [{actor_id: 'doctor', pose: 'hold'}]};
+  }
+};
+window.__rendererId = 'canvas2d';
+window.__requestedStyleId = 'paper_collage';
+window.__styleId = 'paper_collage';
+</script></body></html>'''
+        (self.project / 'index.html').write_text(html)
+        output = self.project / 'preview-multi'
+        args = [sys.executable, '-B', str(SCRIPTS / 'render_javascript_animation.py'),
+                '--project-root', str(self.project), '--review-candidate', '--preview',
+                '--preview-output', str(output), '--width', '320', '--height', '180']
+        result = subprocess.run(args, env=self.env, text=True, capture_output=True, timeout=60)
+        self.assertEqual(result.returncode, 0, result.stderr)
+        report = json.loads((output / 'preview.json').read_text())
+        self.assertEqual(report['status'], 'previewed')
+        self.assertEqual(report['scenes'], 2)
+        self.assertEqual(report['mobile_review_width_px'], 360)
+        self.assertTrue(Path(report['mobile_sheet']).is_file())
+        self.assertTrue(Path(report['cut_pairs_sheet']).is_file())
+        self.assertEqual(len(report['cutPairs']), 1)
+        pair = report['cutPairs'][0]
+        self.assertEqual(pair['outgoing_scene'], 1)
+        self.assertEqual(pair['incoming_scene'], 2)
+        self.assertEqual(pair['outgoing_shot'], 'S01')
+        self.assertEqual(pair['incoming_shot'], 'S02')
+        self.assertFalse(pair['identical_across_cut'])
+        profiles = report['motion_profiles']
+        self.assertEqual(len(profiles), 2)
+        self.assertGreater(profiles[0]['changed_intervals'], 0)
+        self.assertFalse(profiles[0]['possible_static_shot'])
+        self.assertEqual(profiles[1]['changed_intervals'], 0)
+        self.assertTrue(profiles[1]['possible_static_shot'])
+        static_debts = [d for d in report['quality_debt'] if d.get('code') == 'possible_static_shot']
+        self.assertEqual(len(static_debts), 1)
+        self.assertEqual(static_debts[0]['scene'], 2)
+        self.assertFalse(static_debts[0]['blocks_stage_progress'])
+        self.assertIn('font_observations', report)
+        self.assertEqual(report['font_observations']['failed_count'], 0)
 
     def test_missing_css_resource_cannot_publish_video(self):
         (self.project / 'index.html').write_text(self.html.replace('</head>', '<link rel="stylesheet" href="missing.css"></head>'))

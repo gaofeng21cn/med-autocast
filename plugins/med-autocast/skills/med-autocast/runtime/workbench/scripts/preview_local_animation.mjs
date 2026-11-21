@@ -62,11 +62,24 @@ try {
     await Promise.all([...document.images].map(image => image.decode()));
     if (window.__ready) await window.__ready;
     if (typeof window.__seek !== 'function' || !(window.__total > 0)) throw Error('预览需要 window.__seek(t) 和 window.__total');
+    const faces = [...document.fonts].map(f => ({
+      family: String(f.family || '').replace(/^["']|["']$/g, ''),
+      weight: String(f.weight || 'normal'),
+      style: String(f.style || 'normal'),
+      status: f.status,
+    }));
     return {
       duration:window.__total,
+      fps:Number(window.__fps || window.__score?.fps || 24),
       cuts:window.__cuts || [0, window.__total],
       cues:window.__score?.cues || [],
       shots:window.__score?.shots || [],
+      fonts: {
+        loaded_count: faces.filter(f => f.status === 'loaded').length,
+        failed_count: faces.filter(f => f.status === 'error').length,
+        loaded_families: [...new Set(faces.filter(f => f.status === 'loaded').map(f => f.family))],
+        failed_faces: faces.filter(f => f.status === 'error'),
+      },
       renderer_runtime: {
         renderer_id: window.__rendererId || null,
         requested_style_id: window.__requestedStyleId || window.__score?.style?.styleId || null,
@@ -74,18 +87,21 @@ try {
       },
     };
   });
+  const fps = Math.max(1, Number(config.fps || timeline.fps || 24));
+  const frameStep = 1 / fps;
   const rangeStart = Number(config.start ?? 0), rangeEnd = Number(config.end ?? timeline.duration);
   if (!(0 <= rangeStart && rangeStart < rangeEnd && rangeEnd <= timeline.duration)) throw Error('预览窗口无效');
   const cuts = [rangeStart, ...new Set(timeline.cuts.filter(t => Number.isFinite(t) && t > rangeStart && t < rangeEnd)), rangeEnd].sort((a,b)=>a-b);
   const points = [];
   for (let index = 0; index < cuts.length - 1; index++) {
     const start = cuts[index], end = cuts[index + 1], span = end - start;
-    for (const fraction of [0, .04, .25, .5, .75, .96]) points.push({scene:index+1, time:Math.min(timeline.duration-1/30,start+span*fraction)});
+    for (const fraction of [0, .04, .25, .5, .75, .96]) points.push({scene:index+1, fraction, time:Math.min(timeline.duration-1/30,start+span*fraction)});
   }
   await fs.mkdir(output, {recursive:true});
   temporaryMotionFrames = await fs.mkdtemp(path.join(os.tmpdir(), 'med-preview-frame-'));
   const frames = [];
   const contactSourceFiles = [];
+  const mobileSourceFiles = [];
   for (const [index, point] of points.entries()) {
     const state = await page.evaluate(time => { window.__seek(time); return {
       state:window.__state || null, layout:window.__layout || null,
@@ -97,6 +113,7 @@ try {
     const scratchPng = path.join(temporaryMotionFrames, `${stem}.png`);
     await captureFilm(page, width, height, scratchPng);
     contactSourceFiles.push(scratchPng);
+    if (point.fraction === 0.5) mobileSourceFiles.push(scratchPng);
     const overlaps = [];
     const layout = state.layout;
     if (layout?.subtitle && Array.isArray(layout.subjects)) {
@@ -146,18 +163,29 @@ try {
   await page.waitForFunction(()=>!!window.__ready,null,{timeout:20000});
   await page.addStyleTag({content:'button, [role="button"] { visibility: hidden !important; }'});
   const motionStrips=[];
+  const motionProfiles=[];
   // Normal-size diagnostic frames use lossless WebP. The 12 source poses for
   // each contact strip always stay in an isolated scratch directory; compact
   // mode omits their individual copies after the strip sheet is built.
   for (let index=0;index<cuts.length-1;index++) {
     const start=cuts[index],end=cuts[index+1],span=end-start,files=[],sampleTimes=[],stateTrace=[];
+    let prevBuf = null, prevStateKey = null;
+    let changedIntervals = 0, stateChangedIntervals = 0, lastChangePose = 0;
     for (let pose=0;pose<12;pose++) {
       const time=Math.min(timeline.duration-1/30,start+span*(pose+.25)/12);
       const runtimeState=await page.evaluate(t=>{window.__seek(t);return window.__state||null;},time);
-      stateTrace.push({time,shot:runtimeState?.shot||null,performance:runtimeState?.performance||[]});
+      const traceEntry = {time,shot:runtimeState?.shot||null,performance:runtimeState?.performance||[]};
+      stateTrace.push(traceEntry);
       const stem=`strip-s${index+1}-${String(pose).padStart(2,'0')}`;
       const scratch=path.join(temporaryMotionFrames,`${stem}.png`);
-      await captureFilm(page,width,height,scratch);
+      const buf = await captureFilm(page,width,height,scratch);
+      const stateKey = JSON.stringify(traceEntry.performance);
+      if (prevBuf !== null) {
+        if (!buf.equals(prevBuf)) { changedIntervals += 1; lastChangePose = pose; }
+        if (stateKey !== prevStateKey) stateChangedIntervals += 1;
+      }
+      prevBuf = buf;
+      prevStateKey = stateKey;
       if (!config.compact_motion_strips) {
         const filename=`${stem}.webp`;
         execFileSync('cwebp',['-quiet','-lossless','-z','4','-mt',scratch,'-o',path.join(output,filename)]);
@@ -165,10 +193,64 @@ try {
       }
       sampleTimes.push(time);
     }
+    const lastChangeTime = sampleTimes[lastChangePose] ?? start;
+    const tailStaticSeconds = Number(Math.max(0, end - lastChangeTime).toFixed(2));
+    const activeRatio = Number((changedIntervals / 11).toFixed(3));
+    const possibleStaticShot = span >= 3.0 && changedIntervals === 0;
+    const possibleDeadTime = !possibleStaticShot && span >= 4.0 && tailStaticSeconds >= 2.8 && activeRatio < 0.55;
+    motionProfiles.push({
+      scene: index + 1,
+      shot: stateTrace[0]?.shot || null,
+      from: Number(start.toFixed(3)),
+      to: Number(end.toFixed(3)),
+      duration: Number(span.toFixed(3)),
+      changed_intervals: changedIntervals,
+      total_intervals: 11,
+      active_ratio: activeRatio,
+      state_changed_intervals: stateChangedIntervals,
+      last_change_pose: lastChangePose,
+      tail_static_seconds: tailStaticSeconds,
+      possible_static_shot: possibleStaticShot,
+      possible_dead_time: possibleDeadTime,
+    });
     const sheet=`strip-s${index+1}.jpg`;
     execFileSync('ffmpeg',['-y','-loglevel','error','-start_number','0','-i',path.join(temporaryMotionFrames,`strip-s${index+1}-%02d.png`),'-frames:v','1','-vf','scale=400:-1,tile=4x3:padding=8:margin=8:color=white',path.join(output,sheet)]);
     motionStrips.push({scene:index+1,from:start,to:end,frames:config.compact_motion_strips ? [] : files,
       frames_retained:!config.compact_motion_strips,frame_format:'lossless_webp',sample_times:sampleTimes,sheet,state_trace:stateTrace});
+  }
+  // Paired cut-boundary frames (N-1 outgoing last frame vs N incoming first frame)
+  // catch premature clears, jump cuts, and cover-transition regressions compactly.
+  const cutPairs = [];
+  const cutPairSourceFiles = [];
+  for (let i = 1; i < cuts.length - 1; i++) {
+    const cutTime = cuts[i];
+    const beforeTime = Math.max(cuts[i - 1], cutTime - frameStep);
+    const afterTime = Math.min(timeline.duration - frameStep, cutTime);
+    const beforeState = await page.evaluate(t => { window.__seek(t); return { state: window.__state || null, layout: window.__layout || null }; }, beforeTime);
+    const beforePng = path.join(temporaryMotionFrames, `cut-${String(i).padStart(2, '0')}-before.png`);
+    const beforeBuf = await captureFilm(page, width, height, beforePng);
+    const afterState = await page.evaluate(t => { window.__seek(t); return { state: window.__state || null, layout: window.__layout || null }; }, afterTime);
+    const afterPng = path.join(temporaryMotionFrames, `cut-${String(i).padStart(2, '0')}-after.png`);
+    const afterBuf = await captureFilm(page, width, height, afterPng);
+    cutPairSourceFiles.push(beforePng, afterPng);
+    cutPairs.push({
+      cut_index: i,
+      cut_time: Number(cutTime.toFixed(4)),
+      outgoing_scene: i,
+      incoming_scene: i + 1,
+      before_time: Number(beforeTime.toFixed(4)),
+      after_time: Number(afterTime.toFixed(4)),
+      outgoing_shot: beforeState.state?.shot || null,
+      incoming_shot: afterState.state?.shot || null,
+      identical_across_cut: beforeBuf.equals(afterBuf),
+    });
+  }
+  let cutPairsSheet = null;
+  if (cutPairSourceFiles.length > 0) {
+    const cutInputs = path.join(temporaryMotionFrames, 'cut-pairs.ffconcat');
+    await fs.writeFile(cutInputs, 'ffconcat version 1.0\n' + cutPairSourceFiles.map(file => `file '${file.replace(/'/g, "'\\''")}'\n`).join(''));
+    cutPairsSheet = path.join(output, 'cut-pairs.jpg');
+    execFileSync('ffmpeg', ['-y', '-loglevel', 'error', '-f', 'concat', '-safe', '0', '-i', cutInputs, '-vf', `scale=480:-1,tile=2x${cutPairs.length}:padding=8:margin=8:color=white`, '-frames:v', '1', cutPairsSheet]);
   }
   // Subsecond flashes, contact and release can fall between uniform strip poses.
   // Event images are inspection evidence, never semantic approval or a new gate.
@@ -208,22 +290,59 @@ try {
     randomAccessChecks.push({scene,time:first.time,passed});
     if (!passed) errors.push(`乱序 seek 不确定: ${first.time.toFixed(3)}s`);
   }
-  // Build the contact sheet from this run's temporary full-resolution captures
-  // so compact mode never leaves redundant numbered frames or ffconcat files in qa/.
+  // Build the contact sheet and exact 360px mobile review sheet from this run's
+  // temporary full-resolution captures so compact mode leaves zero redundant frames.
   const contactInputs = path.join(temporaryMotionFrames, 'contact-frames.ffconcat');
   await fs.writeFile(contactInputs, 'ffconcat version 1.0\n' + contactSourceFiles.map(file => `file '${file.replace(/'/g, "'\\''")}'\n`).join(''));
   execFileSync('ffmpeg', ['-y','-loglevel','error','-f','concat','-safe','0','-i',contactInputs,'-vf',`scale=400:-1,tile=5x${Math.ceil(frames.length/5)}:padding=8:margin=8:color=white`,'-frames:v','1',path.join(output,'contact.jpg')]);
+  let mobileSheet = null;
+  if (mobileSourceFiles.length > 0) {
+    const mobileInputs = path.join(temporaryMotionFrames, 'mobile-360.ffconcat');
+    await fs.writeFile(mobileInputs, 'ffconcat version 1.0\n' + mobileSourceFiles.map(file => `file '${file.replace(/'/g, "'\\''")}'\n`).join(''));
+    const mobileCols = mobileSourceFiles.length === 1 ? 1 : 2;
+    const mobileRows = Math.ceil(mobileSourceFiles.length / mobileCols);
+    mobileSheet = path.join(output, 'mobile-360.jpg');
+    execFileSync('ffmpeg', ['-y', '-loglevel', 'error', '-f', 'concat', '-safe', '0', '-i', mobileInputs, '-vf', `scale=360:-1,tile=${mobileCols}x${mobileRows}:padding=8:margin=8:color=white`, '-frames:v', '1', mobileSheet]);
+  }
   const runtimeReceipt = await collectRuntimeReceipt({
     project,
     entry,
     config: { width, height },
   });
-  const report = {status:errors.length ? 'failed' : 'previewed', project, output, duration:timeline.duration, range:[rangeStart,rangeEnd], scenes:cuts.length-1, frames, motionStrips, eventFrames, errors, renderer_runtime:timeline.renderer_runtime, runtime_receipt:runtimeReceipt, contact_sheet:path.join(output,'contact.jpg'), release_eligible:false};
-  report.storage_profile={review_frames:'lossless_webp',numbered_frames:config.compact_numbered_frames?'findings_only_contact_preserved':'lossless_webp',motion_strips:'jpeg',motion_strip_source_frames:config.compact_motion_strips?'temporary':'lossless_webp'};
+  const report = {
+    status:errors.length ? 'failed' : 'previewed', project, output, duration:timeline.duration, fps,
+    range:[rangeStart,rangeEnd], scenes:cuts.length-1, frames, motionStrips, motion_profiles:motionProfiles,
+    cutPairs, eventFrames, errors, font_observations:timeline.fonts, renderer_runtime:timeline.renderer_runtime,
+    runtime_receipt:runtimeReceipt, contact_sheet:path.join(output,'contact.jpg'),
+    mobile_sheet:mobileSheet, mobile_review_width_px:360, cut_pairs_sheet:cutPairsSheet, release_eligible:false,
+  };
+  report.storage_profile={review_frames:'lossless_webp',numbered_frames:config.compact_numbered_frames?'findings_only_contact_preserved':'lossless_webp',motion_strips:'jpeg',motion_strip_source_frames:config.compact_motion_strips?'temporary':'lossless_webp',cut_pairs:'jpeg',mobile_sheet:'jpeg_360px'};
   report.text_observations=observeCues({cues:timeline.cues});
   report.primary_view=primaryView;
   report.primary_entry=entry;
   report.quality_debt=frames.flatMap(f=>f.layout_findings.map(d=>({...d,time:f.time,scene:f.scene,owner_stage:'visual-review'})));
+  for (const mp of motionProfiles) {
+    if (mp.possible_static_shot) {
+      report.quality_debt.push({
+        code:'possible_static_shot', owner_stage:'visual-review', blocks_stage_progress:false,
+        scene:mp.scene, shot:mp.shot, duration:mp.duration,
+        detail:`定位提示：第 ${mp.scene} 镜（${mp.duration}s）在 12 个采样点无像素变化；核对是有意静止读图，还是缺少主体变化/表达发展。`,
+      });
+    } else if (mp.possible_dead_time) {
+      report.quality_debt.push({
+        code:'possible_motion_dead_time', owner_stage:'visual-review', blocks_stage_progress:false,
+        scene:mp.scene, shot:mp.shot, duration:mp.duration, tail_static_seconds:mp.tail_static_seconds,
+        detail:`定位提示：第 ${mp.scene} 镜末尾约 ${mp.tail_static_seconds}s 无视觉变化；核对是否为必要阅读停留，或属于动作结束后的空转等待。`,
+      });
+    }
+  }
+  if (timeline.fonts?.failed_count > 0) {
+    report.quality_debt.push({
+      code:'font_load_error', owner_stage:'media-production', blocks_stage_progress:false,
+      failed_faces:timeline.fonts.failed_faces,
+      detail:'检测到字体加载失败，可能已发生非预期字体回退；先查字体资源再审排版层级。',
+    });
+  }
   if(primaryView==='clean')report.quality_debt.push({code:'final_text_view_not_sampled',
     owner_stage:'visual-review',blocks_stage_progress:false,
     detail:'本次主视图为去文字；不能据此判断正式画面的标签、字幕与遮挡，请另导出普通预览。'});

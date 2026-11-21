@@ -88,6 +88,24 @@ def _compact_archived_wavs(backup: Path) -> None:
         })
 
 
+def _prune_old_archived_deliveries(archive_episode_dir: Path, keep_latest: int) -> list[str]:
+    """Keep only the newest `keep_latest` rollback backups per episode."""
+    if keep_latest < 0 or not archive_episode_dir.is_dir():
+        return []
+    snapshots = sorted([d for d in archive_episode_dir.iterdir() if d.is_dir()], key=lambda p: p.name)
+    if len(snapshots) <= keep_latest:
+        return []
+    stale = snapshots[: len(snapshots) - keep_latest] if keep_latest > 0 else snapshots
+    removed = []
+    for old_dir in stale:
+        try:
+            shutil.rmtree(old_dir)
+            removed.append(str(old_dir))
+        except OSError:
+            continue
+    return removed
+
+
 def locations(workspace: Path, series: str, episode: str, *, config: dict | None = None) -> dict:
     import yaml
     workspace = workspace.resolve()
@@ -144,9 +162,18 @@ def install(workspace: Path, series: str, episode: str, user_stage: Path, record
             os.replace(temporary, pointer)
         finally:
             temporary.unlink(missing_ok=True)
-        # Compact archived WAVs after atomic switch succeeds; never rolls back delivery.
+        # Compact archived WAVs and cap rollback depth after atomic switch; never rolls back delivery.
         if backup.exists():
             _compact_archived_wavs(backup)
+            try:
+                import yaml
+                cfg = yaml.safe_load((workspace / 'workbench.yaml').read_text(encoding='utf-8')) or {}
+                keep_latest = int((cfg.get('delivery_policy') or {}).get('archive_keep_latest', 1))
+                pruned = _prune_old_archived_deliveries(loc['archive'], keep_latest)
+                if pruned:
+                    payload['pruned_old_archives'] = pruned
+            except Exception:
+                pass
         # Navigation is a projection of selected files. A missing catalog must
         # not roll back an otherwise complete, usable episode delivery.
         try:

@@ -146,13 +146,16 @@ def run(cmd, cwd, workspace, *, extra_env=None):
     )
 
 
-def get_project(a):
+def get_project(a, *, auto_hydrate: bool = True):
     if not a.project:
         raise ValueError("需要 --project 指向明确单集目录")
     p = a.project.resolve()
     config = read(p / "project.json")
     if config.get("schema") != "paper_project/v1":
         raise ValueError("不是已登记的纸剧场项目")
+    if auto_hydrate and (p / "storage-hydration.json").is_file():
+        import project_lifecycle
+        project_lifecycle.hydrate_project(p, a.workspace)
     return p, config
 
 
@@ -422,7 +425,7 @@ def initialize(a):
 
 
 def inspect(a):
-    p, c = get_project(a)
+    p, c = get_project(a, auto_hydrate=False)
     style_selection = project_style_selection(p, c)
     score = read(p / c["score"])
     manifest = read(p / c["assets"])
@@ -529,6 +532,9 @@ def revise(a):
                         Path(name).stem in {"foley", "premix", "music-raw", "music-prepared", "music-ducked"}}
         return omitted
     shutil.copytree(source, target, ignore=revision_ignore, copy_function=clone_or_copy)
+    if (target / "storage-hydration.json").is_file():
+        import project_lifecycle
+        project_lifecycle.hydrate_project(target, a.workspace)
     evidence = source / "qa/asset-reviews"
     if evidence.is_dir():
         shutil.copytree(evidence, target / "qa/asset-reviews", copy_function=clone_or_copy)
@@ -1585,7 +1591,7 @@ def package(a):
 
 def prune(a):
     """Project-scoped lifecycle closeout: plan or apply verified pruning without full-workspace scans."""
-    p, _c = get_project(a)
+    p, _c = get_project(a, auto_hydrate=False)
     import plan_workspace_retention as retention
     parts = set(getattr(a, "parts", None) or ["node_modules", "review_frame", "audio", "render_temporary"])
     policy = {
@@ -1619,6 +1625,20 @@ def prune(a):
         "parts": sorted(parts),
         "summary": receipt["summary"],
     }
+
+
+def seal(a):
+    """Seal a verified published episode: retire in-process caches and dehydrate recoverable duplicates."""
+    p, _c = get_project(a, auto_hydrate=False)
+    import project_lifecycle
+    return project_lifecycle.seal_project(p, a.workspace, apply=getattr(a, "apply", False))
+
+
+def hydrate(a):
+    """Restore dehydrated assets, MP4, and lossless FLAC audio back into working state."""
+    p, _c = get_project(a, auto_hydrate=False)
+    import project_lifecycle
+    return project_lifecycle.hydrate_project(p, a.workspace)
 
 
 def main():
@@ -1712,6 +1732,9 @@ def main():
     s.add_argument("--parts", nargs="+", choices=["node_modules", "review_frame", "audio", "render_temporary"],
                    default=["node_modules", "review_frame", "audio", "render_temporary"])
     s.add_argument("--output", type=Path)
+    s = sub.add_parser("seal")
+    s.add_argument("--apply", action="store_true", help="将已发布且字节一致的定稿单集转入封存态（清理过程数据、无损压缩混音/片段并脱水库素材副本）；默认只预览")
+    sub.add_parser("hydrate")
     a = p.parse_args()
     a.workspace = a.workspace.resolve()
     if not a.project and a.command != "library":

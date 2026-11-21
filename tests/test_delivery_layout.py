@@ -72,3 +72,15 @@ class DeliveryLayoutTests(unittest.TestCase):
         self.assertTrue((backup_record / 'storage-compaction.json').is_file())
         life.restore_file(backup_record / 'audio.flac')
         self.assertEqual((backup_record / 'audio.wav').read_bytes(), original)
+
+    def test_third_delivery_prunes_oldest_archive_keeping_latest_one_rollback(self):
+        install(self.root, 's', '01', *self.staged('first'))
+        r2 = install(self.root, 's', '01', *self.staged('second'))
+        first_backup = Path(r2['previous_delivery'])
+        self.assertTrue(first_backup.is_dir())
+        r3 = install(self.root, 's', '01', *self.staged('third'))
+        second_backup = Path(r3['previous_delivery'])
+        self.assertTrue(second_backup.is_dir())
+        self.assertFalse(first_backup.exists())
+        self.assertEqual((second_backup / 'publish/video.mp4').read_bytes(), b'second')
+        self.assertEqual(len(list(locations(self.root, 's', '01')['archive'].iterdir())), 1)

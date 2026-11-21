@@ -12,6 +12,7 @@ except ImportError:  # Optional visual dependency in the fast lane.
     Image = None
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / 'runtime/workbench/scripts'))
 import plan_workspace_retention as life
+import project_lifecycle as plc
 import shared_node_deps as deps
 import paper_project as pp
 
@@ -323,6 +324,117 @@ class RetentionTests(unittest.TestCase):
                 self.assertEqual(wav_orig.read_bytes(), raw)
             self.assertTrue(receipt_gz.is_file())
             self.assertIn('deleted', life.read(receipt_gz)['summary']['actions'])
+
+    def test_three_state_lifecycle_seal_hydrate_revise_retire_and_delivery_cap(self):
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp).resolve()
+            lib_asset = root / 'assets/paper-theatre/entries/desk_v1/desk.png'
+            lib_asset.parent.mkdir(parents=True)
+            Image.new('RGBA', (24, 24), (100, 120, 140, 255)).save(lib_asset)
+            lib_bytes = lib_asset.read_bytes()
+
+            v1 = root / 'productions/s/e/v1'
+            v2 = root / 'productions/s/e/v2'
+            for proj in (v1, v2):
+                (proj / 'src').mkdir(parents=True)
+                (proj / 'src/scene.ts').write_text('export const x = 1;\n')
+                (proj / 'assets').mkdir(parents=True)
+                (proj / 'qa/preview').mkdir(parents=True)
+                (proj / 'out').mkdir(parents=True)
+                life.write(proj / 'project.json', {
+                    'schema': 'paper_project/v1',
+                    'series_id': 's', 'episode_id': 'e',
+                    'score': 'score.json', 'narration': 'narration.json',
+                    'audio': 'audio.wav', 'voice': 'audio/narration-normalized.wav',
+                })
+                life.write(proj / 'score.json', {'shots': []})
+                life.write(proj / 'narration.json', {'beats': []})
+            (v2 / 'assets/desk.png').write_bytes(lib_bytes)
+            custom_asset = v2 / 'assets/custom.png'
+            Image.new('RGBA', (16, 16), (255, 10, 10, 255)).save(custom_asset)
+            custom_bytes = custom_asset.read_bytes()
+            write_valid_wav(v2 / 'audio.wav')
+            write_valid_wav(v2 / 'audio/narration.wav')
+            write_valid_wav(v2 / 'audio/narration-normalized.wav')
+            write_valid_wav(v2 / 'audio/segments/01.wav')
+            write_valid_wav(v2 / 'audio/mix-history/old/audio.wav')
+            orig_audio = (v2 / 'audio.wav').read_bytes()
+            orig_norm = (v2 / 'audio/narration-normalized.wav').read_bytes()
+            orig_seg = (v2 / 'audio/segments/01.wav').read_bytes()
+            for name in ('contact.jpg', 'strip-s1.jpg', 'event-S01-at.webp', 'clean-001-s1-1.0.webp'):
+                Image.new('RGB', (16, 16), (50, 60, 70)).save(v2 / 'qa/preview' / name)
+            life.write(v2 / 'qa/preview/preview.json', {'frames': []})
+
+            pub_v = root / 'publish/s/e/video.mp4'
+            pub_v.parent.mkdir(parents=True)
+            pub_v.write_bytes(b'published-mp4-v2')
+            deliv_m = root / 'deliveries/s/e/manifest.json'
+            deliv_m.parent.mkdir(parents=True)
+            life.write(deliv_m, {'project': str(v2)})
+            (root / 'workbench.yaml').write_text(
+                "series:\n  s:\n    publish_root: publish/s\n    episodes:\n      e:\n        project: productions/s/e/v2\n"
+            )
+
+            cur_mp4 = v2 / 'out/final.mp4'
+            cur_mp4.write_bytes(b'unsynced-working-mp4')
+            life.write(v2 / 'out/current.json', {'path': str(cur_mp4), 'sha256': life.sha(cur_mp4)})
+            skip_res = plc.seal_project(v2, root, apply=True)
+            self.assertEqual(skip_res['status'], 'skipped_working')
+            self.assertTrue((v2 / 'assets/desk.png').is_file())
+
+            cur_mp4.write_bytes(b'published-mp4-v2')
+            life.write(v2 / 'out/current.json', {'path': str(cur_mp4), 'sha256': life.sha(cur_mp4)})
+            with patch.object(life, 'assert_idle'):
+                seal_res = plc.seal_project(v2, root, apply=True)
+            self.assertEqual(seal_res['status'], 'sealed')
+            self.assertFalse((v2 / 'audio/mix-history').exists())
+            self.assertFalse((v2 / 'qa/preview/event-S01-at.webp').exists())
+            self.assertTrue((v2 / 'qa/preview/contact.jpg').is_file())
+            self.assertTrue((v2 / 'qa/preview/strip-s1.jpg').is_file())
+            self.assertFalse((v2 / 'assets/desk.png').exists())
+            self.assertTrue(custom_asset.is_file())
+            self.assertFalse(cur_mp4.exists())
+            self.assertFalse((v2 / 'audio.wav').exists())
+            self.assertTrue((v2 / 'audio.flac').is_file())
+            self.assertTrue((v2 / 'audio/narration.wav').is_file())
+            self.assertTrue((v2 / 'storage-hydration.json').is_file())
+
+            v3 = root / 'productions/s/e/v3'
+            from types import SimpleNamespace
+            pp.revise(SimpleNamespace(workspace=root, from_project=v2, project=v3))
+            self.assertTrue((v2 / 'storage-hydration.json').is_file())
+            self.assertFalse((v3 / 'storage-hydration.json').exists())
+            self.assertEqual((v3 / 'assets/desk.png').read_bytes(), lib_bytes)
+            self.assertEqual((v3 / 'assets/custom.png').read_bytes(), custom_bytes)
+            self.assertEqual((v3 / 'audio.wav').read_bytes(), orig_audio)
+            self.assertEqual((v3 / 'audio/narration-normalized.wav').read_bytes(), orig_norm)
+            self.assertEqual((v3 / 'audio/segments/01.wav').read_bytes(), orig_seg)
+
+            hyd = plc.hydrate_project(v2, root)
+            self.assertEqual(hyd['status'], 'hydrated')
+            self.assertFalse((v2 / 'storage-hydration.json').exists())
+            self.assertEqual((v2 / 'assets/desk.png').read_bytes(), lib_bytes)
+            self.assertEqual(cur_mp4.read_bytes(), b'published-mp4-v2')
+            self.assertEqual((v2 / 'audio.wav').read_bytes(), orig_audio)
+
+            with patch.object(life, 'assert_idle'):
+                ret = plc.retire_revisions(root, apply=True)
+            self.assertEqual(ret['status'], 'retired')
+            self.assertEqual(ret['retired_revisions_removed'], 2)
+            self.assertFalse(v1.exists())
+            self.assertFalse(v3.exists())
+            self.assertTrue(v2.is_dir())
+            self.assertTrue(Path(ret['lineage_archive']).is_file())
+
+            for ts in ('20261110T000000Z', '20261115T000000Z', '20261120T000000Z'):
+                d = root / 'archive/deliveries/s/e' / ts / 'publish'
+                d.mkdir(parents=True)
+                (d / 'video.mp4').write_bytes(ts.encode())
+            with patch.object(life, 'assert_idle'):
+                pr = plc.prune_archived_deliveries(root, keep_latest=1, apply=True)
+            self.assertEqual(pr['snapshots_removed'], 2)
+            self.assertEqual(pr['snapshots_kept'], 1)
+            self.assertEqual([p.name for p in (root / 'archive/deliveries/s/e').iterdir()], ['20261120T000000Z'])
 
 
 if __name__ == '__main__':

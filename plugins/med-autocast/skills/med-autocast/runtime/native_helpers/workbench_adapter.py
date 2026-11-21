@@ -76,10 +76,14 @@ TOOLS = {
     "package_review": ("write", "原制作单的单集审看包、双平台文案与字节回读"),
     "build_release_packages": ("write", "原正式 final 合同与双平台文案"),
     "build_keyframe_library": ("write", "已审目录校验及 HTML、CSV、缩略图投影"),
+    "project_lifecycle": (
+        "write",
+        "三态生命周期治理：已发布单集定稿封存(seal)/按需自动解冻(hydrate)、已退役修订谱系归档退场与交付备份限额清理",
+    ),
 }
 
 
-CANONICAL_TOOLS = {"media_asset_library", "publish_catalog", "animation_lab", "paper_project", "plan_workspace_retention", "shared_node_deps", "render_narration", "render_series_tts", "configure_voice", "environment_check", "render_javascript_animation", "audit_pronunciation", "audit_audio_freshness", "audit_narration_samples", "audit_paper_captions", "audit_text_layout", "audit_label_contract", "build_no_music_mix", "resolve_motion_audit"}
+CANONICAL_TOOLS = {"media_asset_library", "publish_catalog", "animation_lab", "paper_project", "plan_workspace_retention", "project_lifecycle", "shared_node_deps", "render_narration", "render_series_tts", "configure_voice", "environment_check", "render_javascript_animation", "audit_pronunciation", "audit_audio_freshness", "audit_narration_samples", "audit_paper_captions", "audit_text_layout", "audit_label_contract", "build_no_music_mix", "resolve_motion_audit"}
 
 
 def resolve_tool(root: Path, name: str, bundled=False) -> tuple[Path, Path]:

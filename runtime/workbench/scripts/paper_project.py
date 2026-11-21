@@ -523,7 +523,7 @@ def revise(a):
         relative = Path(directory).relative_to(source)
         omitted = {name for name in names if name in {"node_modules", "__pycache__"}}
         if relative == Path("."):
-            omitted |= set(names) & {"out", "qa", "dist", "history", "work"}
+            omitted |= set(names) & {"out", "qa", "dist", "history", "work", "entries"}
         if relative == Path("audio"):
             omitted |= {name for name in names if name == "mix-history" or
                         Path(name).stem in {"foley", "premix", "music-raw", "music-prepared", "music-ducked"}}

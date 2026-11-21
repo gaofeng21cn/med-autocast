@@ -240,6 +240,90 @@ class RetentionTests(unittest.TestCase):
             health = life.check_health(root)
             self.assertEqual(health['status'], 'clean')
 
+    def test_round2_archive_work_wav_non_qa_preview_orphans_renders_and_gz_receipts(self):
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp).resolve()
+            project, _qa = self.fixture(root)
+            active_proj = root / 'productions/s/e/v2'
+            active_proj.mkdir(parents=True)
+            life.write(active_proj / 'project.json', {'audio': 'audio.wav'})
+            (root / 'workbench.yaml').write_text(
+                f"series:\n  s:\n    episodes:\n      e:\n        project: {active_proj.relative_to(root)}\n"
+            )
+            used_seg = active_proj / 'audio/segments/01_hook-keep.wav'
+            orphan_seg = active_proj / 'audio/segments/01_hook-rejected.wav'
+            write_valid_wav(used_seg)
+            write_valid_wav(orphan_seg)
+            life.write(orphan_seg.with_suffix('.json'), {'pronunciation_review': {'status': 'rejected'}})
+            life.write(active_proj / 'audio/narration_beats.json', {
+                'beats': [{'id': 'b1', 'audio': str(used_seg)}],
+            })
+            cur_mp4 = active_proj / 'out/final.mp4'
+            old_mp4 = active_proj / 'out/draft.mp4'
+            cur_mp4.parent.mkdir(parents=True)
+            cur_mp4.write_bytes(b'current-mp4-bytes')
+            old_mp4.write_bytes(b'old-draft-bytes')
+            life.write(active_proj / 'out/current.json', {
+                'path': str(cur_mp4),
+                'sha256': life.sha(cur_mp4),
+                'status': 'current',
+            })
+            out_prev = project / 'out/v1-preview.mp4'
+            out_prev.mkdir(parents=True)
+            for name in ('000-s1-0.00.png', 'contact.jpg', 'strip-s1.jpg'):
+                Image.new('RGB', (16, 16), (30, 40, 50)).save(out_prev / name)
+            life.write(out_prev / 'preview.json', {
+                'project': str(project),
+                'frames': [{'file': '000-s1-0.00.png'}],
+                'motionStrips': [{'sheet': 'strip-s1.jpg'}],
+            })
+            ret_wav = project / 'audio/narration.wav'
+            write_valid_wav(ret_wav)
+            orig_ret = ret_wav.read_bytes()
+            (root / 'work/review').mkdir(parents=True, exist_ok=True)
+            (root / 'work/review/batch-summary.md').write_text(str(ret_wav))
+            arch_wav = root / 'archive/deliveries/s/e/20261120/record/audio.wav'
+            work_wav = root / 'work/voice-cache/seg1.wav'
+            write_valid_wav(arch_wav)
+            write_valid_wav(work_wav)
+            orig_arch = arch_wav.read_bytes()
+            orig_work = work_wav.read_bytes()
+
+            wip_plan = life.plan(root, {'protected_projects': [str(active_proj.relative_to(root))]})
+            wip_orphans = [r for r in wip_plan['decisions'] if r['category'] == 'orphan_take']
+            wip_renders = [r for r in wip_plan['decisions'] if r['category'] == 'superseded_render']
+            self.assertEqual(wip_orphans, [])
+            self.assertEqual(wip_renders[0]['decision'], 'keep_operational')
+
+            data = life.plan(root, {})
+            plan_gz = root / 'work/disk-lifecycle-test/plan.json.gz'
+            receipt_gz = root / 'work/disk-lifecycle-test/receipt.json.gz'
+            life.write(plan_gz, data)
+            self.assertEqual(life.read(plan_gz)['schema'], life.SCHEMA)
+
+            with patch.object(life, 'assert_idle'):
+                life.apply(
+                    plan_gz, receipt_gz,
+                    parts={'review_frame', 'audio', 'orphan_take', 'superseded_render'},
+                )
+
+            self.assertFalse((out_prev / '000-s1-0.00.png').exists())
+            self.assertTrue((out_prev / 'contact.jpg').is_file())
+            self.assertTrue(used_seg.is_file())
+            self.assertFalse(orphan_seg.exists())
+            self.assertTrue(cur_mp4.is_file())
+            self.assertFalse(old_mp4.exists())
+            self.assertFalse(ret_wav.exists())
+            self.assertFalse(arch_wav.exists())
+            self.assertFalse(work_wav.exists())
+            for wav_orig, raw in ((ret_wav, orig_ret), (arch_wav, orig_arch), (work_wav, orig_work)):
+                flac = wav_orig.with_suffix('.flac')
+                self.assertTrue(flac.is_file())
+                life.restore_file(flac)
+                self.assertEqual(wav_orig.read_bytes(), raw)
+            self.assertTrue(receipt_gz.is_file())
+            self.assertIn('deleted', life.read(receipt_gz)['summary']['actions'])
+
 
 if __name__ == '__main__':
     unittest.main()

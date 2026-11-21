@@ -8,6 +8,7 @@ its first mutation and refuses changed inputs or active media/build writers.
 """
 from __future__ import annotations
 import argparse
+import gzip
 import hashlib
 import json
 import os
@@ -26,7 +27,7 @@ FRAME = re.compile(r'^(?:clean-\d+-s\d+-|event-|strip-s\d+-\d+|\d+-s\d+-).*\.(?:
 NUMBERED = re.compile(r'^\d+-s\d+-.+\.(?:png|webp)$')
 STRIP_SOURCE = re.compile(r'^strip-s\d+-\d+\.(?:png|webp)$')
 EVENT_SIDE = re.compile(r'^event-.+-(?:before|after)\.(?:png|webp)$')
-PATH_TOKEN = re.compile(r'[^\s\"\'`<>\[\](){};,，：]+\.(?:png|webp|wav|flac)')
+PATH_TOKEN = re.compile(r'[^\s\"\'`<>\[\](){};,，：]+\.(?:png|webp|wav|flac|mp4)')
 DERIVED_AUDIO = {'foley', 'music-raw', 'music-prepared', 'music-ducked', 'premix'}
 SKIP = {'.git', 'node_modules', '__pycache__', '.venv', '.cache'}
 ASSET_LIBRARY_MARKERS = {'assets', 'entries', 'payloads', 'library'}
@@ -37,13 +38,23 @@ def stamp():
 
 
 def read(path):
+    path = Path(path)
+    if path.suffix == '.gz':
+        with gzip.open(path, 'rt', encoding='utf-8') as stream:
+            return json.load(stream)
     return json.loads(path.read_text(encoding='utf-8'))
 
 
 def write(path, value):
+    path = Path(path)
     path.parent.mkdir(parents=True, exist_ok=True)
     temp = path.with_name(path.name + '.tmp')
-    temp.write_text(json.dumps(value, ensure_ascii=False, indent=2) + '\n', encoding='utf-8')
+    if path.suffix == '.gz':
+        with gzip.open(temp, 'wt', encoding='utf-8', compresslevel=6) as stream:
+            json.dump(value, stream, ensure_ascii=False, indent=2)
+            stream.write('\n')
+    else:
+        temp.write_text(json.dumps(value, ensure_ascii=False, indent=2) + '\n', encoding='utf-8')
     os.replace(temp, path)
 
 
@@ -58,6 +69,31 @@ def sha(path, cache=None):
     if cache is not None:
         cache[path] = value
     return value
+
+
+def compress_log_file(path: Path) -> Path | None:
+    """Losslessly gzip a large journal/plan file with verified round-trip SHA-256."""
+    if not path.is_file() or path.suffix == '.gz':
+        return None
+    orig_sha = sha(path)
+    target = path.with_name(path.name + '.gz')
+    temp = target.with_name(target.name + '.tmp')
+    try:
+        with path.open('rb') as src, gzip.open(temp, 'wb', compresslevel=6) as dst:
+            shutil.copyfileobj(src, dst, length=1024 * 1024)
+        verify = hashlib.sha256()
+        with gzip.open(temp, 'rb') as chk:
+            for chunk in iter(lambda: chk.read(1024 * 1024), b''):
+                verify.update(chunk)
+        if verify.hexdigest() != orig_sha:
+            raise RuntimeError(f'Gzip verification mismatch: {path}')
+        st = path.stat()
+        os.replace(temp, target)
+        os.utime(target, ns=(st.st_atime_ns, st.st_mtime_ns))
+        path.unlink()
+        return target
+    finally:
+        temp.unlink(missing_ok=True)
 
 
 def leaves(root):
@@ -98,7 +134,7 @@ def directory_stats(directory):
     files_count = 0
     total_size = 0
     total_alloc = 0
-    for dp, dns, fns in os.walk(directory, followlinks=False):
+    for dp, _dns, fns in os.walk(directory, followlinks=False):
         for fn in fns:
             p = Path(dp) / fn
             try:
@@ -155,10 +191,22 @@ def is_render_scratch(path, workspace):
         return False
     for idx, part in enumerate(parts):
         if part.startswith('.render-'):
-            # Require it to sit inside an `out` directory (or project root for legacy renders).
             parent_part = parts[idx - 1] if idx > 0 else ''
             if parent_part == 'out' or (parts[0] == 'productions' and idx == 4):
                 return True
+    return False
+
+
+def is_archivable_wav(path, workspace):
+    if path.suffix.lower() != '.wav':
+        return False
+    parts = path.relative_to(workspace).parts
+    if not parts:
+        return False
+    if parts[0] == 'work':
+        return True
+    if len(parts) >= 2 and parts[0] == 'archive' and parts[1] == 'deliveries':
+        return True
     return False
 
 
@@ -247,8 +295,10 @@ def references(files, candidates, workspace):
             continue
         doc_project = project_for(doc, workspace)
         doc_rel = str(doc.relative_to(workspace))
-        doc_parents = [parent for parent in (workspace, doc.parent, *doc.parent.parents)
-                       if parent.is_relative_to(workspace)]
+        doc_parents = [
+            parent for parent in (workspace, doc.parent, *doc.parent.parents)
+            if parent.is_relative_to(workspace)
+        ]
         matched_bare_parents = None
 
         for raw_token in tokens:
@@ -266,8 +316,6 @@ def references(files, candidates, workspace):
             if not resolved and '/' not in token:
                 if doc_project is not None:
                     resolved = set(by_project.get((doc_project, name), ()))
-                # Bare names in a work report are scoped by a full project or
-                # preview directory explicitly present in the same document.
                 if not resolved:
                     if matched_bare_parents is None:
                         matched_bare_parents = {
@@ -306,7 +354,7 @@ def plan(workspace, policy, *, project_filter=None):
             confined(proj, workspace)
             files.extend(leaves(proj))
         doc_files = list(files)
-        for top in ('work', 'review', 'content', 'docs'):
+        for top in ('work', 'review', 'content', 'docs', 'deliveries'):
             top_dir = workspace / top
             if top_dir.is_dir():
                 for p in leaves(top_dir):
@@ -321,21 +369,76 @@ def plan(workspace, policy, *, project_filter=None):
     active, wip = active_projects(workspace, policy)
     sha_cache = {}
 
+    preview_files = sorted(p for p in files if p.name == 'preview.json')
+    preview_dirs = {p.parent for p in preview_files}
+
     frame_paths = {
         p for p in files
         if FRAME.fullmatch(p.name)
-        and ('qa' in p.relative_to(workspace).parts or p.relative_to(workspace).parts[0] in {'work', 'qa', 'out'})
+        and (
+            p.parent in preview_dirs
+            or 'qa' in p.relative_to(workspace).parts
+            or p.relative_to(workspace).parts[0] in {'work', 'qa', 'out'}
+        )
     }
-    audio_paths = {
+    prod_audio_paths = {
         p for p in files
         if p.suffix.lower() in {'.wav', '.flac'}
         and p.relative_to(workspace).parts[0] == 'productions'
     }
+    archive_work_wavs = {p for p in files if is_archivable_wav(p, workspace)}
     render_paths = {p for p in files if is_render_scratch(p, workspace)}
 
-    refs = references(doc_files, frame_paths | audio_paths | render_paths, workspace)
+    current_render_map = {}
+    superseded_mp4_paths = set()
+    for cur_path in (p for p in files if p.name == 'current.json' and p.parent.name == 'out'):
+        proj = project_for(cur_path, workspace)
+        if proj is None or cur_path.parent != proj / 'out':
+            continue
+        try:
+            cur_data = read(cur_path)
+            cur_mp4 = Path(cur_data.get('path') or '')
+            if not cur_mp4.is_absolute():
+                cur_mp4 = (proj / cur_mp4).resolve()
+            else:
+                cur_mp4 = cur_mp4.resolve()
+            if cur_mp4.is_file() and cur_data.get('sha256') and sha(cur_mp4, sha_cache) == cur_data['sha256']:
+                current_render_map[proj] = (cur_path, cur_mp4)
+                for candidate in cur_path.parent.glob('*.mp4'):
+                    if candidate.is_file() and not candidate.is_symlink() and candidate.resolve() != cur_mp4:
+                        superseded_mp4_paths.add(candidate)
+        except (OSError, ValueError, TypeError):
+            continue
 
-    to_hash = list(frame_paths | audio_paths | render_paths)
+    narration_beats_map = {}
+    orphan_take_paths = set()
+    for nb_path in (p for p in files if p.name == 'narration_beats.json' and p.parent.name == 'audio'):
+        proj = project_for(nb_path, workspace)
+        if proj is None or nb_path.parent != proj / 'audio':
+            continue
+        try:
+            nb_data = read(nb_path)
+            used_stems = {
+                Path(b['audio']).stem
+                for b in nb_data.get('beats', [])
+                if isinstance(b, dict) and b.get('audio')
+            }
+            if not used_stems:
+                continue
+            seg_dir = proj / 'audio' / 'segments'
+            if seg_dir.is_dir():
+                narration_beats_map[proj] = (nb_path, used_stems)
+                for seg in seg_dir.iterdir():
+                    if seg.is_file() and not seg.is_symlink() and seg.suffix.lower() in {'.wav', '.flac'}:
+                        if seg.stem not in used_stems:
+                            orphan_take_paths.add(seg)
+        except (OSError, ValueError, TypeError):
+            continue
+
+    all_candidates = frame_paths | prod_audio_paths | archive_work_wavs | render_paths | superseded_mp4_paths | orphan_take_paths
+    refs = references(doc_files, all_candidates, workspace)
+
+    to_hash = list(all_candidates)
     if len(to_hash) > 32:
         with ThreadPoolExecutor(max_workers=8) as pool:
             for path, digest in zip(to_hash, pool.map(sha, to_hash)):
@@ -343,7 +446,7 @@ def plan(workspace, policy, *, project_filter=None):
 
     decisions, groups = [], []
     handled = set()
-    for preview in sorted(p for p in files if p.name == 'preview.json'):
+    for preview in preview_files:
         directory = preview.parent
         try:
             data = read(preview)
@@ -461,9 +564,28 @@ def plan(workspace, policy, *, project_filter=None):
         except (ValueError, OSError, TypeError):
             pass
 
-    for path in sorted(audio_paths):
+    for path in sorted(prod_audio_paths):
         project = project_for(path, workspace)
         if project is None:
+            continue
+        if path in orphan_take_paths and not refs.get(path) and project not in wip:
+            nb_path, _used = narration_beats_map[project]
+            meta_p = path.with_suffix('.json')
+            rejected = False
+            if meta_p.is_file():
+                try:
+                    rejected = (read(meta_p).get('pronunciation_review') or {}).get('status') == 'rejected'
+                except (OSError, ValueError):
+                    pass
+            decisions.append(record(
+                path, workspace, sha_cache,
+                category='orphan_take',
+                decision='delete_rebuildable',
+                reason='rejected_take_not_in_narration_beats' if rejected else 'unreferenced_take_not_in_narration_beats',
+                project=str(project),
+                references=[],
+                substitutes=[record(nb_path, workspace, sha_cache)],
+            ))
             continue
         cited = sorted(refs.get(path, []))
         in_mix_history = 'mix-history' in path.relative_to(project).parts
@@ -473,7 +595,7 @@ def plan(workspace, policy, *, project_filter=None):
             action, reason = 'keep_compressed', 'lossless_historical_or_source_audio'
         elif in_mix_history and not cited:
             action, reason = 'keep_compressed', 'prior_mix_history_lossless_flac_restorable'
-        elif project in active or project in wip or cited:
+        elif project in active or project in wip:
             action, reason = 'keep_operational', 'active_audio_input_or_explicit_reference'
         else:
             action, reason = 'keep_compressed', 'frozen_revision_source_or_mix_for_restoration'
@@ -487,6 +609,47 @@ def plan(workspace, policy, *, project_filter=None):
         if project in recipes and action.startswith('delete'):
             row['substitutes'] = [record(p, workspace, sha_cache) for p in recipes[project]]
         decisions.append(row)
+
+    for path in sorted(archive_work_wavs):
+        rel_top = path.relative_to(workspace).parts[0]
+        reason = (
+            'archived_delivery_audio_lossless_flac_restorable'
+            if rel_top == 'archive'
+            else 'work_cache_audio_lossless_flac_restorable'
+        )
+        decisions.append(record(
+            path, workspace, sha_cache,
+            category='audio',
+            decision='keep_compressed',
+            reason=reason,
+            target=str(path.with_suffix('.flac')),
+            project=None,
+            references=sorted(refs.get(path, [])),
+        ))
+
+    for path in sorted(superseded_mp4_paths):
+        project = project_for(path, workspace)
+        cited = sorted(refs.get(path, []))
+        cur_path, cur_mp4 = current_render_map[project]
+        if project in wip or cited:
+            decisions.append(record(
+                path, workspace, sha_cache,
+                category='superseded_render',
+                decision='keep_operational',
+                reason='wip_protected_project' if project in wip else 'explicit_reference_to_prior_render',
+                project=str(project),
+                references=cited,
+            ))
+        else:
+            decisions.append(record(
+                path, workspace, sha_cache,
+                category='superseded_render',
+                decision='delete_rebuildable',
+                reason='superseded_by_verified_current_render',
+                project=str(project),
+                references=[],
+                substitutes=[record(cur_path, workspace, sha_cache), record(cur_mp4, workspace, sha_cache)],
+            ))
 
     for path in sorted(render_paths):
         decisions.append(record(
@@ -638,14 +801,30 @@ def apply(plan_path, output, *, parts):
                 raise ValueError(f'Invalid review leaf: {path}')
             if row['category'] == 'render_temporary' and not is_render_scratch(path, workspace):
                 raise ValueError(f'Invalid renderer scratch leaf: {path}')
-            if row['category'] == 'audio' and (
-                path.suffix not in {'.wav', '.flac'} or path.relative_to(workspace).parts[0] != 'productions'
-            ):
-                raise ValueError(f'Invalid audio leaf: {path}')
-            if row['category'] == 'audio' and row['decision'].startswith('delete'):
+            if row['category'] == 'audio':
+                rel_parts = path.relative_to(workspace).parts
+                allowed_audio_root = (
+                    rel_parts[0] in {'productions', 'work'}
+                    or (len(rel_parts) >= 2 and rel_parts[0] == 'archive' and rel_parts[1] == 'deliveries')
+                )
+                if path.suffix.lower() not in {'.wav', '.flac'} or not allowed_audio_root:
+                    raise ValueError(f'Invalid audio leaf: {path}')
+                if row['decision'].startswith('delete'):
+                    project = project_for(path, workspace)
+                    if project is None or path.parent != project / 'audio' or path.stem not in DERIVED_AUDIO:
+                        raise ValueError(f'Audio source cannot be deleted: {path}')
+            if row['category'] == 'orphan_take':
                 project = project_for(path, workspace)
-                if project is None or path.parent != project / 'audio' or path.stem not in DERIVED_AUDIO:
-                    raise ValueError(f'Audio source cannot be deleted: {path}')
+                if project is None or path.parent != project / 'audio' / 'segments' or path.suffix.lower() not in {'.wav', '.flac'}:
+                    raise ValueError(f'Invalid orphan_take leaf: {path}')
+                if not row.get('substitutes'):
+                    raise ValueError(f'Missing narration_beats substitute for orphan_take: {path}')
+            if row['category'] == 'superseded_render':
+                project = project_for(path, workspace)
+                if project is None or path.parent != project / 'out' or path.suffix.lower() != '.mp4':
+                    raise ValueError(f'Invalid superseded_render leaf: {path}')
+                if not row.get('substitutes') or len(row['substitutes']) < 2:
+                    raise ValueError(f'Missing current render substitutes for superseded_render: {path}')
             if path.exists() and sha(path) != row['sha256']:
                 raise RuntimeError(f'Changed candidate: {path}')
         if row.get('preview'):
@@ -663,7 +842,8 @@ def apply(plan_path, output, *, parts):
             raise RuntimeError(f'Changed substitute: {path}')
 
     output.parent.mkdir(parents=True, exist_ok=True)
-    journal = output.with_suffix('.jsonl')
+    journal_base = output.with_suffix('') if output.suffix == '.gz' else output
+    journal = journal_base.with_suffix('.jsonl')
     records = []
     group_actions = defaultdict(list)
     from compact_workspace_media import convert_png, convert_wav, update_mix_snapshot
@@ -798,6 +978,9 @@ def apply(plan_path, output, *, parts):
                 except OSError:
                     pass
 
+    if journal.is_file() and journal.stat().st_size > 256 * 1024:
+        compress_log_file(journal)
+
     saved = sum(
         r.get('allocated_bytes', 0) - r.get('target_allocated_bytes', 0)
         for r in records
@@ -819,7 +1002,6 @@ def apply(plan_path, output, *, parts):
 
 
 def restore_file(requested):
-    from compact_workspace_media import pixel_sha256
     receipt = requested.parent / 'storage-compaction.json'
     data = read(receipt)
     row = next((r for r in data.get('records', []) if str(requested) in {r.get('source'), r.get('target')}), None)
@@ -841,6 +1023,7 @@ def restore_file(requested):
             if sha(temp) != row['source_sha256']:
                 raise ValueError('Restored WAV hash mismatch')
         else:
+            from compact_workspace_media import pixel_sha256
             from PIL import Image
             with Image.open(target) as image:
                 image.save(temp, format='PNG')
@@ -870,6 +1053,12 @@ def check_health(workspace):
     mix_history_alloc = 0
     inactive_wavs = 0
     inactive_wav_alloc = 0
+    archive_wavs = 0
+    archive_wav_alloc = 0
+    work_wavs = 0
+    work_wav_alloc = 0
+    big_lifecycle_logs = 0
+    big_lifecycle_log_alloc = 0
 
     for p in leaves(workspace):
         try:
@@ -877,6 +1066,7 @@ def check_health(workspace):
         except OSError:
             continue
         al = st.st_blocks * 512
+        rel_parts = p.relative_to(workspace).parts
         if is_render_scratch(p, workspace):
             render_scratch_files += 1
             render_scratch_alloc += al
@@ -884,21 +1074,37 @@ def check_health(workspace):
             if (p.parent / 'contact.jpg').is_file() and any(p.parent.glob('strip-s*.jpg')):
                 numbered_or_strip_files += 1
                 numbered_or_strip_alloc += al
-        elif p.suffix.lower() == '.wav' and p.relative_to(workspace).parts[0] == 'productions':
-            proj = project_for(p, workspace)
-            if proj and 'mix-history' in p.relative_to(proj).parts:
-                mix_history_wavs += 1
-                mix_history_alloc += al
-            elif proj and proj not in active:
-                inactive_wavs += 1
-                inactive_wav_alloc += al
+        elif p.suffix.lower() == '.wav':
+            if rel_parts[0] == 'productions':
+                proj = project_for(p, workspace)
+                if proj and 'mix-history' in p.relative_to(proj).parts:
+                    mix_history_wavs += 1
+                    mix_history_alloc += al
+                elif proj and proj not in active:
+                    inactive_wavs += 1
+                    inactive_wav_alloc += al
+            elif len(rel_parts) >= 2 and rel_parts[0] == 'archive' and rel_parts[1] == 'deliveries':
+                archive_wavs += 1
+                archive_wav_alloc += al
+            elif rel_parts[0] == 'work':
+                work_wavs += 1
+                work_wav_alloc += al
+        elif (
+            rel_parts[0] == 'work'
+            and len(rel_parts) >= 2
+            and rel_parts[1].startswith('disk-lifecycle-')
+            and p.suffix in {'.json', '.jsonl'}
+            and st.st_size > 2 * 1024 * 1024
+        ):
+            big_lifecycle_logs += 1
+            big_lifecycle_log_alloc += al
 
     cache_root = workspace / '.cache' / 'node-deps'
     pools = []
     if cache_root.is_dir():
         for child in sorted(cache_root.iterdir()):
             if child.is_dir() and (child / '.ready.json').is_file():
-                fc, sz, al = directory_stats(child)
+                fc, _sz, al = directory_stats(child)
                 pools.append({'fingerprint': child.name, 'files': fc, 'allocated_bytes': al})
 
     vfs = os.statvfs(workspace)
@@ -913,6 +1119,12 @@ def check_health(workspace):
         findings.append({'code': 'uncompressed_mix_history_wavs', 'count': mix_history_wavs, 'allocated_bytes': mix_history_alloc})
     if inactive_wavs:
         findings.append({'code': 'inactive_revision_wavs', 'count': inactive_wavs, 'allocated_bytes': inactive_wav_alloc})
+    if archive_wavs:
+        findings.append({'code': 'archive_delivery_uncompressed_wavs', 'count': archive_wavs, 'allocated_bytes': archive_wav_alloc})
+    if work_wavs:
+        findings.append({'code': 'work_cache_uncompressed_wavs', 'count': work_wavs, 'allocated_bytes': work_wav_alloc})
+    if big_lifecycle_logs:
+        findings.append({'code': 'uncompressed_large_lifecycle_logs', 'count': big_lifecycle_logs, 'allocated_bytes': big_lifecycle_log_alloc})
 
     return {
         'schema': 'medical_video_storage_health/v1',
@@ -925,6 +1137,9 @@ def check_health(workspace):
         'redundant_preview_frames': {'files': numbered_or_strip_files, 'allocated_bytes': numbered_or_strip_alloc},
         'uncompressed_mix_history_wavs': {'files': mix_history_wavs, 'allocated_bytes': mix_history_alloc},
         'inactive_revision_wavs': {'files': inactive_wavs, 'allocated_bytes': inactive_wav_alloc},
+        'archive_delivery_uncompressed_wavs': {'files': archive_wavs, 'allocated_bytes': archive_wav_alloc},
+        'work_cache_uncompressed_wavs': {'files': work_wavs, 'allocated_bytes': work_wav_alloc},
+        'uncompressed_large_lifecycle_logs': {'files': big_lifecycle_logs, 'allocated_bytes': big_lifecycle_log_alloc},
         'findings': findings,
         'disk_free_bytes': vfs.f_bavail * vfs.f_frsize,
     }
@@ -938,15 +1153,15 @@ def main():
     p.add_argument('--workspace', type=Path, required=True)
     p.add_argument('--policy', type=Path, required=True)
     p.add_argument('--project', type=Path, action='append', help='Optional single/multi project scope for fast closeout')
-    p.add_argument('--output', type=Path, required=True)
+    p.add_argument('--output', type=Path, required=True, help='Output path (.json or .json.gz)')
 
     p = sub.add_parser('apply')
-    p.add_argument('--plan', type=Path, required=True)
-    p.add_argument('--output', type=Path, required=True)
+    p.add_argument('--plan', type=Path, required=True, help='Plan path (.json or .json.gz)')
+    p.add_argument('--output', type=Path, required=True, help='Receipt path (.json or .json.gz)')
     p.add_argument(
         '--parts',
         nargs='+',
-        choices=['review_frame', 'audio', 'render_temporary', 'node_modules'],
+        choices=['review_frame', 'audio', 'render_temporary', 'node_modules', 'orphan_take', 'superseded_render'],
         required=True,
     )
 

@@ -13,6 +13,7 @@ import argparse
 from _opl_file_hash import sha256_file
 import json
 import re
+import subprocess
 from pathlib import Path
 from typing import Any
 
@@ -223,7 +224,21 @@ def _naturalness_brief(project: Path) -> dict[str, Any]:
     }
 
 
-def preflight(project: Path, manifest_ref: Path | None = None) -> dict[str, Any]:
+def interaction_source(project: Path, parser: Path | None = None) -> dict[str, Any]:
+    """Collect source findings with the same parser used by the batch locator."""
+    command = ["node", str(Path(__file__).with_name("locate_interaction_source.mjs")),
+               "--project", str(project)]
+    if parser is not None:
+        command.append(str(parser))
+    try:
+        result = subprocess.run(command, capture_output=True, text=True, check=True, timeout=20)
+        return json.loads(result.stdout)
+    except (OSError, ValueError, subprocess.SubprocessError) as exc:
+        return {"status": "scanner_unavailable", "findings": [], "error": str(exc)}
+
+
+def preflight(project: Path, manifest_ref: Path | None = None,
+              *, scan_interactions: bool = True) -> dict[str, Any]:
     project = project.resolve()
     manifest_path = (project / manifest_ref).resolve() if manifest_ref else project / "asset_manifest.json"
     manifest = {}
@@ -247,7 +262,24 @@ def preflight(project: Path, manifest_ref: Path | None = None) -> dict[str, Any]
     ]
     brief = _manifest_brief(manifest_path)
     naturalness = _naturalness_brief(project)
+    parser = None
+    if scan_interactions and (project / "package.json").is_file():
+        from shared_node_deps import dependency_fingerprint, shared_cache_root
+
+        workspace = next((parent for parent in project.parents
+                          if (parent / "workbench.yaml").is_file()), None)
+        try:
+            fingerprint, _ = dependency_fingerprint(project)
+        except (OSError, ValueError, TypeError):
+            fingerprint = None
+        if fingerprint:
+            shared = shared_cache_root(workspace) / fingerprint / "node_modules/typescript/lib/typescript.js"
+            if shared.is_file():
+                parser = shared
+    interactions = interaction_source(project, parser) if scan_interactions else None
     debts: list[str] = []
+    if interactions and interactions.get("findings"):
+        debts.append("interaction_source_review_pending")
     if brief["status"] == "missing":
         debts.append("asset_manifest_missing")
     if brief.get("human_scale_pending"):
@@ -284,12 +316,14 @@ def preflight(project: Path, manifest_ref: Path | None = None) -> dict[str, Any]
         ),
         "manifest": brief,
         "naturalness": naturalness,
+        "interaction_source": interactions,
         "sources": source_reports,
         "character_scale_locator_count": len(character_locators),
         "quality_debt": sorted(set(debts)),
         "required_next_checks": [
             "先回读scale_contract的共同场景pixels_per_cm与每个真实人物标定；医学示意层可单独按解释职责定比例",
             "首次真实素材试装用原尺寸和手机宽核对人物身体段、躯干与腿和椅子朝向、座面承托及脚底。查看接近、承重、落定、遮挡最大处和邻镜",
+            "按源码定位的镜号和时码核对落脚、椅背、持物接触和前景。首轮预览同时看整件道具的遮挡极值、纸面露出与文字显隐",
             "复杂主体按解释任务取得足够阅读面积；必要时改近景、拆分或换简化版本",
             "确认医生镜头实际加载作者私有 Dr.咩，回读源码路径与当前图像",
             "核对有意遮挡是否仍让观众读清关键脸部、手部、身体连接与握持点。查文字归属、动作因果和去文字读图，并写入qa/naturalness-review.json",

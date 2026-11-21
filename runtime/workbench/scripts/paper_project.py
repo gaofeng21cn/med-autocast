@@ -459,12 +459,13 @@ def inspect(a):
 
 
 def build(a):
+    from first_draft_preflight import interaction_source, preflight
+
     p, c = get_project(a)
     manifest = read(p / c["assets"])
     scale_contract = manifest.get("scale_contract") or {}
     if scale_contract.get("enforcement") == "required":
-        from first_draft_preflight import preflight
-        scale_report = preflight(p)
+        scale_report = preflight(p, scan_interactions=False)
         if scale_report.get("status") == "blocked":
             raise ValueError("scale_contract 未完成：先完成真实人物标定与同场试装，再 build")
     from shared_node_deps import build_env_for_project
@@ -503,6 +504,9 @@ def build(a):
         "project": str(p),
         "entry": c["entry"],
         "shared_deps_fingerprint": deps_pool["fingerprint"],
+        "interaction_source": interaction_source(
+            p, deps_pool["node_modules"] / "typescript/lib/typescript.js"
+        ),
     }
 
 

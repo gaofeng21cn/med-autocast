@@ -7,7 +7,7 @@ description: 把医学视频导演稿落实为可控的本地代码动画，选�
 
 真实短预览前读取 `first_draft_preflight.py` 或构建输出的 `interaction_source`，按镜号复核位移与支撑。纸与字共用变换，笔尖和笔迹共用路径，纸页、整支笔及前景的运动范围给正文留出空间。 [初稿前置检查](../../../runtime/workbench/docs/45_初稿质量经验与前置检查.md#历史返修回流到新集初稿)。
 
-同步落实[初稿动态表现与跨镜状态规范](../../../runtime/workbench/docs/51_初稿动态表现与跨镜状态规范.md)：跨镜复现的核心道具/报告/清单使用单一状态真源派生可见状态，避免在后续镜头回滚旧版；视觉接触/落定/揭示与拟音共用 `score.shots[].events` 感知打击点，不给每次普通入场机械配音效；局部返修前显式声明“修改范围与保留契约”，凡改动动作相位或音频偏移（即便总时长不变），旧的音画同步与切点证据立即失效，必须对受影响窗口与相邻切点重新 build 与 preview。
+同步落实[初稿动态表现与跨镜状态规范](../../../runtime/workbench/docs/51_初稿动态表现与跨镜状态规范.md)：跨镜复现的核心道具/报告使用单一状态真源派生可见状态；带质量感的位移与多目标跟随优先用 `kit/motion.ts` 的闭式确定性弹簧 `springMove`/`springTrack`（或 `tracks.ts` 的 `ease: "spring"`），降权让位用 `demotePose`（牢记 `occupiesSlot: true` 不与新主体抢槽），特写推近用 `focusOn` 避开底部字幕带，静图微动用 `gentleDrift` 避免镜尾刹停，锚点前用 `revealWindow` 严格不显形；细密纸纹放屏幕静态层，整组缩放须验算实际字号，计数不闪出未核实中间医学数值；视觉打击点与拟音共用 `score.shots[].events` 且关键揭示落句间气口；局部返修先声明“改/保契约”，改动动作相位或音频偏移即失效受影响窗口旧同步结论。
 
 代码表演提示放在本镜 `score.shots[].performance[]`，每项含 `actor_id`、`asset_id`、真实 `start`/`events` 锚点、可选偏移和作者素材支持的 `pose`。`kit/acting.ts` 解析当前时间，人物 helper 将实际姿态与画格追加到 `ShotContext.performanceStates`，播放器导出 `window.__state.performance`，预览的 `state_trace` 保存真实调用。缺事件、素材或映射就回到导演/实现修复；不要在源码硬编码第二套时码。
 

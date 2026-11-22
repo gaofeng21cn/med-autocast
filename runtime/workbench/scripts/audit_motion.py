@@ -218,6 +218,26 @@ def audit(project: Path, score_path: Path | None = None) -> dict:
                 owner="visual-review",
                 max_gap=max_gap,
             ))
+        if event_times and span >= 2.0:
+            first_event = min(event_times)
+            last_event = max(event_times)
+            tail_margin = round(span - last_event, 3)
+            if span >= 3.5 and first_event >= 1.8:
+                debts.append(debt(
+                    "opening_empty_wait",
+                    f"镜头开场 {first_event:.2f}s 后才出现首个命名事件；核对开镜是否已有稳定承接画面，避免空台干等",
+                    shot=shot_id,
+                    owner="visual-review",
+                    first_event_seconds=round(first_event, 3),
+                ))
+            if tail_margin < 0.65:
+                debts.append(debt(
+                    "event_too_close_to_shot_end",
+                    f"末个命名事件距镜尾仅 {tail_margin:.2f}s（< 0.65s 保护带）；核对落定结果或结论文字是否来得及读完",
+                    shot=shot_id,
+                    owner="story-directing",
+                    tail_margin_seconds=tail_margin,
+                ))
         if index and start < previous_end - 0.02:
             debts.append(debt("shot_overlap", f"镜头与前一镜重叠 {previous_end - start:.3f}s", shot=shot_id, owner="media-production"))
         if start > previous_end + 0.02:
@@ -285,6 +305,16 @@ def audit(project: Path, score_path: Path | None = None) -> dict:
         debts.append(debt("carrier_continuity_unreported", "至少一个镜头没有登记跨镜承接物，需在邻镜审片确认桌面状态是否连续", owner="story-directing"))
     if shots and len(shots) > 1 and not all("transition" in shot for shot in shots[1:]):
         debts.append(debt("transition_intent_unreported", "镜头之间未登记转场/承接意图；允许硬切，但需要导演在邻镜中说明关系", owner="visual-review"))
+    positive_spans = [row["duration"] for row in per_shot if row["duration"] > 0]
+    if len(positive_spans) >= 5:
+        cadence_ratio = round(max(positive_spans) / min(positive_spans), 3)
+        if cadence_ratio < 1.35:
+            debts.append(debt(
+                "uniform_shot_cadence",
+                f"全片 {len(positive_spans)} 个镜头时长极差比仅 {cadence_ratio:.2f}x（最长 {max(positive_spans):.2f}s / 最短 {min(positive_spans):.2f}s）；核对节奏是否过于均等像翻页",
+                owner="story-directing",
+                cadence_ratio=cadence_ratio,
+            ))
     if duration and previous_end > duration + 0.02:
         debts.append(debt("score_exceeds_duration", "镜头尾部超出 Score duration", owner="media-production"))
 
@@ -299,6 +329,8 @@ def audit(project: Path, score_path: Path | None = None) -> dict:
         "repeated_event_signature", "representative_shot_unregistered",
         "motion_direction_low_diversity", "carrier_continuity_unreported",
         "transition_intent_unreported",
+        "event_too_close_to_shot_end", "opening_empty_wait",
+        "uniform_shot_cadence",
     }
     review_locators = [item for item in debts if item.get("code") in locator_codes]
     debts = [item for item in debts if item.get("code") not in locator_codes]

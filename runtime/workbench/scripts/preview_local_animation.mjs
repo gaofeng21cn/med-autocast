@@ -102,12 +102,38 @@ try {
   const frames = [];
   const contactSourceFiles = [];
   const mobileSourceFiles = [];
+  let posterCanvasRgbRange = null;
   for (const [index, point] of points.entries()) {
-    const state = await page.evaluate(time => { window.__seek(time); return {
+    const state = await page.evaluate(({time, samplePoster}) => { window.__seek(time);
+      let canvasRgbRange = null;
+      if (samplePoster) {
+        try {
+          const canvas = document.querySelector('#film') || document.querySelector('canvas');
+          const ctx = canvas?.getContext?.('2d');
+          if (canvas && ctx && canvas.width > 0 && canvas.height > 0) {
+            let minR = 255, maxR = 0, minG = 255, maxG = 0, minB = 255, maxB = 0;
+            for (let gy = 0; gy < 6; gy++) {
+              const py = Math.min(canvas.height - 1, Math.floor(((gy + 0.5) * canvas.height) / 6));
+              for (let gx = 0; gx < 8; gx++) {
+                const px = Math.min(canvas.width - 1, Math.floor(((gx + 0.5) * canvas.width) / 8));
+                const d = ctx.getImageData(px, py, 1, 1).data;
+                if (d[0] < minR) minR = d[0]; if (d[0] > maxR) maxR = d[0];
+                if (d[1] < minG) minG = d[1]; if (d[1] > maxG) maxG = d[1];
+                if (d[2] < minB) minB = d[2]; if (d[2] > maxB) maxB = d[2];
+              }
+            }
+            canvasRgbRange = Math.max(maxR - minR, maxG - minG, maxB - minB);
+          }
+        } catch { canvasRgbRange = null; }
+      }
+      return {
       state:window.__state || null, layout:window.__layout || null,
       renderer_id:window.__rendererId || null, style_id:window.__styleId || null,
+      canvas_rgb_range: canvasRgbRange,
       declared_texts:(()=>{ try { return typeof window.TEXTS==='function' ? window.TEXTS(time) : null; } catch(error) { return {status:'unavailable',error:String(error)}; } })(),
-    }; }, point.time);
+    }; }, {time: point.time, samplePoster: index === 0 && rangeStart === 0});
+    if (index === 0 && rangeStart === 0) posterCanvasRgbRange = state.canvas_rgb_range;
+    delete state.canvas_rgb_range;
     const stem = `${String(index).padStart(3,'0')}-s${point.scene}-${point.time.toFixed(2)}`;
     const filename = `${stem}.webp`;
     const scratchPng = path.join(temporaryMotionFrames, `${stem}.png`);
@@ -198,6 +224,7 @@ try {
     const activeRatio = Number((changedIntervals / 11).toFixed(3));
     const possibleStaticShot = span >= 3.0 && changedIntervals === 0;
     const possibleDeadTime = !possibleStaticShot && span >= 4.0 && tailStaticSeconds >= 2.8 && activeRatio < 0.55;
+    const possibleRushedEnding = !possibleStaticShot && span >= 2.5 && changedIntervals >= 1 && lastChangePose === 11 && tailStaticSeconds < 0.7;
     motionProfiles.push({
       scene: index + 1,
       shot: stateTrace[0]?.shot || null,
@@ -212,6 +239,7 @@ try {
       tail_static_seconds: tailStaticSeconds,
       possible_static_shot: possibleStaticShot,
       possible_dead_time: possibleDeadTime,
+      possible_rushed_ending: possibleRushedEnding,
     });
     const sheet=`strip-s${index+1}.jpg`;
     execFileSync('ffmpeg',['-y','-loglevel','error','-start_number','0','-i',path.join(temporaryMotionFrames,`strip-s${index+1}-%02d.png`),'-frames:v','1','-vf','scale=400:-1,tile=4x3:padding=8:margin=8:color=white',path.join(output,sheet)]);
@@ -309,10 +337,23 @@ try {
     entry,
     config: { width, height },
   });
+  const posterSubjects = Array.isArray(frames[0]?.layout?.subjects) ? frames[0].layout.subjects.length : 0;
+  const midScene1 = frames.find(f => f.scene === 1 && f.fraction === 0.5);
+  const midScene1Subjects = Array.isArray(midScene1?.layout?.subjects) ? midScene1.layout.subjects.length : 0;
+  const posterFrame = {
+    time: frames[0]?.time ?? rangeStart,
+    canvas_rgb_range: posterCanvasRgbRange,
+    layout_subject_count: posterSubjects,
+    mid_scene1_subject_count: midScene1Subjects,
+    blank_risk: rangeStart === 0 && (
+      (posterCanvasRgbRange !== null && posterCanvasRgbRange < 8) ||
+      (posterSubjects === 0 && midScene1Subjects > 0)
+    ),
+  };
   const report = {
     status:errors.length ? 'failed' : 'previewed', project, output, duration:timeline.duration, fps,
     range:[rangeStart,rangeEnd], scenes:cuts.length-1, frames, motionStrips, motion_profiles:motionProfiles,
-    cutPairs, eventFrames, errors, font_observations:timeline.fonts, renderer_runtime:timeline.renderer_runtime,
+    poster_frame:posterFrame, cutPairs, eventFrames, errors, font_observations:timeline.fonts, renderer_runtime:timeline.renderer_runtime,
     runtime_receipt:runtimeReceipt, contact_sheet:path.join(output,'contact.jpg'),
     mobile_sheet:mobileSheet, mobile_review_width_px:360, cut_pairs_sheet:cutPairsSheet, release_eligible:false,
   };
@@ -321,6 +362,13 @@ try {
   report.primary_view=primaryView;
   report.primary_entry=entry;
   report.quality_debt=frames.flatMap(f=>f.layout_findings.map(d=>({...d,time:f.time,scene:f.scene,owner_stage:'visual-review'})));
+  if (posterFrame.blank_risk) {
+    report.quality_debt.push({
+      code:'poster_frame_blank_risk', owner_stage:'visual-review', blocks_stage_progress:false,
+      scene:1, time:posterFrame.time, canvas_rgb_range:posterFrame.canvas_rgb_range,
+      detail:'定位提示：第 0 帧疑似空屏或无主视觉（可能因 fadeIn(0)=0 或开场空等）；首帧应即封面海报，建议直接呈现可辨主体。',
+    });
+  }
   for (const mp of motionProfiles) {
     if (mp.possible_static_shot) {
       report.quality_debt.push({
@@ -333,6 +381,12 @@ try {
         code:'possible_motion_dead_time', owner_stage:'visual-review', blocks_stage_progress:false,
         scene:mp.scene, shot:mp.shot, duration:mp.duration, tail_static_seconds:mp.tail_static_seconds,
         detail:`定位提示：第 ${mp.scene} 镜末尾约 ${mp.tail_static_seconds}s 无视觉变化；核对是否为必要阅读停留，或属于动作结束后的空转等待。`,
+      });
+    } else if (mp.possible_rushed_ending) {
+      report.quality_debt.push({
+        code:'possible_rushed_ending', owner_stage:'visual-review', blocks_stage_progress:false,
+        scene:mp.scene, shot:mp.shot, duration:mp.duration, tail_static_seconds:mp.tail_static_seconds,
+        detail:`定位提示：第 ${mp.scene} 镜末尾不足 0.7s 仍在变化；核对关键结论/数字是否留足 1.0–1.5s 落位读图稳定期，或属于有意持续运镜承接。`,
       });
     }
   }

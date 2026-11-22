@@ -10,6 +10,81 @@ export const progress = (t: number, start: number, end: number) =>
   end === start ? Number(t >= end) : clamp((t - start) / (end - start));
 export const phase = (t: number, start: number, end: number) =>
   smooth(progress(t, start, end));
+// Strict event gate: returns 0 before `at`, preventing premature ghost reveals.
+export const revealWindow = (t: number, at: number, duration = 0.28) =>
+  t < at ? 0 : easeOut(progress(t, at, at + Math.max(1e-6, duration)));
+
+// Closed-form damped second-order spring presets (deterministic, no frame history).
+export type SpringPreset = { stiffness: number; damping: number };
+export const SPRING = {
+  snappy: { stiffness: 320, damping: 30 },
+  smooth: { stiffness: 170, damping: 26 },
+  heavy: { stiffness: 96, damping: 20 },
+  paper: { stiffness: 220, damping: 22 },
+} as const satisfies Record<string, SpringPreset>;
+
+export function springEase(
+  dt: number,
+  stiffness = SPRING.smooth.stiffness,
+  damping = SPRING.smooth.damping,
+): number {
+  if (dt <= 0) return 0;
+  const w0 = Math.sqrt(Math.max(1e-6, stiffness));
+  const zeta = damping / (2 * w0);
+  if (zeta < 1) {
+    const wd = w0 * Math.sqrt(1 - zeta * zeta);
+    return (
+      1 -
+      Math.exp(-zeta * w0 * dt) *
+        (Math.cos(wd * dt) + ((zeta * w0) / wd) * Math.sin(wd * dt))
+    );
+  }
+  return 1 - Math.exp(-w0 * dt) * (1 + w0 * dt);
+}
+
+export function springMove(
+  t: number,
+  start: number,
+  from: number,
+  to: number,
+  preset: SpringPreset = SPRING.paper,
+): number {
+  return from + (to - from) * springEase(t - start, preset.stiffness, preset.damping);
+}
+
+export function springTrack(
+  t: number,
+  keys: readonly (readonly [number, number])[],
+  preset: SpringPreset = SPRING.smooth,
+): number {
+  if (!keys.length) throw Error("springTrack 需要至少一个关键点");
+  const sorted = [...keys].sort((a, b) => a[0] - b[0]);
+  let value = sorted[0][1];
+  for (let i = 1; i < sorted.length; i++) {
+    value +=
+      (sorted[i][1] - sorted[i - 1][1]) *
+      springEase(t - sorted[i][0], preset.stiffness, preset.damping);
+  }
+  return value;
+}
+
+// Non-exiting handoff: dims and steps back a previous subject while explicitly
+// declaring that its layout slot remains occupied (distinct from true exit).
+export function demotePose(
+  t: number,
+  demoteAt: number,
+  options: { duration?: number; scaleTo?: number; liftY?: number; opacityTo?: number } = {},
+): { scale: number; dy: number; opacity: number; dim: number; occupiesSlot: true } {
+  const dur = Math.max(1e-6, options.duration ?? 0.45);
+  const p = t < demoteAt ? 0 : smooth(progress(t, demoteAt, demoteAt + dur));
+  return {
+    scale: mix(1, options.scaleTo ?? 0.92, p),
+    dy: mix(0, options.liftY ?? -10, p),
+    opacity: mix(1, options.opacityTo ?? 0.36, p),
+    dim: p,
+    occupiesSlot: true,
+  };
+}
 export const hash = (n: number) => {
   const v = Math.sin(n * 127.13 + 41.17) * 43758.5453;
   return v - Math.floor(v);
@@ -357,6 +432,47 @@ export function tiltDrift(
     y: 306 + Math.sin(p * Math.PI * 0.7) * 5,
     zoom: 1 + p * 0.012,
     rotation: (degrees * Math.PI / 180) * Math.sin(p * Math.PI),
+  };
+}
+
+// Focus a world point onto a chosen screen offset (relative to Stage.camera's
+// default focus center `(640, 306)`), so zooming in never pushes subjects into
+// the lower subtitle band or over a co-present presenter.
+export function focusOn(
+  t: number,
+  start: number,
+  end: number,
+  from: Camera,
+  worldTarget: Point,
+  zoomTo: number,
+  screenOffset: Point = { x: 0, y: 0 },
+): Camera {
+  const p = smooth(phase(t, start, end));
+  const safeZoom = Math.max(1e-3, zoomTo);
+  const targetCamX = worldTarget.x - screenOffset.x / safeZoom;
+  const targetCamY = worldTarget.y - screenOffset.y / safeZoom;
+  return {
+    x: mix(from.x, targetCamX, p),
+    y: mix(from.y, targetCamY, p),
+    zoom: mix(from.zoom, safeZoom, p),
+    rotation: mix(from.rotation || 0, 0, p),
+  };
+}
+
+// Constant-velocity subtle push/pull that never stalls to zero speed before a cut.
+export function gentleDrift(
+  t: number,
+  start: number,
+  end: number,
+  fromZoom = 1,
+  toZoom = 1.045,
+  target: Point = { x: 640, y: 306 },
+): Camera {
+  const p = progress(t, start, end);
+  return {
+    x: target.x,
+    y: target.y,
+    zoom: mix(fromZoom, toZoom, p),
   };
 }
 export function soundTime(score: Score, event: Sound): number {

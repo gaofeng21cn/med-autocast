@@ -1,6 +1,19 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { stampPose, stow, soundTime, onTwos } from "../src/kit/motion.ts";
+import {
+  stampPose,
+  stow,
+  soundTime,
+  onTwos,
+  revealWindow,
+  springEase,
+  springMove,
+  springTrack,
+  SPRING,
+  demotePose,
+  focusOn,
+  gentleDrift,
+} from "../src/kit/motion.ts";
 test("stamp contact, ink and sound share one cue after retiming", () => {
   const score: any = {
     shots: [{ id: "seal", start: 40, events: { contact: 2.9 } }],
@@ -41,4 +54,34 @@ test('pocket front mask follows a non-centred asset pivot',()=>{
  pocket(stage,'bag',{x:400,y:300},200,mouth=>assert.deepEqual(mouth,{x:60,y:-10}));
  assert.deepEqual(rect,{x:-40,y:-80,w:200,h:100});
  assert.ok(Math.abs(points[1][0]-120)<1e-8);assert.equal(points[1][1],-40);
+});
+
+test("closed-form spring, demotePose, focusOn and gentleDrift are deterministic and reverse-seek safe", () => {
+  assert.equal(revealWindow(0.99, 1.0, 0.3), 0);
+  assert.ok(revealWindow(1.15, 1.0, 0.3) > 0.5);
+  assert.equal(springEase(0), 0);
+  assert.ok(springEase(0.2, SPRING.paper.stiffness, SPRING.paper.damping) > 0.5);
+  const midA = springTrack(1.35, [[0, 0], [1.0, 100], [1.2, 40]], SPRING.paper);
+  springTrack(5.0, [[0, 0], [1.0, 100], [1.2, 40]], SPRING.paper);
+  const midB = springTrack(1.35, [[0, 0], [1.0, 100], [1.2, 40]], SPRING.paper);
+  assert.equal(midA, midB);
+  assert.ok(Math.abs(springMove(5.0, 1.0, 0, 100, SPRING.smooth) - 100) < 1e-4);
+
+  const beforeDemote = demotePose(1.9, 2.0);
+  assert.equal(beforeDemote.scale, 1);
+  assert.equal(beforeDemote.opacity, 1);
+  assert.equal(beforeDemote.occupiesSlot, true);
+  const afterDemote = demotePose(3.0, 2.0);
+  assert.ok(afterDemote.scale < 1 && afterDemote.opacity < 0.5);
+  assert.equal(afterDemote.occupiesSlot, true);
+
+  const focused = focusOn(2.0, 1.0, 2.0, { x: 640, y: 306, zoom: 1 }, { x: 800, y: 260 }, 2, { x: 0, y: -40 });
+  assert.equal(focused.zoom, 2);
+  assert.equal(focused.x, 800);
+  assert.equal(focused.y, 280);
+
+  const d0 = gentleDrift(0.0, 0, 4, 1.0, 1.04);
+  const d1 = gentleDrift(2.0, 0, 4, 1.0, 1.04);
+  const d2 = gentleDrift(4.0, 0, 4, 1.0, 1.04);
+  assert.ok(Math.abs((d1.zoom - d0.zoom) - (d2.zoom - d1.zoom)) < 1e-9);
 });

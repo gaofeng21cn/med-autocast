@@ -218,6 +218,47 @@ window.__styleId = 'paper_collage';
         self.assertFalse(static_debts[0]['blocks_stage_progress'])
         self.assertIn('font_observations', report)
         self.assertEqual(report['font_observations']['failed_count'], 0)
+        self.assertFalse(report['poster_frame']['blank_risk'])
+
+    @unittest.skipUnless(shutil.which('cwebp'), 'compact previews require cwebp')
+    def test_preview_flags_blank_poster_frame_and_rushed_ending_without_blocking(self):
+        html = '''<!doctype html><html><head><link rel="icon" href="data:,"></head>
+<body style="margin:0"><canvas id="film" width="320" height="180"></canvas>
+<script>
+const image = new Image(); image.src = 'paper.png';
+const ready = image.decode();
+window.__ready = ready;
+window.__total = 3.0;
+window.__fps = 24;
+window.__cuts = [0, 3.0];
+window.__score = {fps: 24, shots: [{id: 'R01', start: 0, end: 3.0, events: {hit: 2.8}}], cues: []};
+window.__seek = t => {
+  const ctx = document.querySelector('canvas').getContext('2d');
+  ctx.fillStyle = '#fafafa'; ctx.fillRect(0, 0, 320, 180);
+  if (t > 0.05) {
+    ctx.drawImage(image, 20 + t * 70, 50, 60, 60);
+  }
+  window.__state = {shot: 'R01', performance: []};
+};
+window.__rendererId = 'canvas2d';
+window.__requestedStyleId = 'paper_collage';
+window.__styleId = 'paper_collage';
+</script></body></html>'''
+        (self.project / 'index.html').write_text(html)
+        output = self.project / 'preview-rushed'
+        args = [sys.executable, '-B', str(SCRIPTS / 'render_javascript_animation.py'),
+                '--project-root', str(self.project), '--review-candidate', '--preview',
+                '--preview-output', str(output), '--width', '320', '--height', '180']
+        result = subprocess.run(args, env=self.env, text=True, capture_output=True, timeout=60)
+        self.assertEqual(result.returncode, 0, result.stderr)
+        report = json.loads((output / 'preview.json').read_text())
+        self.assertEqual(report['status'], 'previewed')
+        self.assertTrue(report['poster_frame']['blank_risk'])
+        self.assertTrue(report['motion_profiles'][0]['possible_rushed_ending'])
+        debt_codes = {d.get('code') for d in report['quality_debt']}
+        self.assertIn('poster_frame_blank_risk', debt_codes)
+        self.assertIn('possible_rushed_ending', debt_codes)
+        self.assertTrue(all(not d.get('blocks_stage_progress') for d in report['quality_debt']))
 
     def test_missing_css_resource_cannot_publish_video(self):
         (self.project / 'index.html').write_text(self.html.replace('</head>', '<link rel="stylesheet" href="missing.css"></head>'))

@@ -1,8 +1,9 @@
 import type { Camera, Point, Pose } from "./types";
-import { clamp, mix, smooth } from "./motion.ts";
+import { clamp, mix, smooth, springEase, SPRING, springMove, springTrack } from "./motion.ts";
+export { SPRING, springEase, springMove, springTrack };
 
 // Ease belongs to the segment LEAVING this key, unlike upstream act()'s arrival key.
-export type Key<T> = { time: number; value: T; ease?: "linear" | "smooth" | "hold" | "in" | "out" };
+export type Key<T> = { time: number; value: T; ease?: "linear" | "smooth" | "hold" | "in" | "out" | "spring" };
 // A track is compiled once; sampling has no frame history and supports reverse seeks.
 export function track<T extends Record<string, number>>(keys: readonly Key<T>[]) {
   if (!keys.length) throw Error("轨道需要至少一个关键帧");
@@ -13,9 +14,12 @@ export function track<T extends Record<string, number>>(keys: readonly Key<T>[])
     while (i + 1 < list.length && t >= list[i + 1].time) i++;
     if (i === list.length - 1) return { ...list[i].value };
     const a = list[i], b = list[i + 1];
-    const p = clamp((t - a.time) / (b.time - a.time));
+    const span = Math.max(1e-6, b.time - a.time);
+    const p = clamp((t - a.time) / span);
     const q = a.ease === "hold" ? 0 : a.ease === "linear" ? p
-      : a.ease === "in" ? p ** 3 : a.ease === "out" ? 1 - (1 - p) ** 3 : smooth(p);
+      : a.ease === "in" ? p ** 3 : a.ease === "out" ? 1 - (1 - p) ** 3
+      : a.ease === "spring" ? springEase(t - a.time, SPRING.paper.stiffness, SPRING.paper.damping)
+      : smooth(p);
     return Object.fromEntries(Object.keys(a.value).map(k =>
       [k, mix(a.value[k], b.value[k], q)])) as T;
   };

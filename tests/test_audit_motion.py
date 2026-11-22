@@ -113,6 +113,32 @@ class MotionAuditTests(unittest.TestCase):
             self.assertFalse(any(item["code"] == "representative_shot_unregistered" for item in report["quality_debt"]))
             self.assertTrue(any(item["code"] == "long_motion_dead_zone" for item in report["review_locators"]))
 
+    def test_reports_tail_margin_opening_wait_and_uniform_cadence_as_non_blocking_locators(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            score = {
+                "duration": 25,
+                "signature_shot": "s1",
+                "shots": [
+                    {
+                        "id": f"s{i + 1}",
+                        "start": i * 5.0,
+                        "end": (i + 1) * 5.0,
+                        "events": {"enter": 2.2, "action": 4.6} if i == 0 else {"enter": 0.4, "settle": 3.0},
+                        "shot_recipe": f"第 {i + 1} 镜独特画面动作",
+                    }
+                    for i in range(5)
+                ],
+            }
+            (root / "score.json").write_text(json.dumps(score), encoding="utf-8")
+            report = audit(root)
+            locator_codes = {item["code"] for item in report["review_locators"]}
+            self.assertIn("opening_empty_wait", locator_codes)
+            self.assertIn("event_too_close_to_shot_end", locator_codes)
+            self.assertIn("uniform_shot_cadence", locator_codes)
+            self.assertEqual(report["summary"]["blocking_debt_count"], 0)
+            self.assertTrue(all(item["blocks_stage_progress"] is False for item in report["review_locators"]))
+
 
 if __name__ == "__main__":
     unittest.main()

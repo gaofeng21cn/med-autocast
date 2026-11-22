@@ -2,7 +2,7 @@
 
 用源码定位和实际预览的事件时点排查问题，检查最大遮挡、接触与落定、关键字显隐、急症切入及相邻切点。将已验证的修正写回单集经验卡。 方法见 `runtime/workbench/docs/45_初稿质量经验与前置检查.md`。
 
-复核预览同时消费 `runtime/workbench/docs/51_初稿动态表现与跨镜状态规范.md` 对应的紧凑审看产物：用 `cut-pairs.jpg`（每处内切点 `N-1 / N` 精确配对帧）排查提前清空、跳切与遮罩回归；用 `mobile-360.jpg`（真实 360px 手机宽度拼图）做移动端可读性与层级检查；结合 `preview.json` 的 `motion_profiles`（`possible_static_shot` / `possible_motion_dead_time` 区分有意阅读停留与空转死区）与 `font_observations`（按“字体资源 -> 360px 视觉层级 -> 内容适配”三层排障）；核对修改定格帧与后镜重现帧之间无状态回滚，并坚持“改动动作相位或音频偏移即失效受影响区间的旧同步结论”。
+复核预览同时消费 `runtime/workbench/docs/51_初稿动态表现与跨镜状态规范.md` 对应的紧凑审看产物：用 `cut-pairs.jpg`（每处内切点 `N-1 / N` 精确配对帧）排查提前清空、跳切与遮罩回归；用 `mobile-360.jpg`（真实 360px 手机宽度拼图）做移动端可读性与缩放后真实字号检查；结合 `preview.json` 的 `poster_frame`（`poster_frame_blank_risk` 查第 0 帧空屏）、`motion_profiles`（`possible_static_shot` / `possible_motion_dead_time` / `possible_rushed_ending` 同时排查空转死区与落位即切）、`font_observations`（按“字体资源 -> 360px 视觉层级 -> 内容适配”三层排障）及 `audit_motion.py` 新增的镜尾保护带/开镜空等/均等节奏定位；核对修改定格帧与后镜重现帧之间无状态回滚，并必答“冷眼审片三问”（哪段开始走神/哪里像 PPT/最弱一镜是哪镜）避免“合规但平淡”；坚持“改动动作相位或音频偏移即失效受影响区间的旧同步结论”。
 
 新动画实际审看角色表演与灵动性：注意力落点、表情、视线、朝向、重心、手势与停顿是否服务本镜任务。固定微笑摊手或只平移倾斜不能证明阅读、转头、解释或递接；有意义的停手倾听和稳定注视可以成立。正常速度看完整动作与邻镜，核对同一身份、身体体量和接触连续性；缺口回最早导演、素材或实现，不以姿态数量/登记状态替代判断。方法见 `runtime/workbench/docs/44_人物素材与画面尺度契约.md` 的“角色表演与灵动性”。
 

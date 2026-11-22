@@ -15,3 +15,16 @@ test("short movement and a held result survive reverse/random seeks",()=>{
   assert.ok(Math.abs(sample(2.1).x-87.5)<1e-9);
   assert.equal(sample(9).x,0);
 });
+
+test("track spring ease is deterministic and settles near target", () => {
+  const sample = track([
+    { time: 0, value: { x: 0 }, ease: "spring" },
+    { time: 1.5, value: { x: 100 } },
+  ]);
+  const a = sample(0.25).x;
+  sample(2.0);
+  const b = sample(0.25).x;
+  assert.equal(a, b);
+  assert.ok(a > 60);
+  assert.equal(sample(1.5).x, 100);
+});

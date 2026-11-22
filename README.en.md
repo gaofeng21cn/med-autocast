@@ -6,30 +6,11 @@
 
 <h1 align="center">Med Auto Cast</h1>
 
-**Explain the medical evidence. Make the video work.**
-
-Med Auto Cast (MAC) is a medical education video agent for clinicians, health educators, and medical content creators. Starting with a question patients care about, it helps you review the evidence, plan a series, write narration, design visuals, produce voiceovers and animation, edit and review videos, and prepare accompanying copy.
-
-Start with a topic or continue from an existing script, recording, asset collection, or video. Refine one episode, produce a series, or update earlier work while building on what you already have.
-
-New productions default to local JavaScript animation in a hand-drawn collage style. The agent prepares medically grounded, layered assets and designs shots around the narration. Video models are used only when explicitly selected in the production plan. VoxCPM2 is used with an authorized reference voice; Edge TTS `zh-CN-XiaoyiNeural` is used when no dedicated voice is configured or the creator explicitly skips it, and requires a network connection. Image gaps can be filled with ImageGen supplied by the calling session; MAC does not choose or validate the calling agent's language or image model.
-
-Code animation includes reusable path drawing, camera tracks, material motion, and event-aligned sound, with seven style studies that run locally. Story treatments and key shots guide production; modules provide a starting point while keeping custom shot design open. See the [animation craft workflow](runtime/workbench/docs/26_代码动画技法与风格工作流.md) for implementation and review boundaries.
+Med Auto Cast helps clinicians, health educators, and creators turn a question patients care about into a video they can review. Give it a topic and audience, or bring a script, recording, or existing video. It picks up from the work you already have.
 
 <p align="center">
   <img src="assets/branding/medautocast-overview.en.png" alt="The six-stage Med Auto Cast workflow, from medical evidence and story design through audiovisual production, review, handoff, and asset curation. Author profiles, professional skills, production tools, and recovery support ongoing work." width="100%" />
 </p>
-
-## What You Can Do
-
-| Your goal | How Med Auto Cast helps |
-| --- | --- |
-| Turn medical knowledge into topics patients can understand | Review evidence, common patient questions, and the limits of what can be said; develop series themes, episode goals, and outlines |
-| Tell a coherent story | Write narration and storyboards, connect each visual to the explanation, and maintain continuity between shots |
-| Produce a video from a script | Coordinate voiceovers, subtitles, animation, and editing; add branding and background music to create a video for review |
-| Identify what needs revision | Check visual meaning, framing, and motion continuity; organize listening feedback and medical review findings |
-| Prepare an episode or series for handoff | Gather videos, subtitles, narration, review records, and accompanying copy for Xiaohongshu and WeChat Channels |
-| Build a useful collection for future work | Store cutouts, environments, code components, motion samples, and audio independently with versions, sources, and reuse scope; inspect existing material before production and curate it afterward |
 
 ## Start With A Request
 
@@ -45,35 +26,21 @@ Describe the audience, what viewers should understand, and the material you alre
 
 For an existing project, provide its folder and identify the current version, what has been approved, and what you want to change.
 
-## Build On Your Previous Work
+## From a topic to a finished episode
 
-**Keep your own style.** Reuse your author information, authorized voice, branding, and presentation preferences to maintain a consistent voice and visual style across a series.
+MAC starts with the audience’s question. It gathers medical evidence, shapes the story, and brings the narration and key shots together for review. Once you approve the direction, it continues with voice, animation, editing, and subtitles. You decide whether the medical content and its presentation are right, and MAC applies your feedback to the relevant shots.
 
-**Use your existing knowledge library.** Author preferences, lasting topic knowledge, and project decisions each retain one editable source. MAC reads authorized notes from Obsidian or another existing directory; without a personal library, the production workspace holds those notes. Each task records the versions it uses, and reviewed lessons return to their original source. Voice references, media, finished videos, and review evidence stay with the production project. See [knowledge ownership and runtime records](docs/architecture.md#知识归属正文来源与运行记录).
+A series can reuse its approved author style, voice, and assets. If only a few shots need revision, MAC can work from the existing version and reuse the parts you already approved. The production record also lets you pick up after an interruption.
 
-**Make focused revisions.** Reuse audio and subtitles when the narration is unchanged, and focus visual revisions on the affected shots. Updating one episode preserves the others.
-
-**Continue after an interruption.** Use existing files and production records to establish progress, resume unfinished work, and retain earlier versions for reference.
-
-**Know what you are receiving.** Videos, accompanying copy, revision notes, and pending reviews are organized together. You can see which version you have, what has been checked, and whose confirmation is still needed. Medical content receives final confirmation from a qualified professional; platform uploads require your authorization.
+When it is time to review, you get the video, subtitles, publication copy, and any outstanding review items together. Approved assets and methods can serve the next episode or a revision of an older one. [Production workflow](agent/policies/production-policy.md) · [Animation techniques](runtime/workbench/docs/26_代码动画技法与风格工作流.md)
 
 ## Install And Get Started
 
-Install through OPL:
-
-```bash
-opl packages install med-autocast --json
-```
-
-Every standard MAC installation installs the lightweight public `mac-media-assets` catalog dependency. OPL App Full includes the same small core; Software Center offers the complete offline library as an option within the same product. MAC discovers and uses its media without a separate user installation or manual invocation.
-
-Start a new task after installation and give Med Auto Cast a production folder, topic, audience, and approximate length. Following the [setup guide](docs/installation.md), the agent can initialize an empty workbench, install local JavaScript production dependencies, and check the browser, Chinese fonts, and the selected voice environment. A video model, remote GPU, and NAS are not required for the default route. A new author can start without an on-screen presenter or avatar; their identity and voice choice still need to be established before production. Use the [project setup guide](docs/workspace-adapter.md) to continue an existing production project.
-
-Source changes and the in-repository plugin carrier reach ordinary installed users only after a subsequent OCI package release and installation. See [current capabilities and validation](docs/status.md) for the exact qualification boundary.
+Install **Med Auto Cast** from the OPL Software Center. Open a new task with a topic, audience, and target length, then start by reviewing the angle and narration for one episode. To revise existing work, point MAC to its production folder. [Installation and setup](docs/installation.md) · [Current capabilities](docs/status.md)
 
 ## Med Auto Cast Assets
 
-[mac-media-assets](https://github.com/gaofeng21cn/mac-media-assets) is MAC's separate medical explainer asset repository for cutouts, backgrounds, motion components, composition references, and BGM stems. Configure it through the workbench's `asset_library` section and query it with `assets --library external`. Local production can continue when the library is unavailable; asset review does not approve a new shot. Repository access is required.
+A standard MAC installation uses the companion library to find reusable paper elements, backgrounds, animation assets, and sound. [Med Auto Cast Assets](https://github.com/gaofeng21cn/mac-media-assets) · [Media library guide](docs/media-assets-integration.md)
 
 ## Learn More
 
@@ -93,6 +60,3 @@ Supporting guides are currently in Chinese.
 
 Apache License 2.0. See [LICENSE](LICENSE). Copyright 2026 FengGao Lab
 contributors.
-
-
-The independent [mac-media-assets](https://github.com/gaofeng21cn/mac-media-assets) companion is fetched or reused by the standard workbench setup. Directors inspect actual assets before use and may adapt, replace or create new material. Offline or private-repository access failures remain non-blocking. See [integration and installation boundaries](docs/media-assets-integration.md).

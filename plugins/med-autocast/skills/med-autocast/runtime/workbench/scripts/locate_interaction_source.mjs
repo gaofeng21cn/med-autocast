@@ -126,6 +126,24 @@ function locate(project, score) {
     });
   }
 
+  // A later shot can never reach a full-film threshold on its local clock.
+  const timingComparisons = new Set([ts.SyntaxKind.GreaterThanToken, ts.SyntaxKind.GreaterThanEqualsToken,
+    ts.SyntaxKind.LessThanToken, ts.SyntaxKind.LessThanEqualsToken]);
+  for (const ast of sources) {
+    for (const node of descend(ast)) {
+      if (!ts.isBinaryExpression(node) || !timingComparisons.has(node.operatorToken.kind)) continue;
+      if (!ts.isPropertyAccessExpression(node.left) || node.left.name.text !== 't') continue;
+      const context = node.left.expression.getText();
+      const threshold = node.right;
+      if (!ts.isBinaryExpression(threshold) || threshold.operatorToken.kind !== ts.SyntaxKind.PlusToken ||
+          threshold.left.getText() !== context + '.beat.start' || !ts.isNumericLiteral(threshold.right)) continue;
+      const offset = Number(threshold.right.text);
+      const outsideShot = (score.shots || []).some(shot => shotIds(node).includes(shot.id) &&
+        Number(shot.start) + offset >= Number(shot.end) - Number(shot.start));
+      if (outsideShot) record('mixed_shot_timebase', node, '镜内 t 与含全片起点的阈值比较，切换点已超出镜长，核对动作和落定帧');
+    }
+  }
+
   const person = functions.get('person');
   const fixedPoseLibrary = person && [...descend(person)].some(node =>
     ['manwalk','womanwalk','doctor_walk','reserve_person_walk_v1'].includes(string(node)));

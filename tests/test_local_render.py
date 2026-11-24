@@ -271,6 +271,54 @@ window.__styleId = 'paper_collage';
         self.assertFalse(receipt['release_eligible'])
         self.assertTrue(any(item['code'] == 'animation_render_failed' for item in receipt['quality_debt']))
 
+    def test_native_remotion_dom_composition_renders_audio_locked_mp4(self):
+        template = REPO / 'runtime/workbench/templates/animation/paper_theatre'
+        remotion_project = self.project / 'remotion_dom_project'
+        shutil.copytree(
+            template,
+            remotion_project,
+            ignore=shutil.ignore_patterns('node_modules', 'dist', '.git'),
+        )
+        score = {
+            'fps': 24,
+            'duration': 0.5,
+            'style': {'styleId': 'kinetic_type', 'appliedStyleId': 'kinetic_type', 'renderer': 'remotion_dom'},
+            'shots': [{'id': 'K01', 'title': '餐后平稳血糖', 'start': 0, 'end': 0.5, 'events': {'enter': 0.1}}],
+            'cues': [{'start': 0.0, 'end': 0.5, 'text': '餐后散步有助控糖'}],
+            'sounds': [],
+        }
+        (remotion_project / 'score.json').write_text(json.dumps(score, ensure_ascii=False))
+        (remotion_project / 'asset_manifest.json').write_text(json.dumps({
+            'schema': 'medical_animation_assets/v1',
+            'assets': [],
+            'shots': [{'shot_id': 'K01', 'asset_ids': []}],
+        }))
+        out = remotion_project / 'remotion-dom.mp4'
+        args = [
+            sys.executable, '-B', str(SCRIPTS / 'render_javascript_animation.py'),
+            '--project-root', str(remotion_project),
+            '--review-candidate',
+            '--remotion-entry', 'src/remotion/index.ts',
+            '--composition-id', 'PaperTheatre',
+            '--audio', str(self.audio),
+            '--width', '320', '--height', '180', '--fps', '24',
+            '--requested-style-id', 'kinetic_type',
+            '--requested-renderer-id', 'remotion_dom',
+            '--output', str(out),
+        ]
+        result = subprocess.run(args, env=self.env, text=True, capture_output=True, timeout=120)
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertTrue(out.is_file())
+        runtime = json.loads(Path(str(out) + '.runtime.json').read_text())
+        self.assertEqual(runtime['render_engine'], '@remotion/renderer')
+        self.assertEqual(runtime['renderer_runtime']['renderer_id'], 'remotion_dom')
+        self.assertEqual(runtime['renderer_runtime']['style_id'], 'kinetic_type')
+        receipt = json.loads(out.with_suffix('.receipt.json').read_text())
+        self.assertEqual(receipt['status'], 'rendered')
+        self.assertTrue(receipt['renderer_selection']['renderer_match'])
+        self.assertTrue(receipt['renderer_selection']['style_match'])
+        self.assertFalse(receipt['release_eligible'])
+
 
 if __name__ == '__main__':
     unittest.main()

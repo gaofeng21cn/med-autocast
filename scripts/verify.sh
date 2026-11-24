@@ -25,6 +25,10 @@ if [[ -n "${framework_python_root}" && -d "${framework_python_root}" ]]; then
   export PYTHONPATH="${framework_python_root}${PYTHONPATH:+:${PYTHONPATH}}"
 fi
 
+if command -v node >/dev/null 2>&1; then
+  node "${repo_dir}/scripts/project-carrier.mjs" >/dev/null
+fi
+
 python3 -m unittest discover -s "${repo_dir}/tests" -v
 python3 "${repo_dir}/scripts/verify_contracts.py"
 if [[ "${1:-fast}" == "full" ]]; then

@@ -7,7 +7,7 @@
 - **产品定位与骨架**：Med Auto Cast 采用 OPL Framework 标准声明式骨架，以 OPL Book Forge 为结构参考；通过 OCI 不可变版本与 `latest-stable` 分发，不自建 ZIP 分发器或 GitHub Release 附件。原工作台十阶段职责归并为六个核心 Stage 并保留专业 Skill 分工，保持长方法按需加载而不删减职责。
 - **领域来源与权责边界**：领域方法源自医学科普制作工作台的专业 Skill 与 SOP；构建输入留在维护者本地档案，不随公开包分发。结构参考和通用标准归 OPL Framework，制作工作区原数据仍是系列、作者与媒体事实权威。
 - **核心不变量**：拒用源优先于残留可用区间；当前制作单优先于旧 `ready` 快照；同一任务保持单一 writer；原音轨未变才可复用；静态、动态、技术、听感、医学与平台发布分别留存证据；资产 catalog 是工作区唯一索引，产品源码不携带真实媒体与凭据；机器只校验可确定条件，不替代质量或授权判断。
-- **长期维护规则**：工作台纯文件 SHA-256 复用 Framework 的 `python/opl_framework/file_hash.py`（由 `scripts/project-carrier.mjs` 投影到 `runtime/workbench/scripts/_opl_file_hash.py`，独立工作区不要求安装 Framework）；工作区优先兼容原制作单/交付合同而不新建平行制作状态；不把结构检查、Skill 数量或安装成功等价为 OMA 资格或内容质量通过。
+- **长期维护规则**：工作台纯文件 SHA-256 复用 Framework 的 `python/opl_framework/file_hash.py`（由 `scripts/project-carrier.mjs` 投影到 `runtime/workbench/scripts/_opl_file_hash.py`，独立工作区不要求安装 Framework）；`plugins/med-autocast/skills/` 与 `plugins/med-autocast/assets/` 为构建/验证/发布期由 `scripts/project-carrier.mjs` 按 `contracts/carrier_projection.json` 从根目录唯一事实源确定性物化的载体投影（已在 `.gitignore` 中排除，不再向 Git 提交双份源码）；工作区优先兼容原制作单/交付合同而不新建平行制作状态；不把结构检查、Skill 数量或安装成功等价为 OMA 资格或内容质量通过。
 
 ## 知识归属、正文来源与运行记录
 
@@ -74,6 +74,6 @@ Score / Shot / Asset / Layout / Review
      └── webgl_three    (2.5D、粒子和三维结构)
 ```
 
-当前共用渲染入口按 HTML 项目的 `window.__seek(t)` 逐帧捕获；随包完整模板是 Canvas 2D，故 `paper_collage + canvas2d` 为稳定默认。renderer 注册表区分已激活、计划和实验项；renderer ID 不会自动安装或切换实现。未激活实现仍可用于前期导演规划，之后可选兼容的已激活 renderer 并如实记录质量债务。Remotion 与 HyperFrames 可作镜头预览、薄装配或特定 renderer 候选，不另建主时间轴；视频模型属于显式选择的后端能力，不是动画风格。
+当前共用渲染入口统一由 Remotion（`@remotion/renderer`）驱动，同时支持原生 `remotion_dom` Composition 与基于 `window.__seek(t)` 的 HTML 项目（通过同源 `remotion_seek_host` 宿主捕获）；随包纸剧场模板同时提供 `canvas2d`（`paper_collage` 稳定默认）与 `remotion_dom` 入口，动画弹簧与插值统一由 `remotion` 提供。renderer 注册表区分已激活、计划和实验项；renderer ID 不会自动安装或切换实现。未激活实现仍可用于前期导演规划，之后可选兼容的已激活 renderer 并如实记录质量债务。Remotion 与主时间轴（`score.json`）严格绑定，不另建第二条音画时码；视频模型属于显式选择的后端能力，不是动画风格。
 
 OPL 负责运行、阶段状态、生成接口、独立评测、包版本和激活。原十阶段与六个 OPL 阶段的完整职责对应见[制作 SOP](../agent/policies/production-policy.md)，实际工具和输入合同见[工作台接入](workspace-adapter.md)。同一个专业 Skill 可以参与多个阶段；合成由成片打包 Skill 实现，不能只交给后端 Skill。

@@ -1,9 +1,14 @@
 {
   "name": "med-autocast-workbench-runtime",
   "private": true,
-  "version": "0.2.4",
-  "description": "Local browser runtime for Med Auto Cast JavaScript animation rendering",
+  "version": "0.3.0",
+  "description": "Local browser and Remotion runtime for Med Auto Cast JavaScript animation rendering",
   "dependencies": {
-    "playwright": "1.63.0"
+    "@remotion/bundler": "4.0.546",
+    "@remotion/renderer": "4.0.546",
+    "playwright": "1.63.0",
+    "react": "19.3.1",
+    "react-dom": "19.3.1",
+    "remotion": "4.0.546"
   }
 }

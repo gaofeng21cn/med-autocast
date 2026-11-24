@@ -11,6 +11,7 @@ from _opl_file_hash import sha256_file as sha256
 
 import yaml
 
+from build_episode_video import parse_srt as _parse_srt_tuples
 from delivery_contract import animation_gate
 from workbench_config import load_workbench, production_root_for, resolve_font, series_paths, workspace_path
 
@@ -28,27 +29,15 @@ def alignment_text(text: str) -> str:
     return ALIGNMENT_IGNORED_RE.sub("", text).upper()
 
 
-def parse_timestamp(value: str) -> float:
-    hours, minutes, rest = value.split(":")
-    seconds, milliseconds = rest.split(",")
-    return int(hours) * 3600 + int(minutes) * 60 + int(seconds) + int(milliseconds) / 1000
-
-
 def parse_srt(path: Path) -> list[dict]:
-    cues = []
-    for block in re.split(r"\n\s*\n", path.read_text(encoding="utf-8-sig").strip()):
-        lines = block.splitlines()
-        if len(lines) < 3 or "-->" not in lines[1]:
-            continue
-        start, end = [part.strip() for part in lines[1].split("-->")]
-        cues.append(
-            {
-                "start": parse_timestamp(start),
-                "end": parse_timestamp(end),
-                "lines": lines[2:],
-            }
-        )
-    return cues
+    return [
+        {
+            "start": start,
+            "end": end,
+            "lines": text.splitlines() or [""],
+        }
+        for start, end, text in _parse_srt_tuples(path)
+    ]
 
 
 def paper_cues(score: dict) -> list[dict]:

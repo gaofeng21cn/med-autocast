@@ -107,6 +107,9 @@ class MiniAppTests(unittest.TestCase):
             read_workspace(self.root, {key: value[key] for key in ('series_id', 'episode_id', 'request_id')}, 'status')
 
     def test_installed_adapter_calls_the_same_owner(self):
+        projected_entry = ROOT / 'plugins/med-autocast/skills/med-autocast/runtime/native_helpers/app_contribution.py'
+        if not projected_entry.is_file():
+            subprocess.run(['node', str(ROOT / 'scripts/project-carrier.mjs')], check=True, capture_output=True)
         carrier = self.root / 'isolated-carrier'
         shutil.copytree(ROOT / 'plugins/med-autocast', carrier)
         adapter = json.loads((carrier / 'app-contribution-adapter.json').read_text())

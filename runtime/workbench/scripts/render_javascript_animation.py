@@ -222,6 +222,8 @@ def main() -> None:
     parser.add_argument("--fps", type=int, default=24)
     parser.add_argument("--output", type=Path)
     parser.add_argument("--html-entry", default="index.html")
+    parser.add_argument("--remotion-entry", help="可选 Remotion registerRoot() 入口路径（相对项目根目录），启用原生 remotion_dom 渲染")
+    parser.add_argument("--composition-id", default="PaperTheatre", help="Remotion composition ID")
     parser.add_argument("--audio", type=Path, help="共享渲染入口使用的最终旁白（可为已混音音轨）")
     parser.add_argument("--width", type=int, default=1280)
     parser.add_argument("--height", type=int, default=720)
@@ -393,6 +395,9 @@ def main() -> None:
             config = {"project_root": str(project), "entry": args.html_entry,
                       "audio": str(args.audio.resolve()), "output": str(output),
                       "fps": args.fps, "width": args.width, "height": args.height}
+            if args.remotion_entry:
+                config["remotion_entry"] = args.remotion_entry
+                config["composition_id"] = args.composition_id
             with tempfile.TemporaryDirectory(prefix="med-animation-") as temporary:
                 config_path = Path(temporary) / "render.json"
                 config_path.write_text(json.dumps(config))

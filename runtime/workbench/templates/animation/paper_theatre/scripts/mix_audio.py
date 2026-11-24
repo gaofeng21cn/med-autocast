@@ -1,15 +1,20 @@
 #!/usr/bin/env python3
 """Mix a frozen narration, optional music stems, and event-aligned foley locally."""
+from __future__ import annotations
+
 import argparse
-import array
 import hashlib
 import json
 import math
-import random
 import subprocess
 import tempfile
-import wave
 from pathlib import Path
+
+import numpy as np
+import pyloudnorm as pyln
+import soundfile as sf
+from scipy.signal import lfilter, resample_poly
+
 from sound_materials import material_sound
 
 
@@ -22,43 +27,141 @@ INTERMEDIATE_WAVS = (
 )
 
 
-def run(args):
+def run(args: list[str]) -> subprocess.CompletedProcess[str]:
     return subprocess.run(args, check=True, capture_output=True, text=True)
 
 
-def measure(path, target=-16, peak=-1.2):
-    result = run(["ffmpeg", "-hide_banner", "-i", str(path), "-af",
-                  f"loudnorm=I={target}:TP={peak}:LRA=11:print_format=json", "-f", "null", "-"])
-    return json.JSONDecoder().raw_decode(result.stderr[result.stderr.rfind("{"):])[0]
+def _read_audio(path: Path, target_rate: int | None = None) -> tuple[np.ndarray, int]:
+    """Load audio as 2D float64 (frames, channels) via soundfile, with ffmpeg decode fallback for AAC/M4A."""
+    try:
+        data, sr = sf.read(str(path), dtype="float64", always_2d=True)
+    except Exception:
+        probe = json.loads(
+            subprocess.check_output(
+                ["ffprobe", "-v", "error", "-show_streams", "-select_streams", "a:0", "-of", "json", str(path)],
+                text=True,
+            )
+        )
+        stream = probe["streams"][0]
+        sr = int(target_rate or stream["sample_rate"])
+        channels = int(stream.get("channels") or 2)
+        decoded = subprocess.check_output(
+            ["ffmpeg", "-v", "error", "-i", str(path), "-ar", str(sr), "-ac", str(channels), "-f", "f64le", "-"]
+        )
+        data = np.frombuffer(decoded, dtype=np.float64).reshape(-1, channels).copy()
+    if target_rate is not None and sr != target_rate and len(data) > 0:
+        divisor = math.gcd(int(sr), int(target_rate))
+        up, down = int(target_rate) // divisor, int(sr) // divisor
+        data = resample_poly(data, up, down, axis=0)
+        sr = int(target_rate)
+    return data, int(sr)
 
 
-def normalize(source, output, rate, target=-16, peak=-1.2):
-    data = measure(source, target, peak)
-    if math.isfinite(float(data["input_i"])):
-        filter_text = f"loudnorm=I={target}:TP={peak}:LRA=11:linear=true:" + (
-            "measured_I={input_i}:measured_TP={input_tp}:measured_LRA={input_lra}:"
-            "measured_thresh={input_thresh}:offset={target_offset}"
-        ).format(**data)
-    else:
-        filter_text = "anull"
-    # Keep the container and codec compatible with the registered audio path.
-    # A retained mix may intentionally use `.m4a`; asking FFmpeg to place raw
-    # PCM in that container truncates the target before returning an error.
-    suffix = output.suffix.lower()
-    if suffix == ".wav":
-        codec = ["-c:a", "pcm_s24le"]
-    elif suffix == ".flac":
-        codec = ["-c:a", "flac"]
-    else:
-        codec = ["-c:a", "aac", "-b:a", "256k"]
-    run(["ffmpeg", "-y", "-v", "error", "-i", str(source), "-af", filter_text,
-         "-ar", str(rate), "-ac", "2", *codec, str(output)])
+def _ensure_stereo(data: np.ndarray) -> np.ndarray:
+    if data.ndim == 1:
+        return np.stack([data, data], axis=1)
+    if data.shape[1] == 1:
+        return np.repeat(data, 2, axis=1)
+    if data.shape[1] > 2:
+        return data[:, :2]
     return data
 
 
-def foley(project, score, output, rate, *, return_unresolved=False):
+def _write_audio(path: Path, data: np.ndarray, rate: int, subtype: str = "PCM_24") -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    clipped = np.clip(data, -1.0, 1.0)
+    suffix = path.suffix.lower()
+    if suffix in (".wav", ".flac"):
+        sf.write(str(path), clipped, rate, subtype=subtype)
+        return
+    # Containers not natively writable by libsndfile (e.g., .m4a/.aac) encode cleanly via FFmpeg.
+    with tempfile.NamedTemporaryFile(suffix=".wav", dir=path.parent, delete=False) as handle:
+        temporary = Path(handle.name)
+    try:
+        sf.write(str(temporary), clipped, rate, subtype="PCM_24")
+        run(["ffmpeg", "-y", "-v", "error", "-i", str(temporary), "-ar", str(rate), "-ac", "2",
+             "-c:a", "aac", "-b:a", "256k", str(path)])
+    finally:
+        temporary.unlink(missing_ok=True)
+
+
+def _meter_for(data: np.ndarray, rate: int) -> pyln.Meter:
+    duration = len(data) / max(1, rate)
+    block_size = 0.400 if duration >= 0.45 else max(0.05, duration * 0.8)
+    return pyln.Meter(rate, block_size=block_size)
+
+
+def measure(path: Path, target: float = -16, peak: float = -1.2) -> dict:
+    data, sr = _read_audio(path)
+    if len(data) == 0:
+        return {
+            "engine": "pyloudnorm",
+            "input_i": "-inf",
+            "input_tp": "-inf",
+            "target_i": f"{float(target):.2f}",
+            "target_tp": f"{float(peak):.2f}",
+            "target_offset": "0.00",
+        }
+    loudness = float(_meter_for(data, sr).integrated_loudness(data))
+    peak_amp = float(np.max(np.abs(data)))
+    peak_db = 20.0 * math.log10(peak_amp) if peak_amp > 0.0 else -math.inf
+    return {
+        "engine": "pyloudnorm",
+        "input_i": f"{loudness:.2f}" if math.isfinite(loudness) else "-inf",
+        "input_tp": f"{peak_db:.2f}" if math.isfinite(peak_db) else "-inf",
+        "target_i": f"{float(target):.2f}",
+        "target_tp": f"{float(peak):.2f}",
+        "target_offset": f"{float(target) - loudness:.2f}" if math.isfinite(loudness) else "0.00",
+    }
+
+
+def normalize(source: Path, output: Path, rate: int, target: float = -16, peak: float = -1.2) -> dict:
+    data, sr = _read_audio(source, target_rate=rate)
+    stereo = _ensure_stereo(data)
+    loudness = float(_meter_for(stereo, sr).integrated_loudness(stereo)) if len(stereo) > 0 else -math.inf
+    peak_amp = float(np.max(np.abs(stereo))) if len(stereo) > 0 else 0.0
+    peak_db = 20.0 * math.log10(peak_amp) if peak_amp > 0.0 else -math.inf
+    before = {
+        "engine": "pyloudnorm",
+        "input_i": f"{loudness:.2f}" if math.isfinite(loudness) else "-inf",
+        "input_tp": f"{peak_db:.2f}" if math.isfinite(peak_db) else "-inf",
+        "target_i": f"{float(target):.2f}",
+        "target_tp": f"{float(peak):.2f}",
+        "target_offset": f"{float(target) - loudness:.2f}" if math.isfinite(loudness) else "0.00",
+    }
+    if math.isfinite(loudness) and len(stereo) > 0:
+        normalized = pyln.normalize.loudness(stereo, loudness, float(target))
+        post_peak_amp = float(np.max(np.abs(normalized)))
+        peak_ceiling = 10.0 ** (float(peak) / 20.0)
+        if post_peak_amp > peak_ceiling:
+            normalized = pyln.normalize.peak(normalized, float(peak))
+    else:
+        normalized = stereo
+    _write_audio(output, normalized, rate, subtype="PCM_24")
+    return before
+
+
+def _procedural_paper_foley(kind: str, rate: int, seed: int) -> np.ndarray:
+    duration = 0.17 if kind == "stamp" else 0.44
+    count = round(duration * rate)
+    if count <= 0:
+        return np.zeros(0, dtype=np.float32)
+    rng = np.random.default_rng(seed)
+    noise = rng.uniform(-1.0, 1.0, size=count)
+    lo = lfilter([0.28], [1.0, -0.72], noise)
+    slow = lfilter([0.04], [1.0, -0.96], lo)
+    band = lo - slow
+    t = np.arange(count, dtype=np.float64) / rate
+    if kind == "stamp":
+        samples = (np.sin(t * 2.0 * math.pi * 155.0) * np.exp(-t * 43.0) + band * 0.16) * 0.026
+    else:
+        samples = band * (np.sin(math.pi * t / duration) ** 2) * 0.023
+    return samples.astype(np.float32)
+
+
+def foley(project: Path, score: dict, output: Path, rate: int, *, return_unresolved: bool = False):
     length = round(score["duration"] * rate)
-    mix = array.array("f", [0]) * length
+    mix = np.zeros(length, dtype=np.float64)
     resolved = []
     unresolved = []
     assets = json.loads((project / "asset_manifest.json").read_text())["assets"]
@@ -80,52 +183,20 @@ def foley(project, score, output, rate, *, return_unresolved=False):
         start = round(time * rate)
         if event.get("asset_id"):
             source = next(a for a in assets if a["asset_id"] == event["asset_id"])
-            decoded = subprocess.check_output(["ffmpeg", "-v", "error", "-i", str(project / source["path"]),
-                                               "-ar", str(rate), "-ac", "1", "-f", "f32le", "-"])
-            samples = array.array("f")
-            samples.frombytes(decoded)
+            raw, _ = _read_audio(project / source["path"], target_rate=rate)
+            samples = raw.mean(axis=1)
             resolved[-1].update(source=source["path"], source_type="registered_audio")
         elif (samples := material_sound(event["kind"], rate, 1701 + i)) is not None:
             resolved[-1]["source_type"] = "procedural_material_study"
         else:
-            duration = .17 if event["kind"] == "stamp" else .44
-            rng = random.Random(1701 + i)
-            lo = slow = 0.
-            samples = array.array("f")
-            for k in range(round(duration * rate)):
-                noise = rng.uniform(-1, 1)
-                lo += .28 * (noise - lo)
-                slow += .04 * (lo - slow)
-                band = lo - slow
-                if event["kind"] == "stamp":
-                    value = (math.sin(k / rate * 2 * math.pi * 155) * math.exp(-k / rate * 43) + band * .16) * .026
-                else:
-                    value = band * math.sin(math.pi * k / (duration * rate)) ** 2 * .023
-                samples.append(value)
+            samples = _procedural_paper_foley(event["kind"], rate, 1701 + i)
             resolved[-1]["source_type"] = "procedural_paper_foley"
-        for k, value in enumerate(samples):
-            if 0 <= start + k < length:
-                mix[start + k] += value * event.get("gain", 1)
-    pcm = array.array("h", (round(max(-1, min(1, v)) * 32767) for v in mix))
-    output.parent.mkdir(parents=True, exist_ok=True)
-    if output.suffix.lower() == ".flac":
-        with tempfile.NamedTemporaryFile(suffix=".wav", dir=output.parent, delete=False) as handle:
-            temporary = Path(handle.name)
-        try:
-            with wave.open(str(temporary), "wb") as f:
-                f.setnchannels(1)
-                f.setsampwidth(2)
-                f.setframerate(rate)
-                f.writeframes(pcm.tobytes())
-            run(["ffmpeg", "-y", "-v", "error", "-i", str(temporary), "-c:a", "flac", str(output)])
-        finally:
-            temporary.unlink(missing_ok=True)
-    else:
-        with wave.open(str(output), "wb") as f:
-            f.setnchannels(1)
-            f.setsampwidth(2)
-            f.setframerate(rate)
-            f.writeframes(pcm.tobytes())
+        src_start = max(0, -start)
+        dst_start = max(0, start)
+        dst_end = min(length, start + len(samples))
+        if dst_end > dst_start:
+            mix[dst_start:dst_end] += samples[src_start : src_start + (dst_end - dst_start)] * float(event.get("gain", 1))
+    _write_audio(output, mix, rate, subtype="PCM_16")
     return (resolved, unresolved) if return_unresolved else resolved
 
 
@@ -214,11 +285,11 @@ def main():
     }
     (audio / "mix-receipt.json").write_text(json.dumps(receipt, ensure_ascii=False, indent=2) + "\n")
     if not args.retain_intermediates:
-        receipt['intermediate_audio_retained'] = False
-        receipt['storage_profile'] = {'policy':'necessity_first','retained':'final_mix_and_recipe_sources','intermediates':'rebuildable_pruned'}
+        receipt["intermediate_audio_retained"] = False
+        receipt["storage_profile"] = {"policy": "necessity_first", "retained": "final_mix_and_recipe_sources", "intermediates": "rebuildable_pruned"}
         for legacy in INTERMEDIATE_WAVS:
-            (audio / legacy).with_suffix('.flac').unlink(missing_ok=True)
-        receipt['intermediate_audio'] = {}
+            (audio / legacy).with_suffix(".flac").unlink(missing_ok=True)
+        receipt["intermediate_audio"] = {}
         (audio / "mix-receipt.json").write_text(json.dumps(receipt, ensure_ascii=False, indent=2) + "\n")
     print(json.dumps({"output": str(args.output), "events": len(events), "unresolved_foley": len(unresolved_foley), "duration": duration,
                       "music_stems": len(tracks), "sample_rate": rate, "voice_resynthesized": False}))

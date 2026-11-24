@@ -16,14 +16,21 @@ jobs:
           path: framework
           sparse-checkout: python
           persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
       - uses: actions/setup-python@v6
         with:
           python-version: '3.11'
-      - name: Install lossless media tools
+      - name: Install lossless media and subtitle tools
         run: |
           sudo apt-get update
-          sudo apt-get install --yes --no-install-recommends webp flac
+          sudo apt-get install --yes --no-install-recommends webp flac ffmpeg fonts-noto-cjk
       - run: python -m pip install -r runtime/workbench/requirements.txt
+      - name: Install and verify paper_theatre Remotion kit
+        run: |
+          npm --prefix runtime/workbench/templates/animation/paper_theatre ci --ignore-scripts --no-audit --no-fund
+          npm --prefix runtime/workbench/templates/animation/paper_theatre test
       - env:
           OPL_FRAMEWORK_PYTHON_ROOT: ${{ github.workspace }}/framework/python
         run: scripts/verify.sh fast

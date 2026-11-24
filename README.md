@@ -44,15 +44,14 @@ MAC 会随标准安装使用配套素材库，查找可复用的纸件、背景�
 
 ## 进一步了解
 
+- [文档索引](docs/README.md)：全仓文档分工与维护验证入口。
 - [制作流程](agent/policies/production-policy.md)：从选题、脚本到成片交付。
-- [视听复核](docs/visual-review-sop.md)与[交付说明](docs/delivery-sop.md)：如何审看、修订并整理成果。
-- [关键帧素材库](docs/keyframe-library.md)：如何积累和复用有价值的画面。
+- [制作与交付运维](docs/delivery-sop.md)：媒体后端、视听复核、中断恢复与双平台交付。
+- [关键帧与外挂素材库](docs/media-assets-integration.md#工作区关键帧参考库)：如何接入 `mac-media-assets` 及沉淀关键帧参考库。
 - [可复用动画素材](runtime/workbench/docs/23_可复用素材保管与策展.md)：保管透明纸件、环境、组件、动作和声音，跨集采用精确版本。
 - [当前能力与验证范围](docs/status.md)：了解已验证的能力及仍待完成的验收。
 
-开发与维护请阅读 [AGENTS.md](AGENTS.md)、[项目说明](docs/project.md)、[架构说明](docs/architecture.md)、
-[不变量](docs/invariants.md)和[关键决策](docs/decisions.md)；后端操作与来源适配见
-[媒体后端 SOP](docs/backend-sop.md)和[来源与适配](docs/provenance.md)。
+开发与维护请阅读 [AGENTS.md](AGENTS.md)、[架构、不变量与决策](docs/architecture.md) 及 [工作台与原合同接入](docs/workspace-adapter.md)。
 
 ## 许可
 

@@ -37,7 +37,7 @@ bash runtime/workbench/scripts/setup_workbench.sh --workspace "$HOME/MedAutoCast
 | --- | --- | --- |
 | 默认 JS 制作核心 | Python 3.11+、PyYAML、Pillow、Node.js 20+（推荐 LTS）、FFmpeg/ffprobe、ImageMagick、cwebp（无损预览）、Playwright Chromium、中文字体 | 首次安装下载；素材齐备后本机渲染可离线 |
 | 无专用声线的保底 | 安装脚本包含 edge-tts；默认 zh-CN-XiaoyiNeural | 合成需要微软在线服务，安装成功不证明服务可用 |
-| 自有声线／Dr.咩 | 授权参考音频、独立 VoxCPM2 环境与模型、固定表达参数 | 权重齐备后可在本机推理；首次须短音频实测 |
+| 授权作者声线 | 授权参考音频、独立 VoxCPM2 环境与模型、固定表达参数 | 权重齐备后可在本机推理；首次须短音频实测 |
 | 自动字幕对齐 | requirements-alignment.txt、Whisper 模型 | 模型首次下载；随后本机执行 |
 | 新插画素材 | 会话 ImageGen 能力或授权网络资源；透明底分层素材 | 按来源需要联网，也可复用本地已审资产 |
 | 视频模型、NAS、远端 GPU | 显式选用时配置 | 均不属于核心安装条件 |
@@ -56,7 +56,7 @@ bash scripts/setup_workbench.sh --check
 node scripts/smoke_local_animation.mjs
 ```
 
-检查报告列出缺项、实际解释器、浏览器启动结果和对应修复命令；未选中的模型缺失不阻断核心安装。`selected_narration` 单独报告当前声音依赖：选了 Edge 就检查 edge-tts，选了 VoxCPM2 就检查运行时、模型配置和参考音频路径；缺项时整体返回 `needs_setup`，仍保留独立的 `core_ready`。`ready` 仅表示环境和配置通过，不代表模型完整或合成成功，`production_ready` 始终为 false。语气稳定性、素材与医学关系、整片视听、发布资格必须按制作 SOP 另行验收。
+检查报告结合 `contracts/pack_doctor.json` 列出缺项、实际解释器、浏览器启动结果和对应修复命令；未选中的模型缺失不阻断核心安装。`selected_narration` 单独报告当前声音依赖：选了 Edge 就检查 edge-tts，选了 VoxCPM2 就检查运行时、模型配置和参考音频路径；缺项时整体返回 `needs_setup`，仍保留独立的 `core_ready`。`ready` 仅表示环境和配置通过，不代表模型完整或合成成功，`production_ready` 始终为 false。语气稳定性、素材与医学关系、整片视听、发布资格必须按制作 SOP 另行验收。
 
 已有工作台先用其原安装脚本或随包 `environment_check --workspace <目录>` 检查。旧工作区缺新入口时可执行 `python3 runtime/workbench/scripts/init_workbench.py --workspace <目录> --upgrade`，或运行该工作区的 `scripts/setup_workbench.sh`；两者只补齐缺失目录、入口脚本和入口标记，不整目录覆盖。新建隔离工作区也是可选路径。具体工具调用见[工作台接入](workspace-adapter.md)，VoxCPM2 见[后端说明](../runtime/workbench/backends/voxcpm/README.md)。
 

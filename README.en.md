@@ -44,16 +44,14 @@ A standard MAC installation uses the companion library to find reusable paper el
 
 ## Learn More
 
+- [Documentation index](docs/README.md): repository doc boundaries and verification workflow.
 - [Production workflow](agent/policies/production-policy.md): from topics and scripts to video handoff.
-- [Audiovisual review](docs/visual-review-sop.md) and [delivery guide](docs/delivery-sop.md): review, revise, and organize the results.
-- [Keyframe library](docs/keyframe-library.md): collect and reuse valuable visuals.
+- [Production & delivery operations](docs/delivery-sop.md): media backends, audiovisual review, interruption recovery, and delivery.
+- [Media library & keyframe library](docs/media-assets-integration.md#工作区关键帧参考库): integrating `mac-media-assets` and curating reusable keyframes.
 - [Reusable animation elements](runtime/workbench/docs/23_可复用素材保管与策展.md): preserve cutouts, environments, components, motion, and audio, and adopt exact versions in new episodes.
 - [Current capabilities and validation](docs/status.md): what has been verified and which evaluations remain outstanding.
 
-For development and maintenance, see [AGENTS.md](AGENTS.md), [Project](docs/project.md),
-[Architecture](docs/architecture.md), [Invariants](docs/invariants.md) and
-[Decisions](docs/decisions.md). Backend operations and source attribution are in
-[Backend SOP](docs/backend-sop.md) and [Provenance](docs/provenance.md).
+For development and maintenance, see [AGENTS.md](AGENTS.md), [Architecture & Decisions](docs/architecture.md), and [Workspace & Contract Adapter](docs/workspace-adapter.md).
 Supporting guides are currently in Chinese.
 
 ## License

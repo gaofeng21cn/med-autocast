@@ -144,8 +144,9 @@ python3 runtime/workbench/scripts/init_workbench.py \
 
 或用该工作区的 `scripts/setup_workbench.sh`；升级只补齐缺失目录和入口标记。`med_autocast.py inspect` 与 `environment_check.py` 会回报 `workspace_layout` 的 `ready/partial` 状态，`partial` 是可修复诊断，不是 Stage 硬门，也不覆盖旧生产路径。
 
-核心依赖 PyYAML、Pillow、FFmpeg/ffprobe、ImageMagick 与配置字体；Python 3.11 以上。GPU、VoxCPM2、Whisper、MLX/CUDA 的环境与模型保持独立。随包部署脚本只在明确安装/迁移任务中运行，不因一次检查自动安装模型或重启服务。
-# JS 动画与旁白基线入口
+核心依赖 PyYAML、Pillow、FFmpeg/ffprobe、ImageMagick 与配置字体；Python 3.11 以上。环境依赖规格在 `contracts/pack_doctor.json` 声明；工作台脚本通过 `runtime/workbench/scripts/_opl_framework_bootstrap.py` 与 `_opl_file_hash.py` 复用 Framework helper，独立工作区无需另装 Framework。GPU、VoxCPM2、Whisper、MLX/CUDA 的环境与模型保持独立。随包部署脚本只在明确安装/迁移任务中运行，不因一次检查自动安装模型或重启服务。
+
+## JS 动画与旁白基线入口
 
 JS 与纸剧场统一使用随包渲染器；预览和正式编码不再因 --preview 而选择不同实现。单集默认使用 paper_project 串联实际工具，Edge 仅是联网保底。
 
@@ -158,35 +159,11 @@ JS 与纸剧场统一使用随包渲染器；预览和正式编码不再因 --pr
 
 完整操作见[单集工具与局部返修](../runtime/workbench/docs/20_纸剧场单集工具与局部返修.md)。纸剧场预检的 --plan 为 project.json，当前单集从 workbench.yaml.series 的 episodes 中发现，交付指针在 deliveries/SERIES/EPISODE.json。
 
-`animation_lab` 是随包优先的代码动画能力入口：`list` 查询七个风格方法；`create --project <新空目录> --complete` 创建并构建原创样例、音效、预览和 MP4；失败后从 build/audio/preview/render 继续。通过 `workbench_tool.py --workspace <工作台> --name animation_lab -- ...` 调用。样例不含人物、品牌、医学解剖或旁白；实际单集继续用 paper_project。细节见 `runtime/workbench/docs/26_代码动画技法与风格工作流.md`。
+`animation_lab` 是随包优先的代码动画能力入口：`list` 查询七个风格方法；`create --project <新空目录> --complete` 创建并构建原创样例、音效、预览和 MP4；失败后从 build/audio/preview/render 继续。通过 `workbench_tool.py --workspace <工作台> --name animation_lab -- ...` 调用。样例不含人物、品牌、医学解剖或旁白；实际单集继续用 `paper_project`。细节见 `runtime/workbench/docs/26_代码动画技法与风格工作流.md`。
 
-## 面向用户的单一最新版交付
-
-`publish/<系列展示名>/` 是唯一面向用户的交付目录：首页/观看页和各集成片。每集直接放 `video.mp4`、`封面.jpg`（可用时）、字幕、两平台 TXT 和简明交付说明；不放 `current/`、日期/版本子目录、旧版、源码、旁白 WAV、Score、预览或 QA。用户无需在版本间挑选。交付位置不改变原有动态、听感、医学或上传状态。
-
-过程按 OPL 已声明的 Stage 拆分输入、输出与 owner。自然语言交接引用实际内容、工程和审查材料，保存在 `deliveries/<series>/stages/<stage_id>/`；推荐位置用于找材料，不是阻断字段门。精确交付 manifest 位于 `deliveries/<series>/<episode>/manifest.json`，用户最新版指针仍由 `deliveries/<series>/<episode>.json` 记录。旧包完整移到 `archive/deliveries/<series>/<episode>/<revision>/`，再安装新包并回读；不在 publish 留旧入口或归档链接。
-
-代码动画用 `paper_project package` 默认替换本集唯一最新版并在交付目录外保留旧包；`--output` 只用于交付目录外的过程导出。旧多版本纸剧场包可运行 `scripts/organize_delivery.py --workspace <工作区> --series <系列>`，只按精确指针整理，不猜最大版本、不重渲染、不升级审核状态。Stage 职责与交付结构见工作台目录规范。
+面向用户的 `publish/` 单一最新版交付规范、归档边界与 `publish_catalog` 维护流程见[成片与双平台交付](delivery-sop.md#面向用户的单一最新版交付)；外挂 `mac-media-assets` 的只读查询与按需取用见[独立 MAC 媒体库接入](media-assets-integration.md)。
 
 `audit_pronunciation --workspace W --series SERIES --output work/SERIES/pronunciation-audit.json` 从登记当前工程读取每个词的注音覆盖与真实原音状态。它可在配音前发现遗漏、配音后定位听辨范围，只写定位报告，未合成也可使用，不批准实际读音。
-
-## 外挂医学视频资产库（可选）
-
-当工作区 `workbench.yaml` 声明 `asset_library` 时，MAC 可以只读查询跨工作区资产：
-
-```sh
-python3 runtime/native_helpers/med_autocast.py assets \
-  --workspace /绝对/工作台 \
-  --library external \
-  --query 纸景
-```
-
-该入口会调用配置的 `query_tool`，返回资产版本、来源、载荷和 Review 边界；它不复制素材、不改单集 manifest，也不把外部库状态解释为医学或发布批准。外挂库不存在、工具失败或输出不可解析时返回诊断并继续本地工作台流程。同步和 SHA-256 校验由外挂库的 `sync_from_workbench.py`、`verify_catalog.py` 完成，真正复用仍需当前单集重新登记和审看。
-
-
-独立资产库在标准工作台 setup 中自动获取或复用；已有本地库不覆盖，离线/私有权限失败保留诊断并继续新创。导演先 query 并看原件，制作 use 复制精确版本后重新审查当前镜头；不设复用率。实际命令及载体安装边界见 [独立库接入](media-assets-integration.md)。
-
-用户入口按主题和集名组织：publish/观看与发布.html 覆盖全部当前系列；展示名映射见 workbench.yaml.series.<series_id>.delivery，内部 series_id/episode_id 保持不变。publish_catalog 更新观看页与全季 TXT 文案合集，--check 只读检查实际链接；--migrate 配合显式选集进行可恢复迁移。单集更换从 delivery_layout.locations 定位，不重建英文目录，不重编码未变媒体，不改变审核和上传状态。标准方法见 runtime/workbench/docs/30_用户交付目录与导航SOP.md。
 
 音频防复发工具：`audit_narration_samples --workspace W --output work/narration-samples.json` 逐段检查 source take 与原始 narration PCM 的精确采样包含关系；`audit_audio_freshness --workspace W --output work/audio-freshness.json` 核对 source/timing/mix/render/publish 的当前 SHA 绑定。两者只生成定位诊断，不批准读音、语气、完整听感、动画表意或医学含义。发现失配先修最早断点，再只更新受影响下游；其他可消费 Stage 继续。
 

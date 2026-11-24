@@ -57,3 +57,11 @@ python3 runtime/native_helpers/workbench_tool.py --workspace <目录> --name med
 导入保留原记录与原载荷，并在 `external-source.json` 保存 `effective_review_boundary`、当次策展和当前镜头 pending。本地缓存保存精确版本注解及外库来源根；直接重用时重新读取中央决定，防止导入后被撤回的包继续从缓存进入新项目。旧工程保持原版本，后续修订按受影响范围重新审查。
 
 完整离线安装可保存直接使用的WebP/AAC/FLAC与去重媒体。`status/query/use` 发现与当前核心索引、内容锁匹配的离线安装后使用其压缩版本；旧ID按来源映射到新revision，保留独立扩展名、哈希、坐标和当前镜头待审状态。项目复制仍独立，缓存清理不删除项目文件。
+
+## 工作区关键帧参考库
+
+制作工作区 `assets/keyframes/catalog.json` 是本地关键帧索引权威（schema `medical_keyframe_library/v1`）。原图按用途目录保存，HTML、CSV 及缩略图是生成投影，Agent 源码不复制真实媒体。
+
+用途涵盖测量与监测、饮食与采购、运动与日常、睡眠与行为、门诊与治疗沟通、用药与药房、报告与随访、就医与家庭支持；系列、人物、风格和医学限制作为索引字段维护。每项保留稳定 ID、原图路径、类别、`series_id`、用途、来源路径及 `shot_id`、静态审查范围与证据、复用注意事项、关联视频审查和使用记录；`excluded` 保留拒收理由。
+
+入库只表示静态参考价值，不表示可跨篇直接复用、医学准确或动态通过；关联视频 `accepted=false` 时不得返回其残留可用视频区间。查询命令：`python3 runtime/native_helpers/med_autocast.py assets --workspace /absolute/workspace --category 05`，更新使用制作工作区的 `build_keyframe_library.py`。

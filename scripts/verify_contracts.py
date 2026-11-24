@@ -1,9 +1,16 @@
 """Resource integrity checks, not semantic quality approval."""
 import json
 import re
+import subprocess
 from pathlib import Path
 import yaml
 R=Path(__file__).resolve().parents[1]
+if (R/'.git').exists():
+    tracked_dups = subprocess.check_output(
+        ['git', '-C', str(R), 'ls-files', '--', 'plugins/med-autocast/skills', 'plugins/med-autocast/assets'],
+        text=True,
+    ).splitlines()
+    assert not tracked_dups, ('投影副本不得提交进 Git，应由 scripts/project-carrier.mjs 构建期物化', tracked_dups[:5])
 for p in (R/'contracts').glob('*.json'):json.loads(p.read_text())
 manifest=json.loads((R/'agent/stages/manifest.json').read_text())
 for stage in manifest['stages']:

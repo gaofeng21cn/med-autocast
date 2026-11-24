@@ -7,7 +7,7 @@
 - **产品定位与骨架**：Med Auto Cast 采用 OPL Framework 标准声明式骨架，以 OPL Book Forge 为结构参考；通过 OCI 不可变版本与 `latest-stable` 分发，不自建 ZIP 分发器或 GitHub Release 附件。原工作台十阶段职责归并为六个核心 Stage 并保留专业 Skill 分工，保持长方法按需加载而不删减职责。
 - **领域来源与权责边界**：领域方法源自医学科普制作工作台的专业 Skill 与 SOP；构建输入留在维护者本地档案，不随公开包分发。结构参考和通用标准归 OPL Framework，制作工作区原数据仍是系列、作者与媒体事实权威。
 - **核心不变量**：拒用源优先于残留可用区间；当前制作单优先于旧 `ready` 快照；同一任务保持单一 writer；原音轨未变才可复用；静态、动态、技术、听感、医学与平台发布分别留存证据；资产 catalog 是工作区唯一索引，产品源码不携带真实媒体与凭据；机器只校验可确定条件，不替代质量或授权判断。
-- **长期维护规则**：工作台纯文件 SHA-256 复用 Framework 的 `python/opl_framework/file_hash.py`（由 `scripts/project-carrier.mjs` 投影到 `runtime/workbench/scripts/_opl_file_hash.py`，独立工作区不要求安装 Framework）；工作区优先兼容原制作单/交付合同而不新建平行制作状态；不把结构检查、Skill 数量或安装成功等价为 OMA 资格或内容质量通过。
+- **长期维护规则**：工作台纯文件 SHA-256 复用 Framework 的 `python/opl_framework/file_hash.py`（由 `scripts/project-carrier.mjs` 投影到 `runtime/workbench/scripts/_opl_file_hash.py`，独立工作区不要求安装 Framework）；`plugins/med-autocast/skills/` 与 `plugins/med-autocast/assets/` 为构建/验证/发布期由 `scripts/project-carrier.mjs` 按 `contracts/carrier_projection.json` 从根目录唯一事实源确定性物化的载体投影（已在 `.gitignore` 中排除，不再向 Git 提交双份源码）；工作区优先兼容原制作单/交付合同而不新建平行制作状态；不把结构检查、Skill 数量或安装成功等价为 OMA 资格或内容质量通过。
 
 ## 知识归属、正文来源与运行记录
 

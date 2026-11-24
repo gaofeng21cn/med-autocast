@@ -8,3 +8,6 @@ node_modules/
 dist/
 .venv/
 /src/opl_framework
+# Build-time projected carrier mirror (materialized via `node scripts/project-carrier.mjs`)
+/plugins/med-autocast/assets/
+/plugins/med-autocast/skills/

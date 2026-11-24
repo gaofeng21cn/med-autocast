@@ -297,24 +297,36 @@ class MediaCompanionTests(unittest.TestCase):
         self.assertEqual(check_assets(self.project / 'asset_manifest.json')['animation_references'], 1)
 
     def test_prepare_repairs_missing_library_through_framework_and_reuses_it(self):
-        state = self.base / 'state'
-        installed = state / 'internal-package-carrier/.tmp/marketplaces/mac-media-assets'
+        installed = self.base / 'installed-companion/mac-media-assets'
         commands = self.base / 'commands'
         commands.mkdir()
         calls = self.base / 'calls.jsonl'
         executable = commands / 'opl'
-        executable.write_text(f"#!{sys.executable}\n" +
-            "import json,shutil,sys\nfrom pathlib import Path\n" +
-            f"with Path({str(calls)!r}).open('a') as out: out.write(json.dumps(sys.argv[1:])+'\\n')\n" +
-            f"Path({str(installed.parent)!r}).mkdir(parents=True,exist_ok=True)\n" +
-            f"shutil.copytree({str(self.repo)!r},{str(installed)!r},ignore=shutil.ignore_patterns('.git'))\n" +
-            "print('{}')\n")
+        executable.write_text(
+            f"#!{sys.executable}\n"
+            "import json,shutil,sys\nfrom pathlib import Path\n"
+            f"with Path({str(calls)!r}).open('a') as out: out.write(json.dumps(sys.argv[1:])+'\\n')\n"
+            f"dest = Path({str(installed)!r})\n"
+            "if sys.argv[1:3] == ['packages', 'install']:\n"
+            "    dest.parent.mkdir(parents=True,exist_ok=True)\n"
+            f"    shutil.copytree({str(self.repo)!r}, dest, ignore=shutil.ignore_patterns('.git'))\n"
+            "    print('{}')\n"
+            "elif sys.argv[1:3] == ['packages', 'locate']:\n"
+            "    found = (dest / 'catalog/assets.jsonl').is_file()\n"
+            "    print(json.dumps({'version':'g2','opl_package_location':{'found':found,'package_root':str(dest) if found else None,'readiness':{'installed':found}}}))\n"
+            "else:\n"
+            "    print('{}')\n"
+        )
         executable.chmod(0o755)
         (self.workspace / 'workbench.yaml').write_text('schema: medical_video_workbench/v2\nasset_library:\n  root: ../mac-media-assets\n')
         import os
-        environment = {**os.environ, 'PATH': str(commands) + os.pathsep + os.environ['PATH'],
-                       'OPL_STATE_DIR': str(state), 'CODEX_HOME': str(self.base / 'codex'),
-                       'OPL_COMPANION_SOURCES_ROOT': str(self.base / 'sources')}
+        environment = {
+            **os.environ,
+            'PATH': str(commands) + os.pathsep + os.environ['PATH'],
+            'OPL_BIN': str(executable),
+            'CODEX_HOME': str(self.base / 'codex'),
+            'OPL_COMPANION_SOURCES_ROOT': str(self.base / 'sources'),
+        }
         entry = ROOT / 'runtime/native_helpers/med_autocast.py'
         for expected in ['installed_via_framework', 'reused_existing']:
             completed = subprocess.run([sys.executable, str(entry), 'prepare', '--workspace', str(self.workspace)],
@@ -324,12 +336,17 @@ class MediaCompanionTests(unittest.TestCase):
             self.assertEqual(result['asset_library']['installation'], expected)
             self.assertEqual(result['asset_library']['status'], 'available')
             self.assertEqual(Path(result['asset_library']['repo']), installed.resolve())
-        self.assertEqual([json.loads(line) for line in calls.read_text().splitlines()],
-                         [['packages', 'install', 'mac-media-assets', '--json']])
+        recorded_calls = [json.loads(line) for line in calls.read_text().splitlines()]
+        self.assertEqual(
+            [c for c in recorded_calls if c[:2] == ['packages', 'install']],
+            [['packages', 'install', 'mac-media-assets', '--json']],
+        )
+        self.assertIn(['packages', 'locate', 'mac-media-assets', '--json'], recorded_calls)
         self.assertFalse(self.target.exists())
 
     def test_framework_success_without_discoverable_files_is_not_reported_ready(self):
-        with patch('media_asset_library.shutil.which', return_value='/fixture/opl'), \
+        with patch.dict('os.environ', {'OPL_BIN': '/fixture/opl'}, clear=False), \
+             patch('media_asset_library.locate_installed_companion', return_value=[]), \
              patch('media_asset_library.subprocess.run', return_value=subprocess.CompletedProcess([], 0)) as run:
             result = companion.ensure(self.workspace)
         self.assertEqual(result['installation'], 'framework_install_not_discovered')
@@ -338,7 +355,8 @@ class MediaCompanionTests(unittest.TestCase):
 
     def test_framework_failure_and_timeout_do_not_start_a_parallel_git_clone(self):
         for failure in [subprocess.CompletedProcess([], 1), subprocess.TimeoutExpired('opl', 600)]:
-            with patch('media_asset_library.shutil.which', return_value='/fixture/opl'), \
+            with patch.dict('os.environ', {'OPL_BIN': '/fixture/opl'}, clear=False), \
+                 patch('media_asset_library.locate_installed_companion', return_value=[]), \
                  patch('media_asset_library.subprocess.run') as run:
                 if isinstance(failure, Exception): run.side_effect = failure
                 else: run.return_value = failure
@@ -348,42 +366,51 @@ class MediaCompanionTests(unittest.TestCase):
                 self.assertFalse(self.target.exists())
 
     def test_framework_headless_install_is_discovered_without_a_second_download(self):
-        state = self.base / 'opl-state'
-        installed = state / 'internal-package-carrier/plugins/cache/mac-media-assets/mac-media-assets/0.1.5'
+        installed = self.base / 'installed-companion/mac-media-assets'
         shutil.copytree(self.repo, installed, ignore=shutil.ignore_patterns('.git'))
-        skill = installed / 'skills/mac-media-assets/SKILL.md'
-        skill.parent.mkdir(parents=True)
-        skill.write_text('# Assets')
         (self.workspace / 'workbench.yaml').write_text('asset_library:\n  root: ../mac-media-assets\n')
-        with patch.dict('os.environ', {'OPL_STATE_DIR': str(state)}):
+        with patch('media_asset_library.locate_installed_companion', return_value=[installed]):
             status = companion.ensure(self.workspace, repository='/must-not-download')
             self.assertEqual(status['installation'], 'reused_existing')
             self.assertEqual(Path(status['repo']), installed.resolve())
             self.assertEqual(companion.query(self.workspace)['count'], 1)
 
-    def test_current_managed_library_wins_over_an_old_native_cache(self):
-        state = self.base / 'opl-state'
-        old = state / 'internal-package-carrier/plugins/cache/mac-media-assets/mac-media-assets/0.1.5'
-        current = state / 'codex-plugin-marketplaces/mac-media-assets/plugins/mac-media-assets'
-        for folder in [old, current]:
-            shutil.copytree(self.repo, folder, ignore=shutil.ignore_patterns('.git'))
-            skill = folder / 'skills/mac-media-assets/SKILL.md'
-            skill.parent.mkdir(parents=True)
-            skill.write_text('# Assets')
+    def test_framework_located_companion_is_preferred_over_uninstalled_fallback_dir(self):
+        current = self.base / 'framework-managed/mac-media-assets'
+        shutil.copytree(self.repo, current, ignore=shutil.ignore_patterns('.git'))
+        sources_root = self.base / 'sources'
+        stale = sources_root / 'mac-media-assets'
+        shutil.copytree(self.repo, stale, ignore=shutil.ignore_patterns('.git'))
         (self.workspace / 'workbench.yaml').write_text('asset_library:\n  root: ../mac-media-assets\n')
-        with patch.dict('os.environ', {'OPL_STATE_DIR': str(state)}):
+        locate_payload = json.dumps({
+            'version': 'g2',
+            'opl_package_location': {
+                'found': True,
+                'package_root': str(current),
+                'readiness': {'installed': True},
+            },
+        })
+        orig_run = companion.subprocess.run
+        def run_locate_only(cmd, *args, **kwargs):
+            if len(cmd) >= 3 and cmd[1:3] == ['packages', 'locate']:
+                return subprocess.CompletedProcess(cmd, 0, stdout=locate_payload, stderr='')
+            return orig_run(cmd, *args, **kwargs)
+        with patch.dict('os.environ', {'OPL_BIN': '/fixture/opl', 'OPL_COMPANION_SOURCES_ROOT': str(sources_root)}), \
+             patch('media_asset_library.subprocess.run', side_effect=run_locate_only):
             found, _ = companion.locate(self.workspace)
             self.assertEqual(found, current.resolve())
+            self.assertEqual(companion.query(self.workspace)['count'], 1)
 
-    def test_native_local_source_update_wins_over_stale_managed_projection(self):
-        state = self.base / 'opl-state'
-        old = state / 'codex-plugin-marketplaces/mac-media-assets/plugins/mac-media-assets'
-        current = state / 'internal-package-carrier/.tmp/marketplaces/mac-media-assets'
-        for folder in [old, current]:
-            shutil.copytree(self.repo, folder, ignore=shutil.ignore_patterns('.git'))
-        (old / 'catalog/assets.jsonl').write_text('')
+    def test_framework_locate_runs_before_install_target_fallback(self):
+        current = self.base / 'current-located/mac-media-assets'
+        shutil.copytree(self.repo, current, ignore=shutil.ignore_patterns('.git'))
+        sources_root = self.base / 'sources'
+        fallback = sources_root / 'mac-media-assets'
+        shutil.copytree(self.repo, fallback, ignore=shutil.ignore_patterns('.git'))
+        (fallback / 'catalog/assets.jsonl').write_text('')
         (self.workspace / 'workbench.yaml').write_text('asset_library:\n  root: ../mac-media-assets\n')
-        with patch.dict('os.environ', {'OPL_STATE_DIR': str(state)}):
+        with patch.dict('os.environ', {'OPL_COMPANION_SOURCES_ROOT': str(sources_root)}), \
+             patch('media_asset_library.locate_installed_companion', return_value=[current]):
             found, _ = companion.locate(self.workspace)
             self.assertEqual(found, current.resolve())
             self.assertEqual(companion.query(self.workspace)['count'], 1)

@@ -4,7 +4,7 @@ import module from 'node:module';
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
 
-const sharedRoot = process.env.MED_AUTOCAST_SHARED_NODE_MODULES;
+const sharedRoot = process.env.OPL_SHARED_NODE_MODULES || process.env.MED_AUTOCAST_SHARED_NODE_MODULES;
 
 function isBareSpecifier(specifier) {
   return (

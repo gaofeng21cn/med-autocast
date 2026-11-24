@@ -16,6 +16,20 @@ from pathlib import Path
 
 from PIL import Image
 
+from _opl_framework_bootstrap import bootstrap_opl_framework
+
+bootstrap_opl_framework()
+
+from opl_framework.workspace_storage import (  # noqa: E402
+    allocated_bytes,
+    convert_png_to_lossless_webp as convert_png,
+    convert_wav_to_lossless_flac as convert_wav,
+    exact_wav_sha_from_flac,
+    pixel_sha256,
+    read_json,
+    sha256_file as sha256,
+    write_json_atomic as write_json,
+)
 
 SCHEMA = "medical_video_lossless_compaction/v1"
 INTERMEDIATE_AUDIO = {
@@ -25,41 +39,6 @@ INTERMEDIATE_AUDIO = {
     "music-ducked.wav",
     "premix.wav",
 }
-
-
-def read_json(path: Path):
-    return json.loads(path.read_text(encoding="utf-8"))
-
-
-def write_json(path: Path, value):
-    path.parent.mkdir(parents=True, exist_ok=True)
-    temporary = path.with_name(path.name + ".tmp")
-    temporary.write_text(
-        json.dumps(value, ensure_ascii=False, indent=2) + "\n",
-        encoding="utf-8",
-    )
-    os.replace(temporary, path)
-
-
-def sha256(path: Path) -> str:
-    digest = hashlib.sha256()
-    with path.open("rb") as handle:
-        for chunk in iter(lambda: handle.read(1024 * 1024), b""):
-            digest.update(chunk)
-    return digest.hexdigest()
-
-
-def pixel_sha256(path: Path) -> str:
-    with Image.open(path) as image:
-        rgba = image.convert("RGBA")
-        digest = hashlib.sha256()
-        digest.update(json.dumps(rgba.size).encode("ascii"))
-        digest.update(rgba.tobytes())
-        return digest.hexdigest()
-
-
-def allocated_bytes(path: Path) -> int:
-    return path.stat().st_blocks * 512
 
 
 def candidate(path: Path, kind: str, workspace: Path) -> dict:
@@ -144,99 +123,6 @@ def prior_group_record(target: Path) -> dict | None:
         if Path(row.get("target", "")) == target:
             return row
     return None
-
-
-def convert_png(row: dict) -> dict:
-    source, target = Path(row["source"]), Path(row["target"])
-    if source.exists() and target.exists():
-        source_pixels, target_pixels = pixel_sha256(source), pixel_sha256(target)
-        if source_pixels != target_pixels:
-            raise RuntimeError(f"已有 WebP 与 PNG 像素不一致：{target}")
-    elif source.exists():
-        temporary = target.with_name(f".{target.name}.{os.getpid()}.tmp.webp")
-        try:
-            subprocess.run(
-                ["cwebp", "-quiet", "-lossless", "-exact", "-z", "4", "-mt",
-                 str(source), "-o", str(temporary)],
-                check=True,
-            )
-            source_pixels, target_pixels = pixel_sha256(source), pixel_sha256(temporary)
-            if source_pixels != target_pixels:
-                raise RuntimeError(f"WebP 像素校验失败：{source}")
-            os.replace(temporary, target)
-            os.utime(target, ns=(source.stat().st_atime_ns, source.stat().st_mtime_ns))
-        finally:
-            temporary.unlink(missing_ok=True)
-    elif not target.exists():
-        raise FileNotFoundError(f"源文件和转换后文件都不存在：{source}")
-    else:
-        previous = prior_group_record(target)
-        if previous is None or previous.get("pixel_sha256") != pixel_sha256(target):
-            raise RuntimeError(f"只看到转换后文件，缺少可验证的同批像素记录：{target}")
-        row = {**row, **previous}
-    result = {
-        **row,
-        "source_sha256": sha256(source) if source.exists() else None,
-        "target_sha256": sha256(target),
-        "pixel_sha256": pixel_sha256(target),
-        "target_size": target.stat().st_size,
-        "target_allocated_bytes": allocated_bytes(target),
-    }
-    return result
-
-
-def exact_wav_sha_from_flac(flac_path: Path, directory: Path) -> str:
-    with tempfile.NamedTemporaryFile(suffix=".wav", dir=directory, delete=False) as handle:
-        restored = Path(handle.name)
-    try:
-        subprocess.run(
-            ["flac", "-s", "-d", "--keep-foreign-metadata", "-f",
-             str(flac_path), "-o", str(restored)],
-            check=True,
-        )
-        return sha256(restored)
-    finally:
-        restored.unlink(missing_ok=True)
-
-
-def convert_wav(row: dict) -> dict:
-    source, target = Path(row["source"]), Path(row["target"])
-    source_sha = sha256(source) if source.exists() else None
-    if source.exists() and target.exists():
-        if exact_wav_sha_from_flac(target, target.parent) != source_sha:
-            raise RuntimeError(f"已有 FLAC 无法还原当前 WAV：{target}")
-    elif source.exists():
-        temporary = target.with_name(f".{target.name}.{os.getpid()}.tmp.flac")
-        try:
-            subprocess.run(
-                ["flac", "-s", "--verify", "--keep-foreign-metadata", "-8",
-                 "-f", str(source), "-o", str(temporary)],
-                check=True,
-            )
-            restored_sha = exact_wav_sha_from_flac(temporary, target.parent)
-            if restored_sha != source_sha:
-                raise RuntimeError(f"FLAC 还原 WAV 字节校验失败：{source}")
-            os.replace(temporary, target)
-            os.utime(target, ns=(source.stat().st_atime_ns, source.stat().st_mtime_ns))
-        finally:
-            temporary.unlink(missing_ok=True)
-    elif not target.exists():
-        raise FileNotFoundError(f"源文件和转换后文件都不存在：{source}")
-    else:
-        previous = prior_group_record(target)
-        if previous is None or previous.get("restored_wav_sha256") != exact_wav_sha_from_flac(
-            target, target.parent
-        ):
-            raise RuntimeError(f"只看到 FLAC，缺少可验证的同批 WAV 记录：{target}")
-        row = {**row, **previous}
-    return {
-        **row,
-        "source_sha256": source_sha,
-        "restored_wav_sha256": exact_wav_sha_from_flac(target, target.parent),
-        "target_sha256": sha256(target),
-        "target_size": target.stat().st_size,
-        "target_allocated_bytes": allocated_bytes(target),
-    }
 
 
 def update_text_references(directory: Path, mappings: list[tuple[str, str]]):

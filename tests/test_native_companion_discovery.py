@@ -1,8 +1,9 @@
-"""Resolve the current native companion before stale projections and caches."""
+"""Resolve the installed companion library via `opl packages locate`."""
 import importlib.util
 import json
 import os
 from pathlib import Path
+import subprocess
 import tempfile
 import unittest
 from unittest.mock import patch
@@ -21,90 +22,78 @@ class NativeCompanionDiscoveryTests(unittest.TestCase):
         self.temp = tempfile.TemporaryDirectory()
         self.addCleanup(self.temp.cleanup)
         self.base = Path(self.temp.name).resolve()
-        self.home = self.base / "native"
-        self.home.mkdir()
-
-    def marketplace(self, root, relative="./"):
-        manifest = root / ".agents/plugins/marketplace.json"
-        manifest.parent.mkdir(parents=True, exist_ok=True)
-        manifest.write_text(json.dumps({
-            "name": "mac-media-assets",
-            "plugins": [{"name": "mac-media-assets", "source": {
-                "source": "local", "path": relative,
-            }}],
-        }))
-
-    def native_config(self, root, installed=True, source_type="local"):
-        text = ("[marketplaces.mac-media-assets]\nsource_type = "
-                + json.dumps(source_type) + "\nsource = " + json.dumps(str(root)) + "\n")
-        if installed:
-            text += '[plugins."mac-media-assets@mac-media-assets"]\nenabled = false\n'
-        (self.home / "config.toml").write_text(text)
 
     @staticmethod
-    def library(root):
+    def library(root: Path):
         (root / "catalog").mkdir(parents=True, exist_ok=True)
         (root / "tools").mkdir(parents=True, exist_ok=True)
         (root / "catalog/assets.jsonl").write_text("")
         (root / "tools/query_assets.py").write_text("# fixture\n")
 
-    def test_disabled_headless_membership_resolves_current_local_source(self):
-        current = self.base / "current"
-        self.marketplace(current)
-        self.native_config(current)
-        self.assertEqual(companion.native_companion_roots(self.home), [current])
+    def test_locate_installed_companion_uses_framework_package_location(self):
+        current = self.base / "installed-companion"
+        self.library(current)
+        stdout = json.dumps({
+            "version": "g2",
+            "opl_package_location": {
+                "surface_kind": "opl_package_location",
+                "package_id": "mac-media-assets",
+                "found": True,
+                "enabled": False,
+                "readiness": {"installed": True, "physical_status": "available"},
+                "package_root": str(current),
+                "source_kind": "local",
+                "asset_path": None,
+                "asset_exists": False,
+            },
+        })
+        with patch.dict(os.environ, {"OPL_BIN": "/fixture/opl"}, clear=False), \
+             patch.object(companion.subprocess, "run", return_value=subprocess.CompletedProcess([], 0, stdout=stdout, stderr="")) as run:
+            self.assertEqual(companion.locate_installed_companion("mac-media-assets"), [current])
+        run.assert_called_once_with(
+            ["/fixture/opl", "packages", "locate", "mac-media-assets", "--json"],
+            capture_output=True,
+            text=True,
+            timeout=30,
+        )
 
-    def test_relative_plugin_source_is_resolved_within_marketplace(self):
-        current = self.base / "current"
-        self.marketplace(current, "./plugins/mac-media-assets")
-        self.native_config(current)
-        self.assertEqual(companion.native_companion_roots(self.home), [
-            current / "plugins/mac-media-assets"
-        ])
+    def test_uninstalled_or_missing_location_returns_empty(self):
+        not_found = json.dumps({
+            "version": "g2",
+            "opl_package_location": {"package_id": "mac-media-assets", "found": False, "package_root": None},
+        })
+        uninstalled = json.dumps({
+            "version": "g2",
+            "opl_package_location": {
+                "package_id": "mac-media-assets",
+                "found": True,
+                "package_root": str(self.base / "absent"),
+                "readiness": {"installed": False},
+            },
+        })
+        for payload in (not_found, uninstalled, "not-json"):
+            with patch.dict(os.environ, {"OPL_BIN": "/fixture/opl"}, clear=False), \
+                 patch.object(companion.subprocess, "run", return_value=subprocess.CompletedProcess([], 0, stdout=payload, stderr="")):
+                self.assertEqual(companion.locate_installed_companion("mac-media-assets"), [])
 
-    def test_available_but_uninstalled_marketplace_is_ignored(self):
-        current = self.base / "current"
-        self.marketplace(current)
-        self.native_config(current, installed=False)
-        self.assertEqual(companion.native_companion_roots(self.home), [])
+    def test_cli_failure_timeout_or_missing_binary_fails_open(self):
+        with patch.dict(os.environ, {"OPL_BIN": "/fixture/opl"}, clear=False), \
+             patch.object(companion.subprocess, "run", side_effect=subprocess.TimeoutExpired("opl", 30)):
+            self.assertEqual(companion.locate_installed_companion("mac-media-assets"), [])
+        with patch.dict(os.environ, {"OPL_BIN": "/fixture/opl"}, clear=False), \
+             patch.object(companion.subprocess, "run", return_value=subprocess.CompletedProcess([], 1, stdout="", stderr="err")):
+            self.assertEqual(companion.locate_installed_companion("mac-media-assets"), [])
+        with patch.dict(os.environ, {}, clear=True), \
+             patch.object(companion.shutil, "which", return_value=None):
+            self.assertEqual(companion.locate_installed_companion("mac-media-assets"), [])
 
-    def test_git_marketplace_uses_its_current_native_checkout(self):
-        current = self.home / ".tmp/marketplaces/mac-media-assets"
-        self.marketplace(current)
-        self.native_config("https://example.invalid/assets.git", source_type="git")
-        self.assertEqual(companion.native_companion_roots(self.home), [current])
-
-    def test_relative_source_cannot_escape_marketplace(self):
-        current = self.base / "current"
-        self.marketplace(current, "../outside")
-        self.native_config(current)
-        self.assertEqual(companion.native_companion_roots(self.home), [])
-
-    def test_absolute_source_is_not_a_portable_marketplace_path(self):
-        current = self.base / "current"
-        self.marketplace(current, str(current / "payload"))
-        self.native_config(current)
-        self.assertEqual(companion.native_companion_roots(self.home), [])
-
-    def test_malformed_config_leaves_fallback_available(self):
-        (self.home / "config.toml").write_text("broken = [")
-        self.assertEqual(companion.native_companion_roots(self.home), [])
-
-    def test_current_native_source_precedes_historical_projection(self):
+    def test_locate_resolves_installed_companion_after_framework_locate(self):
         workspace = self.base / "workspace"
         workspace.mkdir()
-        state = self.base / "state"
-        native = state / "internal-package-carrier"
-        native.mkdir(parents=True)
-        self.home = native
-        current = self.base / "current"
-        self.marketplace(current)
+        current = self.base / "framework-located"
         self.library(current)
-        self.native_config(current)
-        stale = state / "codex-plugin-marketplaces/mac-media-assets/plugins/mac-media-assets"
-        self.library(stale)
-        env = {"CODEX_HOME": str(self.base / "codex"), "OPL_STATE_DIR": str(state)}
-        with patch.dict(os.environ, env, clear=True):
+        with patch.dict(os.environ, {"CODEX_HOME": str(self.base / "codex")}, clear=True), \
+             patch.object(companion, "locate_installed_companion", return_value=[current]):
             self.assertEqual(companion.locate(workspace), (current, "installed_companion"))
 
     def test_explicit_workspace_library_still_has_precedence(self):
@@ -115,7 +104,9 @@ class NativeCompanionDiscoveryTests(unittest.TestCase):
         (workspace / "workbench.yaml").write_text(
             "asset_library:\n  root: " + json.dumps(str(selected)) + "\n"
         )
-        self.assertEqual(companion.locate(workspace), (selected, "workspace_config"))
+        with patch.object(companion, "locate_installed_companion") as locate_mock:
+            self.assertEqual(companion.locate(workspace), (selected, "workspace_config"))
+        locate_mock.assert_not_called()
 
 
 if __name__ == "__main__":

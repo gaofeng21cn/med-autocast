@@ -26,6 +26,22 @@ from pathlib import Path
 
 import yaml
 
+from _opl_framework_bootstrap import bootstrap_opl_framework
+
+bootstrap_opl_framework()
+
+from opl_framework.workspace_storage import (  # noqa: E402
+    build_storage_report as _fw_build_storage_report,
+    clone_or_copy,
+    cow_dedup_directory as _fw_cow_dedup_directory,
+    dir_stats as _fw_dir_stats,
+    iso_timestamp as stamp,
+    physical_extent_offset as _devoff_of,
+    read_json,
+    sha256_file,
+    write_json_atomic as write_json,
+)
+
 SCHEMA_HYDRATION = "medical_video_project_hydration/v1"
 HYDRATION_FILE = "storage-hydration.json"
 VERSION_RE = re.compile(r"^v(\d+)$")
@@ -49,70 +65,9 @@ LINEAGE_SKIP_DIRS = {"assets", "qa", "out", "dist", "node_modules", "__pycache__
 LINEAGE_AUDIO_KEEP = {"narration_beats.json", "mix-receipt.json", "timing-receipt.json", "narration.json", "pronunciation-review.json"}
 
 
-def stamp() -> str:
-    return time.strftime("%Y-%m-%dT%H:%M:%S%z")
-
-
-def sha256_file(path: Path) -> str:
-    h = hashlib.sha256()
-    with path.open("rb") as f:
-        for chunk in iter(lambda: f.read(1024 * 1024), b""):
-            h.update(chunk)
-    return h.hexdigest()
-
-
-def read_json(path: Path) -> dict:
-    return json.loads(path.read_text(encoding="utf-8"))
-
-
-def write_json(path: Path, value: dict) -> None:
-    path.parent.mkdir(parents=True, exist_ok=True)
-    tmp = path.with_name(path.name + ".tmp")
-    tmp.write_text(json.dumps(value, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
-    os.replace(tmp, path)
-
-
-def clone_or_copy(src: Path, dst: Path) -> None:
-    dst.parent.mkdir(parents=True, exist_ok=True)
-    if sys.platform == "darwin" and src.is_file() and not src.is_symlink():
-        try:
-            libc = ctypes.CDLL("/usr/lib/libSystem.B.dylib")
-            fn = libc.clonefile
-            fn.argtypes = [ctypes.c_char_p, ctypes.c_char_p, ctypes.c_uint32]
-            fn.restype = ctypes.c_int
-            tmp = dst.with_name(f".{dst.name}.{os.getpid()}.hydrate-tmp")
-            try:
-                if fn(os.fsencode(src), os.fsencode(tmp), 0) == 0:
-                    os.replace(tmp, dst)
-                    return
-            finally:
-                tmp.unlink(missing_ok=True)
-        except OSError:
-            pass
-    tmp = dst.with_name(f".{dst.name}.{os.getpid()}.hydrate-tmp")
-    try:
-        shutil.copy2(src, tmp)
-        os.replace(tmp, dst)
-    finally:
-        tmp.unlink(missing_ok=True)
-
-
 def dir_stats(directory: Path) -> tuple[int, int]:
-    files = alloc = 0
-    if not directory.exists():
-        return 0, 0
-    for dp, dns, fns in os.walk(directory, followlinks=False):
-        dns[:] = [d for d in dns if not (Path(dp) / d).is_symlink()]
-        for fn in fns:
-            p = Path(dp) / fn
-            if p.is_symlink():
-                continue
-            try:
-                alloc += p.lstat().st_blocks * 512
-                files += 1
-            except OSError:
-                pass
-    return files, alloc
+    stats = _fw_dir_stats(directory, skip_dirs=())
+    return stats["files"], stats["allocated_bytes"]
 
 
 def build_global_asset_index(workspace: Path) -> dict[str, str]:
@@ -794,95 +749,15 @@ def seal_all_published(workspace: Path, *, apply: bool = False, workers: int = 6
     }
 
 
-def _devoff_of(path: Path) -> int | None:
-    if sys.platform != "darwin":
-        return None
-    import fcntl
-    try:
-        fd = os.open(path, os.O_RDONLY)
-        try:
-            res = fcntl.fcntl(fd, F_LOG2PHYS, struct.pack("<Iqq", 0, 0, 0))
-            _flags, _contig, devoff = struct.unpack("<Iqq", res)
-            return devoff if devoff > 0 else None
-        finally:
-            os.close(fd)
-    except OSError:
-        return None
-
-
 def storage_report(workspace: Path) -> dict:
     """Fast read-only dual-metric storage report: logical du vs unique APFS physical blocks."""
-    workspace = workspace.resolve()
-    seen_global: set[tuple[int, int]] = set()
-    per_top: dict[str, list[int]] = collections.defaultdict(lambda: [0, 0, 0])
-    total_files = total_logical = total_unique_phys = 0
-
-    for entry in sorted(workspace.iterdir(), key=lambda p: p.name):
-        top = entry.name
-        seen_top: set[tuple[int, int]] = set()
-        if entry.is_symlink():
-            continue
-        if entry.is_file():
-            try:
-                al = entry.lstat().st_blocks * 512
-            except OSError:
-                continue
-            per_top[top][0] += 1
-            per_top[top][1] += al
-            per_top[top][2] += al
-            total_files += 1
-            total_logical += al
-            total_unique_phys += al
-            continue
-        for dp, dns, fns in os.walk(entry, followlinks=False):
-            dns[:] = [d for d in dns if not (Path(dp) / d).is_symlink()]
-            for fn in fns:
-                p = Path(dp) / fn
-                if p.is_symlink():
-                    continue
-                try:
-                    al = p.lstat().st_blocks * 512
-                except OSError:
-                    continue
-                per_top[top][0] += 1
-                per_top[top][1] += al
-                total_files += 1
-                total_logical += al
-                devoff = _devoff_of(p) if al > 0 else None
-                key = (devoff, al) if devoff is not None else None
-                if key is None or key not in seen_top:
-                    if key is not None:
-                        seen_top.add(key)
-                    per_top[top][2] += al
-                if key is None or key not in seen_global:
-                    if key is not None:
-                        seen_global.add(key)
-                    total_unique_phys += al
-
-    vfs = os.statvfs(workspace)
-    return {
-        "schema": "medical_video_storage_report/v1",
-        "created_at": stamp(),
-        "workspace": str(workspace),
-        "platform": sys.platform,
-        "total_files": total_files,
-        "total_logical_alloc_bytes": total_logical,
-        "total_logical_alloc_gib": round(total_logical / 1024**3, 2),
-        "total_unique_physical_bytes": total_unique_phys,
-        "total_unique_physical_gib": round(total_unique_phys / 1024**3, 2),
-        "disk_free_bytes": vfs.f_bavail * vfs.f_frsize,
-        "by_top_dir": {
-            k: {
-                "files": v[0],
-                "logical_bytes": v[1],
-                "logical_gib": round(v[1] / 1024**3, 2),
-                "unique_phys_bytes": v[2],
-                "unique_phys_gib": round(v[2] / 1024**3, 2),
-            }
-            for k, v in sorted(per_top.items(), key=lambda x: -x[1][1])
-            if v[1] >= 1024 * 1024
-        },
-    }
+    return _fw_build_storage_report(
+        workspace,
+        scan_dirs=COW_SCAN_DIRS,
+        skip_dirs=SKIP_DIRS,
+        schema="medical_video_storage_report/v1",
+        timestamp=stamp(),
+    )
 
 
 def cow_dedup(workspace: Path, *, min_size: int = 65536, apply: bool = False) -> dict:
@@ -895,105 +770,16 @@ def cow_dedup(workspace: Path, *, min_size: int = 65536, apply: bool = False) ->
     if apply:
         retention.assert_idle(workspace)
 
-    libc = ctypes.CDLL("/usr/lib/libSystem.B.dylib")
-    clonefile_fn = libc.clonefile
-    clonefile_fn.argtypes = [ctypes.c_char_p, ctypes.c_char_p, ctypes.c_uint32]
-    clonefile_fn.restype = ctypes.c_int
-
-    by_size: dict[int, list[tuple[Path, int]]] = collections.defaultdict(list)
-    scanned = 0
-    for rel_root in COW_SCAN_DIRS:
-        root = workspace / rel_root
-        if not root.exists():
-            continue
-        for dp, dns, fns in os.walk(root, followlinks=False):
-            dns[:] = [d for d in dns if d not in SKIP_DIRS and not (Path(dp) / d).is_symlink()]
-            for fn in fns:
-                p = Path(dp) / fn
-                if p.is_symlink():
-                    continue
-                try:
-                    st = p.lstat()
-                except OSError:
-                    continue
-                scanned += 1
-                if st.st_size >= min_size and st.st_nlink == 1:
-                    by_size[st.st_size].append((p, st.st_blocks * 512))
-
-    candidates = [p for items in by_size.values() if len(items) > 1 for p, _ in items]
-    sha_map: dict[Path, str] = {}
-    if candidates:
-        with ThreadPoolExecutor(max_workers=8) as pool:
-            for p, digest in zip(candidates, pool.map(sha256_file, candidates)):
-                sha_map[p] = digest
-
-    groups: dict[tuple[int, str], list[Path]] = collections.defaultdict(list)
-    for sz, items in by_size.items():
-        if len(items) <= 1:
-            continue
-        for p, _ in items:
-            digest = sha_map.get(p)
-            if digest:
-                groups[(sz, digest)].append(p)
-
-    deduped = already_shared = reclaimed_bytes = 0
-    errors = []
-    for (sz, expected_sha), paths in groups.items():
-        if len(paths) <= 1:
-            continue
-        paths.sort(key=lambda p: (0 if p.relative_to(workspace).parts[0] == "assets" else 1, str(p)))
-        canonical = paths[0]
-        canon_devoff = _devoff_of(canonical)
-        if canon_devoff is None:
-            continue
-        for target in paths[1:]:
-            try:
-                cur_devoff = _devoff_of(target)
-                if cur_devoff == canon_devoff:
-                    already_shared += 1
-                    continue
-                st_before = target.lstat()
-                if st_before.st_size != sz or st_before.st_nlink != 1:
-                    continue
-                alloc = st_before.st_blocks * 512
-                if not apply:
-                    deduped += 1
-                    reclaimed_bytes += alloc
-                    continue
-                tmp = target.with_name(f".{target.name}.{os.getpid()}.cowtmp")
-                try:
-                    rc = clonefile_fn(os.fsencode(canonical), os.fsencode(tmp), 0)
-                    if rc != 0:
-                        raise OSError(f"clonefile failed rc={rc}")
-                    if sha256_file(tmp) != expected_sha:
-                        raise RuntimeError("cloned SHA mismatch")
-                    if os.path.samefile(canonical, tmp) or tmp.lstat().st_nlink != 1:
-                        raise RuntimeError("clone unexpectedly shared inode or hardlinked")
-                    os.chmod(tmp, st_before.st_mode & 0o7777)
-                    os.utime(tmp, ns=(st_before.st_atime_ns, st_before.st_mtime_ns))
-                    os.replace(tmp, target)
-                finally:
-                    if tmp.exists() or tmp.is_symlink():
-                        tmp.unlink(missing_ok=True)
-                if _devoff_of(target) != canon_devoff:
-                    raise RuntimeError("devoff did not converge")
-                deduped += 1
-                reclaimed_bytes += alloc
-            except Exception as exc:
-                errors.append({"path": str(target), "error": str(exc)})
-
-    return {
-        "schema": "medical_video_apfs_cow_dedup/v1",
-        "status": "deduped" if apply else "planned",
-        "created_at": stamp(),
-        "scanned_files": scanned,
-        "hashed_candidates": len(candidates),
-        "deduped_files": deduped,
-        "already_shared_files": already_shared,
-        "reclaimed_physical_bytes": reclaimed_bytes,
-        "reclaimed_physical_gib": round(reclaimed_bytes / 1024**3, 2),
-        "errors": errors,
-    }
+    return _fw_cow_dedup_directory(
+        workspace,
+        scan_dirs=COW_SCAN_DIRS,
+        skip_dirs=SKIP_DIRS,
+        min_bytes=min_size,
+        apply=apply,
+        schema="medical_video_apfs_cow_dedup/v1",
+        preferred_top_dir="assets",
+        timestamp=stamp(),
+    )
 
 
 def _has_active_pending_queue(directory: Path) -> bool:

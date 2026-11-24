@@ -94,7 +94,7 @@ class MiniAppTests(unittest.TestCase):
         self.assertEqual(record_note(self.root, value), recorded)
         missing = read_workspace(self.root, {**lookup, 'request_id': 'absent'}, 'status')['data']['items'][0]
         self.assertEqual(missing['requested_note']['status'], 'not_found')
-        self.assertEqual(len(list((self.project / 'qa/miniapp-notes').iterdir())), 1)
+        self.assertEqual(len(list((self.project / 'qa/miniapp-notes').glob('*.json'))), 1)
 
     def test_revoked_workspace_registration_cannot_write_or_read_old_note(self):
         row = self.selected()

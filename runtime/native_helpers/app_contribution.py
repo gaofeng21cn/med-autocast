@@ -2,24 +2,60 @@
 """MAC-owned project/media projection and revision-bound review notes."""
 from __future__ import annotations
 
-from datetime import datetime, timezone
 import hashlib
 import json
 import math
 import os
 from pathlib import Path
-import re
 import sys
-import tempfile
 import uuid
 
 from med_autocast import ContractError, local_path, mapping
 import yaml
 
+
+def _bootstrap_opl_framework() -> None:
+    try:
+        import opl_framework  # noqa: F401
+        return
+    except ImportError:
+        pass
+    candidates: list[Path] = []
+    for env_key, suffix in (('OPL_FRAMEWORK_PYTHON_ROOT', ''), ('OPL_FRAMEWORK_ROOT', 'python')):
+        raw = os.environ.get(env_key, '').strip()
+        if raw:
+            candidates.append(Path(raw) / suffix if suffix else Path(raw))
+    here = Path(__file__).resolve()
+    for parent in here.parents:
+        candidates.append(parent / 'src')
+        candidates.append(parent / 'one-person-lab' / 'python')
+    for candidate in candidates:
+        if (candidate / 'opl_framework').is_dir() and str(candidate) not in sys.path:
+            sys.path.insert(0, str(candidate))
+            return
+
+
+_bootstrap_opl_framework()
+
+from opl_framework.app_contribution import (  # noqa: E402
+    AppContributionError,
+    read_stdin_json,
+    ready_envelope,
+    resolve_workspace_root,
+    unavailable_envelope,
+    write_json_stdout,
+)
+from opl_framework.review_feedback_store import (  # noqa: E402
+    ReviewFeedbackError,
+    list_feedback_notes,
+    record_feedback_note,
+    validate_feedback_id,
+)
+
 BUNDLE = Path(__file__).resolve().parents[1] / 'workbench/scripts'
 sys.path.insert(0, str(BUNDLE))
-from delivery_layout import locations
-from _opl_file_hash import sha256_file
+from delivery_layout import locations  # noqa: E402
+from _opl_file_hash import sha256_file  # noqa: E402
 
 NOTE_ACTION = 'med-autocast.workspace.v1#review.note'
 INPUT_SCHEMA = {
@@ -47,9 +83,10 @@ NOTE_SCHEMA = {
 
 
 def identifier(value: object) -> str:
-    if not isinstance(value, str) or not value or value in ('.', '..') or Path(value).name != value or '\\' in value:
-        raise ContractError('需要有效的系列、集号或请求编号')
-    return value
+    try:
+        return validate_feedback_id(value, label='请求编号')
+    except ReviewFeedbackError as exc:
+        raise ContractError('需要有效的系列、集号或请求编号') from exc
 
 
 def relative(root: Path, path: Path) -> str:
@@ -65,12 +102,18 @@ def artifact(root: Path, path: Path, title: str, kind: str) -> dict | None:
     path = local_path(root, str(path), exists=False)
     if not path.is_file():
         return None
-    return {'id': relative(root, path), 'title': title, 'artifact_ref': str(path),
-            'artifact_kind': kind, 'status': 'available'}
+    return {
+        'id': relative(root, path),
+        'title': title,
+        'artifact_ref': str(path),
+        'artifact_kind': kind,
+        'status': 'available',
+    }
 
 
 def episode(root: Path, sid: str, eid: str, series: dict, spec: dict) -> dict:
-    identifier(sid); identifier(eid)
+    identifier(sid)
+    identifier(eid)
     project = local_path(root, spec.get('project'), exists=False)
     project_file = local_path(root, str(project / spec.get('entry', 'project.json')), exists=False)
     config = optional_record(root, project_file)
@@ -82,11 +125,15 @@ def episode(root: Path, sid: str, eid: str, series: dict, spec: dict) -> dict:
     current = optional_record(root, pointer)
     current_path = local_path(root, str(project / current['path']), exists=False) if current.get('path') else None
     title = str(config.get('title') or spec.get('title') or eid)
-    artifacts = [item for item in (
-        artifact(root, project_file, '当前工程', 'project'),
-        artifact(root, score_path, '镜头与时码', 'score'),
-        artifact(root, current_path, title, 'video') if current_path else None,
-    ) if item]
+    artifacts = [
+        item
+        for item in (
+            artifact(root, project_file, '当前工程', 'project'),
+            artifact(root, score_path, '镜头与时码', 'score'),
+            artifact(root, current_path, title, 'video') if current_path else None,
+        )
+        if item
+    ]
     fingerprint = hashlib.sha256()
     for source in (project_file, score_path, pointer):
         fingerprint.update(relative(root, source).encode())
@@ -113,25 +160,36 @@ def episode(root: Path, sid: str, eid: str, series: dict, spec: dict) -> dict:
     if delivered:
         artifacts.append(delivered)
     notes_root = local_path(root, str(project / 'qa/miniapp-notes'), exists=False)
-    notes = []
-    if notes_root.is_dir():
-        for note_path in sorted(notes_root.glob('*.json')):
-            note = mapping(local_path(root, str(note_path)))
-            notes.append({**note, 'artifact_ref': str(note_path), 'matches_current_revision': note.get('revision') == revision})
+    try:
+        notes = list_feedback_notes(notes_root, revision=revision, root=root) if notes_root.is_dir() else []
+    except ReviewFeedbackError as exc:
+        raise ContractError(str(exc)) from exc
     defaults = {'series_id': sid, 'episode_id': eid, 'revision': revision, 'request_id': str(uuid.uuid4())}
     return {
-        'id': f'{sid}/{eid}', 'title': f'{series.get("title", sid)} · {title}',
-        'series_id': sid, 'episode_id': eid, 'project_ref': str(project_file),
+        'id': f'{sid}/{eid}',
+        'title': f'{series.get("title", sid)} · {title}',
+        'series_id': sid,
+        'episode_id': eid,
+        'project_ref': str(project_file),
         'summary': f'{len(shots)} 个镜头 · {"当前候选可审看" if current_path and current_path.is_file() else "制作中，已有材料可继续使用"}',
         'status': 'candidate_available' if current_path and current_path.is_file() else 'in_progress',
-        'revision': revision, 'artifacts': artifacts, 'shots': shots,
+        'revision': revision,
+        'artifacts': artifacts,
+        'shots': shots,
         'media': {'artifact_ref': str(current_path), 'kind': 'video', 'sha256': media_digest} if media_digest else None,
         'current_candidate': current,
-        'delivery_review': {'source_ref': str(delivery_path), 'reviews': delivery.get('reviews', {}),
-                            'quality_debt': delivery.get('quality_debt', []), 'master_ref': delivery.get('path') or delivery.get('master_ref'),
-                            'scope': 'delivered_artifact_only'} if delivery else None,
+        'delivery_review': {
+            'source_ref': str(delivery_path),
+            'reviews': delivery.get('reviews', {}),
+            'quality_debt': delivery.get('quality_debt', []),
+            'master_ref': delivery.get('path') or delivery.get('master_ref'),
+            'scope': 'delivered_artifact_only',
+        } if delivery else None,
         'review_notes': notes,
-        'next_action': {'title': '阅读审看意见并继续当前任务', 'summary': '通过当前 OPL 任务动作将意见交给复核或返修阶段'},
+        'next_action': {
+            'title': '阅读审看意见并继续当前任务',
+            'summary': '通过当前 OPL 任务动作将意见交给复核或返修阶段',
+        },
         'actions': [{'action_ref': NOTE_ACTION, 'input': defaults}],
         'source_refs': [str(p) for p in (project_file, score_path, pointer) if p.is_file()],
     }
@@ -179,9 +237,17 @@ def read_workspace(root: Path, value: dict, view: str) -> dict:
                 if selected_episode:
                     raise
                 diagnostics.append({'series_id': sid, 'episode_id': eid, 'message': str(exc)})
-    return {'state': 'ready', 'data': {'schema': 'med_autocast_miniapp/v1', 'view': view, 'items': items,
-        'diagnostics': diagnostics, 'command_inputs': {NOTE_ACTION: {'input_schema': NOTE_SCHEMA}},
-        'workspace_ref': str(root), 'domain_quality_approved': False}}
+    return ready_envelope(
+        {
+            'schema': 'med_autocast_miniapp/v1',
+            'view': view,
+            'items': items,
+            'diagnostics': diagnostics,
+            'command_inputs': {NOTE_ACTION: {'input_schema': NOTE_SCHEMA}},
+            'workspace_ref': str(root),
+            'domain_quality_approved': False,
+        }
+    )
 
 
 def record_note(root: Path, value: dict) -> dict:
@@ -189,17 +255,17 @@ def record_note(root: Path, value: dict) -> dict:
     if not isinstance(text, str) or not text.strip() or len(text) > 20000:
         raise ContractError('审看意见必须为 1–20000 字符')
     request_id = identifier(value.get('request_id'))
-    if not re.fullmatch(r'[A-Za-z0-9_-]{1,100}', request_id):
-        raise ContractError('意见编号只允许字母、数字、下划线与短横线')
     for key in ('series_id', 'episode_id'):
         identifier(value.get(key))
-    # Resolve the registered episode first.  An old shot may have disappeared
+    # Resolve the registered episode first. An old shot may have disappeared
     # after the write succeeded; that must not prevent reading its receipt.
     selection = {key: value[key] for key in ('series_id', 'episode_id')}
     row = read_workspace(root, selection, 'media')['data']['items'][0]
     project = Path(row['project_ref']).parent
-    target = local_path(root, str(project / 'qa/miniapp-notes' / (request_id + '.json')), exists=False)
-    identity = {key: value.get(key, '') for key in ('series_id', 'episode_id', 'shot_id', 'revision', 'request_id', 'note')}
+    notes_dir = local_path(root, str(project / 'qa/miniapp-notes'), exists=False)
+    target = local_path(root, str(notes_dir / (request_id + '.json')), exists=False)
+    identity_keys = ('series_id', 'episode_id', 'shot_id', 'revision', 'request_id', 'note')
+    identity = {key: value.get(key, '') for key in identity_keys}
     if target.is_file():
         saved = mapping(target)
         if any(saved.get(key) != field for key, field in identity.items()):
@@ -214,60 +280,67 @@ def record_note(root: Path, value: dict) -> dict:
         row['selected_shot'] = shot
         if row['media']:
             row['media'].update(start=shot['start'], end=shot['end'])
-    record = {'schema': 'med_autocast_review_note/v1', **identity,
-              'recorded_at': datetime.now(timezone.utc).isoformat(),
-              'project_ref': row['project_ref'], 'media': row['media'],
-              'shot': row.get('selected_shot'), 'domain_quality_approved': False,
-              'handoff_stage': 'visual-review'}
-    target.parent.mkdir(parents=True, exist_ok=True)
-    temporary = None
+    record = {
+        'schema': 'med_autocast_review_note/v1',
+        **identity,
+        'project_ref': row['project_ref'],
+        'media': row['media'],
+        'shot': row.get('selected_shot'),
+        'domain_quality_approved': False,
+        'handoff_stage': 'visual-review',
+    }
+    from datetime import datetime, timezone
+    record['recorded_at'] = datetime.now(timezone.utc).isoformat()
     try:
-        # Publish complete JSON atomically without replacing another request.
-        # A reader must never mistake a half-written receipt for an unknown
-        # action and submit the same intent again.
-        with tempfile.NamedTemporaryFile(mode='w', encoding='utf-8', dir=target.parent, suffix='.tmp', delete=False) as handle:
-            temporary = Path(handle.name)
-            json.dump(record, handle, ensure_ascii=False, indent=2)
-            handle.write('\n')
-            handle.flush()
-            os.fsync(handle.fileno())
-        os.link(temporary, target)
-    except FileExistsError:
-        return record_note(root, value)
-    finally:
-        if temporary is not None:
-            temporary.unlink(missing_ok=True)
-    saved = mapping(target)
-    return note_result(target, saved)
+        stored_path, saved, _created = record_feedback_note(
+            notes_dir,
+            request_id=request_id,
+            payload=record,
+            identity_keys=identity_keys,
+            root=root,
+        )
+    except ReviewFeedbackError as exc:
+        if exc.reason_code == 'idempotency_conflict':
+            raise ContractError('意见编号已被不同输入使用') from exc
+        raise ContractError(str(exc)) from exc
+    return note_result(stored_path, saved)
 
 
 def note_result(target: Path, saved: dict) -> dict:
-    return {'state': 'ready', 'result': {
-        'status': 'recorded', 'artifact_ref': str(target), 'note': saved,
-        'readback': {'data_ref': 'med-autocast.workspace.v1#status',
-                     'input': {key: saved[key] for key in ('series_id', 'episode_id', 'request_id')}},
-    }}
+    return ready_envelope(
+        result={
+            'status': 'recorded',
+            'artifact_ref': str(target),
+            'note': saved,
+            'readback': {
+                'data_ref': 'med-autocast.workspace.v1#status',
+                'input': {key: saved[key] for key in ('series_id', 'episode_id', 'request_id')},
+            },
+        }
+    )
 
 
 def main() -> int:
     try:
-        root_value = os.environ.get('OPL_PROFILE_WORKSPACE', '')
-        if not root_value or not Path(root_value).is_absolute():
+        root = resolve_workspace_root()
+        if root is None:
             raise ContractError('请先选择已登记制作工作区')
-        root = Path(root_value).resolve()
-        value = json.load(sys.stdin)
-        if not isinstance(value, dict):
-            raise ContractError('输入必须为对象')
+        value = read_stdin_json()
         operation = sys.argv[1] if len(sys.argv) > 1 else 'status'
         if operation not in ('status', 'media', 'note'):
             raise ContractError('未知 Mini App 操作')
         result = record_note(root, value) if operation == 'note' else read_workspace(root, value, operation)
-    except (ValueError, OSError, TypeError, KeyError, yaml.YAMLError) as exc:
-        result = {'state': 'unavailable', 'reason': str(exc)}
+    except (ValueError, AppContributionError, OSError, TypeError, KeyError, json.JSONDecodeError, yaml.YAMLError) as exc:
+        result = unavailable_envelope(str(exc))
         if len(sys.argv) > 1 and sys.argv[1] == 'note':
-            result = {'schema_version': 'opl-package-app-contribution-response.v1', 'ok': False,
-                      'operation': 'execute', 'ref': NOTE_ACTION, 'error': {'message': str(exc)}}
-    print(json.dumps(result, ensure_ascii=False))
+            result = {
+                'schema_version': 'opl-package-app-contribution-response.v1',
+                'ok': False,
+                'operation': 'execute',
+                'ref': NOTE_ACTION,
+                'error': {'message': str(exc)},
+            }
+    write_json_stdout(result)
     return 0
 
 

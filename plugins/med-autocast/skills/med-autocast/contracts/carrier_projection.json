@@ -1,0 +1,67 @@
+{
+  "schema_version": "opl_carrier_projection.v1",
+  "owner": "med-autocast",
+  "carrier_root": "plugins/med-autocast",
+  "resource_target_prefix": "skills/med-autocast",
+  "resource_source_mode": "filesystem",
+  "resource_roots": [
+    "agent",
+    "contracts",
+    "docs",
+    "runtime"
+  ],
+  "exclude_path_segments": [
+    "__pycache__",
+    "node_modules",
+    "dist",
+    "design",
+    "evidence"
+  ],
+  "copy_presentation_icon": true,
+  "file_aliases": [
+    {
+      "from": "agent/primary_skill/SKILL.md",
+      "to": "skills/med-autocast/SKILL.md"
+    }
+  ],
+  "prune_roots": [
+    "skills/med-autocast/agent",
+    "skills/med-autocast/contracts",
+    "skills/med-autocast/docs",
+    "skills/med-autocast/runtime"
+  ],
+  "package_manifest_projection": {
+    "mode": "clone_with_plugin_source_dot"
+  },
+  "plugin_manifests": [
+    {
+      "path": "plugins/med-autocast/plugin.json",
+      "sync_version": true,
+      "sync_interface": {
+        "target_pointer": "extensions.com.openai.interface",
+        "logo_prefix": "./"
+      }
+    },
+    {
+      "path": "plugins/med-autocast/.codex-plugin/plugin.json",
+      "sync_version": true,
+      "set_fields": {
+        "mcpServers": "./mcp.json"
+      },
+      "sync_interface": {
+        "target_pointer": "interface",
+        "logo_prefix": "./"
+      }
+    }
+  ],
+  "adapter_projection": {
+    "source": "app-contribution-adapter.json",
+    "target": "app-contribution-adapter.json",
+    "argv_rewrites": [
+      {
+        "from": "runtime/native_helpers/app_contribution.py",
+        "to": "skills/med-autocast/runtime/native_helpers/app_contribution.py"
+      }
+    ]
+  }
+}

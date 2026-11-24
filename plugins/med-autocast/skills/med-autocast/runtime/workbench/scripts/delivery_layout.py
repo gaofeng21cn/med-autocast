@@ -2,13 +2,20 @@
 from __future__ import annotations
 
 from datetime import datetime, timezone
-import hashlib
 import json
-import os
 from pathlib import Path
 import shutil
-import subprocess
-import tempfile
+
+from _opl_framework_bootstrap import bootstrap_opl_framework
+
+bootstrap_opl_framework()
+
+from opl_framework.delivery_layout import (  # noqa: E402
+    compact_archived_wav_files,
+    prune_archived_versions,
+    transactional_swap_directories,
+)
+from opl_framework.workspace_storage import sha256_file as _sha256_file  # noqa: E402
 
 
 def save(path: Path, value: dict) -> None:
@@ -16,94 +23,18 @@ def save(path: Path, value: dict) -> None:
     path.write_text(json.dumps(value, ensure_ascii=False, indent=2) + '\n', encoding='utf-8')
 
 
-def _sha256_file(path: Path) -> str:
-    digest = hashlib.sha256()
-    with path.open('rb') as handle:
-        for chunk in iter(lambda: handle.read(1024 * 1024), b''):
-            digest.update(chunk)
-    return digest.hexdigest()
-
-
 def _compact_archived_wavs(backup: Path) -> None:
     """Losslessly archive WAV copies inside a retired delivery backup as exact-restore FLAC."""
-    if not shutil.which('flac'):
-        return
-    record_dir = backup / 'record'
-    if not record_dir.is_dir():
-        return
-    records = []
-    for wav_path in sorted(record_dir.glob('*.wav')):
-        if wav_path.is_symlink() or not wav_path.is_file():
-            continue
-        try:
-            with wav_path.open('rb') as handle:
-                if handle.read(4) != b'RIFF':
-                    continue
-            source_sha = _sha256_file(wav_path)
-            flac_path = wav_path.with_suffix('.flac')
-            tmp_flac = wav_path.with_name(f'.{wav_path.name}.{os.getpid()}.tmp.flac')
-            tmp_wav = wav_path.with_name(f'.{wav_path.name}.{os.getpid()}.verify.wav')
-            try:
-                subprocess.run(
-                    ['flac', '-s', '--verify', '--keep-foreign-metadata', '-8',
-                     '-f', str(wav_path), '-o', str(tmp_flac)],
-                    check=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
-                )
-                subprocess.run(
-                    ['flac', '-s', '-d', '--keep-foreign-metadata', '-f',
-                     str(tmp_flac), '-o', str(tmp_wav)],
-                    check=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
-                )
-                if _sha256_file(tmp_wav) != source_sha:
-                    continue
-                st_src = wav_path.stat()
-                os.replace(tmp_flac, flac_path)
-                os.utime(flac_path, ns=(st_src.st_atime_ns, st_src.st_mtime_ns))
-                st_dst = flac_path.stat()
-                records.append({
-                    'source': str(wav_path),
-                    'target': str(flac_path),
-                    'kind': 'audio_retained',
-                    'source_sha256': source_sha,
-                    'restored_wav_sha256': source_sha,
-                    'target_sha256': _sha256_file(flac_path),
-                    'size': st_src.st_size,
-                    'allocated_bytes': st_src.st_blocks * 512,
-                    'target_size': st_dst.st_size,
-                    'target_allocated_bytes': st_dst.st_blocks * 512,
-                })
-                wav_path.unlink()
-            finally:
-                tmp_flac.unlink(missing_ok=True)
-                tmp_wav.unlink(missing_ok=True)
-        except (OSError, subprocess.CalledProcessError):
-            continue
-    if records:
-        save(record_dir / 'storage-compaction.json', {
-            'schema': 'medical_video_storage_compaction_group/v1',
-            'directory': str(record_dir),
-            'kind': 'audio_retained',
-            'policy': 'lossless_flac_exact_wav_bytes_recoverable',
-            'records': records,
-        })
+    compact_archived_wav_files(
+        backup / 'record',
+        compaction_schema='medical_video_storage_compaction_group/v1',
+        which=shutil.which,
+    )
 
 
 def _prune_old_archived_deliveries(archive_episode_dir: Path, keep_latest: int) -> list[str]:
     """Keep only the newest `keep_latest` rollback backups per episode."""
-    if keep_latest < 0 or not archive_episode_dir.is_dir():
-        return []
-    snapshots = sorted([d for d in archive_episode_dir.iterdir() if d.is_dir()], key=lambda p: p.name)
-    if len(snapshots) <= keep_latest:
-        return []
-    stale = snapshots[: len(snapshots) - keep_latest] if keep_latest > 0 else snapshots
-    removed = []
-    for old_dir in stale:
-        try:
-            shutil.rmtree(old_dir)
-            removed.append(str(old_dir))
-        except OSError:
-            continue
-    return removed
+    return prune_archived_versions(archive_episode_dir, keep_latest=keep_latest)
 
 
 def locations(workspace: Path, series: str, episode: str, *, config: dict | None = None) -> dict:
@@ -135,61 +66,37 @@ def install(workspace: Path, series: str, episode: str, user_stage: Path, record
     loc = locations(workspace, series, episode)
     user, record, pointer = loc['user'], loc['record'], loc['pointer']
     backup = archive_destination(workspace, series, episode)
-    before = pointer.read_bytes() if pointer.exists() else None
-    replaced, installed = [], []
+    has_previous = user.exists() or record.exists() or pointer.exists()
+    payload = {
+        'current': str(user),
+        'manifest': str(record / 'manifest.json'),
+        'layout': 'latest_only',
+        'previous_delivery': str(backup) if has_previous else None,
+    }
+    transactional_swap_directories(
+        [(user_stage, user, 'publish'), (record_stage, record, 'record')],
+        backup_dir=backup,
+        pointer_path=pointer,
+        pointer_payload=payload,
+    )
+    # Compact archived WAVs and cap rollback depth after atomic switch; never rolls back delivery.
+    if backup.exists():
+        _compact_archived_wavs(backup)
+        try:
+            import yaml
+            cfg = yaml.safe_load((workspace / 'workbench.yaml').read_text(encoding='utf-8')) or {}
+            keep_latest = int((cfg.get('delivery_policy') or {}).get('archive_keep_latest', 1))
+            pruned = _prune_old_archived_deliveries(loc['archive'], keep_latest)
+            if pruned:
+                payload['pruned_old_archives'] = pruned
+        except Exception:
+            pass
+    # Navigation is a projection of selected files. A missing catalog must
+    # not roll back an otherwise complete, usable episode delivery.
     try:
-        for destination, name in ((user, 'publish'), (record, 'record')):
-            destination.parent.mkdir(parents=True, exist_ok=True)
-            if destination.exists():
-                backup.mkdir(parents=True, exist_ok=True)
-                destination.rename(backup / name)
-                replaced.append((destination, backup / name))
-        if before is not None:
-            backup.mkdir(parents=True, exist_ok=True)
-            (backup / 'pointer.json').write_bytes(before)
-        for source, destination in ((user_stage, user), (record_stage, record)):
-            source.rename(destination)
-            installed.append(destination)
-        payload = {'current': str(user), 'manifest': str(record / 'manifest.json'),
-                   'layout': 'latest_only', 'previous_delivery': str(backup) if backup.exists() else None}
-        # Readers see a complete new user directory and record before the pointer switches.
-        pointer.parent.mkdir(parents=True, exist_ok=True)
-        with tempfile.NamedTemporaryFile(mode='w', encoding='utf-8', dir=pointer.parent, delete=False) as handle:
-            json.dump(payload, handle, ensure_ascii=False, indent=2)
-            handle.write('\n')
-            temporary = Path(handle.name)
-        try:
-            os.replace(temporary, pointer)
-        finally:
-            temporary.unlink(missing_ok=True)
-        # Compact archived WAVs and cap rollback depth after atomic switch; never rolls back delivery.
-        if backup.exists():
-            _compact_archived_wavs(backup)
-            try:
-                import yaml
-                cfg = yaml.safe_load((workspace / 'workbench.yaml').read_text(encoding='utf-8')) or {}
-                keep_latest = int((cfg.get('delivery_policy') or {}).get('archive_keep_latest', 1))
-                pruned = _prune_old_archived_deliveries(loc['archive'], keep_latest)
-                if pruned:
-                    payload['pruned_old_archives'] = pruned
-            except Exception:
-                pass
-        # Navigation is a projection of selected files. A missing catalog must
-        # not roll back an otherwise complete, usable episode delivery.
-        try:
-            from publish_catalog import refresh
-            payload['navigation'] = refresh(workspace, series)
-        except Exception as exc:
-            payload['navigation'] = {'status': 'diagnostic', 'error': str(exc),
-                                     'blocks_stage_progress': False}
-        return payload
-    except Exception:
-        for destination in reversed(installed):
-            shutil.rmtree(destination)
-        for destination, previous in reversed(replaced):
-            previous.rename(destination)
-        if before is not None:
-            pointer.write_bytes(before)
-        else:
-            pointer.unlink(missing_ok=True)
-        raise
+        from publish_catalog import refresh
+        payload['navigation'] = refresh(workspace, series)
+    except Exception as exc:
+        payload['navigation'] = {'status': 'diagnostic', 'error': str(exc),
+                                 'blocks_stage_progress': False}
+    return payload

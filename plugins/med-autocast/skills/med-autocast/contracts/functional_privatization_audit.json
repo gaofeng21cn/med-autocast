@@ -131,7 +131,138 @@
     "domain_handler_target_or_opaque_ref_projection_output",
     "domain_entry_and_tests"
   ],
-  "modules": [],
+  "modules": [
+    {
+      "module_id": "workbench_environment_check",
+      "classification": "native_helper_implementation",
+      "standardization_layer": "authority_function_inventory",
+      "owner": "med-autocast",
+      "code_paths": [
+        "runtime/workbench/scripts/environment_check.py",
+        "runtime/workbench/scripts/_opl_framework_bootstrap.py"
+      ],
+      "active_callers": [
+        "tests/test_environment_check.py",
+        "runtime/workbench/scripts/setup_workbench.sh"
+      ],
+      "expected_opl_primitives": [
+        "opl_framework.dependency_probe",
+        "opl pack doctor"
+      ],
+      "retained_domain_authority": [
+        "medical_video_narration_backend_readiness_rules",
+        "medical_video_font_and_author_profile_validation"
+      ],
+      "active_caller_status": "delegates_generic_substrate_to_opl_framework",
+      "migration_action": "retain_domain_policy_adapter",
+      "retention_reason": "Delegates CLI, Python, venv, and Playwright probes to opl_framework.dependency_probe while retaining MAC-specific voice backend and author profile policy checks."
+    },
+    {
+      "module_id": "workbench_delivery_layout",
+      "classification": "native_helper_implementation",
+      "standardization_layer": "authority_function_inventory",
+      "owner": "med-autocast",
+      "code_paths": [
+        "runtime/workbench/scripts/delivery_layout.py",
+        "runtime/workbench/scripts/delivery_contract.py",
+        "runtime/workbench/scripts/organize_delivery.py",
+        "runtime/workbench/scripts/publish_catalog.py"
+      ],
+      "active_callers": [
+        "tests/test_delivery_layout.py",
+        "runtime/workbench/scripts/build_release_packages.py"
+      ],
+      "expected_opl_primitives": [
+        "opl_framework.delivery_layout",
+        "opl_framework.workspace_storage"
+      ],
+      "retained_domain_authority": [
+        "medical_video_latest_only_delivery_naming",
+        "medical_video_publish_navigation_catalog"
+      ],
+      "active_caller_status": "delegates_generic_substrate_to_opl_framework",
+      "migration_action": "retain_domain_policy_adapter",
+      "retention_reason": "Delegates atomic directory swap/rollback, archive pruning, and lossless WAV archival to opl_framework.delivery_layout while retaining MAC series/episode delivery naming and publish catalog projection."
+    },
+    {
+      "module_id": "workbench_shared_node_deps",
+      "classification": "native_helper_implementation",
+      "standardization_layer": "authority_function_inventory",
+      "owner": "med-autocast",
+      "code_paths": [
+        "runtime/workbench/scripts/shared_node_deps.py",
+        "runtime/workbench/scripts/shared_node_resolve.mjs"
+      ],
+      "active_callers": [
+        "tests/test_workspace_retention.py",
+        "runtime/workbench/scripts/paper_project.py"
+      ],
+      "expected_opl_primitives": [
+        "opl_framework.shared_node_deps"
+      ],
+      "retained_domain_authority": [
+        "med_autocast_shared_node_env_bindings"
+      ],
+      "active_caller_status": "delegates_generic_substrate_to_opl_framework",
+      "migration_action": "retain_domain_policy_adapter",
+      "retention_reason": "Thin configuration adapter over opl_framework.shared_node_deps preserving MED_AUTOCAST_* environment variables and medical_video_shared_node_deps/v1 schema."
+    },
+    {
+      "module_id": "workbench_workspace_storage",
+      "classification": "native_helper_implementation",
+      "standardization_layer": "authority_function_inventory",
+      "owner": "med-autocast",
+      "code_paths": [
+        "runtime/workbench/scripts/project_lifecycle.py",
+        "runtime/workbench/scripts/compact_workspace_media.py",
+        "runtime/workbench/scripts/plan_workspace_retention.py",
+        "runtime/workbench/scripts/prune_workspace_history.py"
+      ],
+      "active_callers": [
+        "tests/test_workspace_retention.py",
+        "runtime/workbench/scripts/optimize_current_episodes.py"
+      ],
+      "expected_opl_primitives": [
+        "opl_framework.workspace_storage"
+      ],
+      "retained_domain_authority": [
+        "medical_video_episode_seal_hydrate_retire_policy",
+        "medical_video_qa_retention_classification"
+      ],
+      "active_caller_status": "delegates_generic_substrate_to_opl_framework",
+      "migration_action": "retain_domain_policy_adapter",
+      "retention_reason": "Delegates APFS clonefile, F_LOG2PHYS storage reporting, CoW deduplication, and lossless WebP/FLAC compaction to opl_framework.workspace_storage while retaining medical-video episode retention rules."
+    },
+    {
+      "module_id": "workbench_media_production_pipeline",
+      "classification": "native_helper_implementation",
+      "standardization_layer": "authority_function_inventory",
+      "owner": "med-autocast",
+      "code_paths": [
+        "runtime/workbench/scripts/media_backend.py",
+        "runtime/workbench/scripts/media_asset_library.py",
+        "runtime/workbench/scripts/paper_project.py",
+        "runtime/workbench/scripts/build_episode_video.py",
+        "runtime/workbench/scripts/render_narration.py",
+        "runtime/workbench/scripts/workbench_config.py"
+      ],
+      "active_callers": [
+        "runtime/native_helpers/med_autocast.py",
+        "tests/"
+      ],
+      "expected_opl_primitives": [
+        "opl_framework.workspace_storage",
+        "opl_framework.app_contribution"
+      ],
+      "retained_domain_authority": [
+        "medical_video_visual_audio_production_and_quality_audits",
+        "medical_video_paper_theatre_rendering"
+      ],
+      "active_caller_status": "domain_media_pipeline_owned_by_mac",
+      "migration_action": "retain_domain_policy_adapter",
+      "retention_reason": "Domain-owned medical science video rendering, TTS/narration timing, visual scale/caption audits, and ComfyUI/paper-theatre production workbench."
+    }
+  ],
   "authority_boundary": {
     "opl_can_write_domain_truth": false,
     "opl_can_write_memory_body": false,

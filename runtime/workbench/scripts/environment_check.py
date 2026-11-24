@@ -13,51 +13,52 @@ import subprocess
 import sys
 from pathlib import Path
 
+from _opl_framework_bootstrap import bootstrap_opl_framework
+
+bootstrap_opl_framework()
+
+from opl_framework.dependency_probe import (  # noqa: E402
+    probe_cli_command,
+    probe_node_playwright,
+    probe_python_module,
+    probe_workspace_venv_python,
+)
+
 ROOT = Path(__file__).resolve().parents[1]
 
 
 def command(name: str, args: list[str] | None = None) -> dict:
-    path = shutil.which(name)
-    result = {'state': 'ready' if path else 'missing', 'path': path}
-    if path and args:
-        try:
-            completed = subprocess.run([path, *args], capture_output=True, text=True, timeout=10, check=True)
-            result['version'] = (completed.stdout or completed.stderr).strip().splitlines()[0]
-        except (OSError, subprocess.SubprocessError, IndexError) as exc:
-            result.update(state='error', error=str(exc))
+    probed = probe_cli_command(
+        name,
+        version_args=args,
+        extra_paths=(),
+        timeout_s=10,
+        which=shutil.which,
+        runner=subprocess.run,
+    )
+    result = {'state': probed['state'], 'path': probed['path']}
+    if probed['state'] == 'ready' and args and probed.get('version') is not None:
+        result['version'] = probed['version']
+    elif probed['state'] == 'error':
+        result['error'] = probed['detail']
     return result
 
 
 def node_playwright(root: Path) -> dict:
     fix = f'bash {shlex.quote(str(root / "scripts/setup_workbench.sh"))}'
-    if not shutil.which('node'):
-        return {'state': 'blocked', 'reason': 'node_missing', 'fix': fix}
-    # Resolve from the workspace, not cwd or the installed plugin's cache.
-    probe = """
-const {createRequire} = require('node:module');
-const fs = require('node:fs');
-(async () => {
- let browser;
- try {
-  const req = createRequire(require('node:path').resolve(process.argv[1], 'package.json'));
-  const {chromium} = req('playwright');
-  const executable = process.env.CHROME_PATH || chromium.executablePath();
-  if (!fs.existsSync(executable)) throw new Error('Chromium 未安装: ' + executable);
-  browser = await chromium.launch({headless:true, executablePath:executable});
-  const page = await browser.newPage();
-  await page.setContent('<canvas id="c" width="8" height="8"></canvas>');
-  const canvas = await page.evaluate(() => !!document.querySelector('canvas').getContext('2d'));
-  if (!canvas) throw new Error('Canvas 2D 不可用');
-  console.log(JSON.stringify({state:'ready', executable, launch_verified:true}));
- } catch (e) { console.log(JSON.stringify({state:'missing', error:e.message})); }
- finally { if (browser) await browser.close(); }
-})();
-"""
-    try:
-        result = subprocess.run(['node', '-e', probe, str(root)], capture_output=True, text=True, timeout=30, check=True)
-        return {**json.loads(result.stdout), 'runtime_root': str(root), 'fix': fix}
-    except (OSError, subprocess.SubprocessError, ValueError) as exc:
-        return {'state': 'error', 'error': str(exc), 'fix': fix}
+    probed = probe_node_playwright(
+        repo_root=root,
+        which=shutil.which,
+        runner=subprocess.run,
+        timeout_s=30,
+    )
+    if probed['state'] == 'blocked':
+        return {'state': 'blocked', 'reason': probed.get('reason', 'node_missing'), 'fix': fix}
+    if probed['state'] == 'error':
+        return {'state': 'error', 'error': probed.get('error', probed.get('detail')), 'fix': fix}
+    output = {k: v for k, v in probed.items() if k not in ('ok', 'detail', 'executable_path', 'canvas_ok')}
+    output.update(runtime_root=str(root), fix=fix)
+    return output
 
 
 def narration_dependencies(workspace: Path, packages: dict) -> dict:
@@ -134,17 +135,19 @@ def check(workspace: Path) -> dict:
         except (KeyError, ValueError):
             node.update(state='error', fix='无法识别 Node.js 版本')
     packages = {}
-    workspace_python = workspace / '.venv/bin/python'
     for name in ('yaml', 'PIL', 'edge_tts'):
-        present = bool(importlib.util.find_spec(name))
+        mod_probe = probe_python_module(name, find_spec=importlib.util.find_spec)
+        present = bool(mod_probe['ok'])
         source = 'system' if present else None
-        if not present and workspace_python.is_file():
-            try:
-                probe = subprocess.run([str(workspace_python), '-c', f'import {name}'], capture_output=True, timeout=10)
-                present = probe.returncode == 0
-                source = 'workspace_venv' if present else None
-            except (OSError, subprocess.SubprocessError):
-                present = False
+        if not present:
+            venv_probe = probe_workspace_venv_python(
+                workspace,
+                required_modules=(name,),
+                runner=subprocess.run,
+                timeout_s=10,
+            )
+            present = bool(venv_probe['modules'].get(name))
+            source = 'workspace_venv' if present else None
         packages[name] = {'state': 'ready' if present else 'missing', 'source': source, 'fix': setup}
     for name in ('yaml', 'PIL'):
         required[name] = packages[name]

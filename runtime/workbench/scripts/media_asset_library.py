@@ -10,7 +10,6 @@ import shutil
 import subprocess
 import sys
 import tempfile
-import tomllib
 
 import yaml
 
@@ -19,38 +18,50 @@ NOTE = '资产库提供可选起点；按当前故事适配、替换或新创，
 ANIMATION_REFERENCE_NOTE = '动作库只提供可复用下限；当前镜头、风格、节奏和新效果仍由 MAC 自主设计。'
 
 
-def native_companion_roots(carrier_home: Path):
-    """Read installed membership plus its current marketplace source, never caches."""
-    config_path = carrier_home / 'config.toml'
-    if not config_path.is_file():
+def _resolve_opl_bin():
+    env_bin = os.environ.get('OPL_BIN', '').strip()
+    if env_bin:
+        return env_bin
+    fw_root = os.environ.get('OPL_FRAMEWORK_ROOT', '').strip()
+    if fw_root:
+        candidate = Path(fw_root) / 'bin' / 'opl'
+        if candidate.is_file() and os.access(candidate, os.X_OK):
+            return str(candidate)
+    return shutil.which('opl')
+
+
+def locate_installed_companion(package_id='mac-media-assets'):
+    """Resolve an installed companion package via Framework `opl packages locate`."""
+    opl = _resolve_opl_bin()
+    if not opl:
         return []
     try:
-        config = tomllib.loads(config_path.read_text())
-        selector = 'mac-media-assets@mac-media-assets'
-        if selector not in config.get('plugins', {}):
-            return []
-        marketplace = config.get('marketplaces', {}).get('mac-media-assets') or {}
-        if marketplace.get('source_type') == 'local':
-            root = Path(marketplace['source']).expanduser().resolve()
-        else:
-            root = (carrier_home / '.tmp/marketplaces/mac-media-assets').resolve()
-        descriptor = json.loads((root / '.agents/plugins/marketplace.json').read_text())
-        if descriptor.get('name') != 'mac-media-assets':
-            return []
-        candidates = []
-        for plugin in descriptor.get('plugins', []):
-            source = plugin.get('source') or {}
-            if plugin.get('name') != 'mac-media-assets' or source.get('source') != 'local':
-                continue
-            reference = Path(source.get('path', '.'))
-            if reference.is_absolute():
-                continue
-            path = (root / reference).resolve()
-            if path.is_relative_to(root):
-                candidates.append(path)
-        return candidates
-    except (OSError, ValueError, KeyError, TypeError, tomllib.TOMLDecodeError):
+        completed = subprocess.run(
+            [opl, 'packages', 'locate', package_id, '--json'],
+            capture_output=True,
+            text=True,
+            timeout=30,
+        )
+    except (OSError, subprocess.TimeoutExpired):
         return []
+    if completed.returncode != 0:
+        return []
+    try:
+        payload = json.loads(completed.stdout)
+    except (ValueError, TypeError):
+        return []
+    if not isinstance(payload, dict):
+        return []
+    location = payload.get('opl_package_location')
+    if not isinstance(location, dict) or location.get('found') is not True:
+        return []
+    readiness = location.get('readiness')
+    if isinstance(readiness, dict) and readiness.get('installed') is False:
+        return []
+    package_root = location.get('package_root')
+    if not isinstance(package_root, str) or not package_root.strip():
+        return []
+    return [Path(package_root).expanduser()]
 
 
 def config(workspace):
@@ -92,25 +103,12 @@ def locate(workspace, explicit=None):
     candidates = []
     if os.environ.get('MAC_MEDIA_ASSETS_ROOT'):
         candidates.append(Path(os.environ['MAC_MEDIA_ASSETS_ROOT']).expanduser())
-    candidates.extend([workspace.parent / 'mac-media-assets', sources / 'mac-media-assets'])
+    candidates.append(workspace.parent / 'mac-media-assets')
+    candidates.extend(locate_installed_companion('mac-media-assets'))
+    candidates.append(sources / 'mac-media-assets')
     skill = codex / 'skills/mac-media-assets'
     if skill.is_dir():
         candidates.append(skill.resolve().parents[1])
-    state = Path(os.environ.get('OPL_STATE_DIR') or
-                 (Path(os.environ['OPL_DATA_DIR']) / 'opl/state' if os.environ.get('OPL_DATA_DIR') else
-                  Path.home() / 'Library/Application Support/OPL/state')).expanduser()
-    # Framework installs headless capabilities in its internal native carrier.
-    # Inspect both supported native cache homes; no download or state mutation.
-    # Native local-source installs resolve the marketplace checkout directly.
-    # An older Framework projection may remain beside it after an update.
-    for carrier_home in [state / 'internal-package-carrier', codex]:
-        candidates.extend(native_companion_roots(carrier_home))
-    candidates.append(state / 'internal-package-carrier/.tmp/marketplaces/mac-media-assets')
-    candidates.append(state / 'codex-plugin-marketplaces/mac-media-assets/plugins/mac-media-assets')
-    for cache in [state / 'internal-package-carrier/plugins/cache/mac-media-assets',
-                  codex / 'plugins/cache/mac-media-assets']:
-        if cache.is_dir():
-            candidates.extend(path.parents[2] for path in cache.glob('**/skills/mac-media-assets/SKILL.md'))
     for root in candidates:
         root = root.resolve()
         if valid(root):
@@ -172,7 +170,7 @@ def ensure(workspace, explicit=None, repository=REPOSITORY, offline=False):
         return {**result, 'installation': 'preserved_existing', 'diagnostic': '配置目录已有内容，未覆盖；请检查资产库路径'}
     if offline or os.environ.get('OPL_COMPANION_DISABLE_REMOTE_INSTALL') == '1':
         return {**result, 'installation': 'not_downloaded', 'diagnostic': '离线模式；继续本地素材或新创'}
-    opl = shutil.which('opl')
+    opl = _resolve_opl_bin()
     if repository == REPOSITORY and opl:
         try:
             completed = subprocess.run([opl, 'packages', 'install', 'mac-media-assets', '--json'],

@@ -48,12 +48,16 @@
     },
     {
       "renderer_id": "remotion_dom",
-      "status": "planned",
-      "adapter_status": "planned",
+      "status": "active",
+      "adapter_status": "implemented",
       "native_seek_api": "frames",
-      "shared_seek_bridge": "window.__seek(t_seconds)-to-frame adapter required",
+      "shared_seek_bridge": "secondsToFrame / installRemotionSeekBridge + remotion_seek_host",
       "purpose": "React/DOM 排版、复杂字幕和可复用 composition",
-      "entry_refs": ["https://www.remotion.dev/docs/"]
+      "entry_refs": [
+        "runtime/workbench/templates/animation/paper_theatre/src/remotion/",
+        "runtime/workbench/scripts/render_local_animation.mjs",
+        "runtime/workbench/scripts/remotion_seek_host/"
+      ]
     },
     {
       "renderer_id": "webgl_three",

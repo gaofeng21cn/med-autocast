@@ -1,21 +1,44 @@
+import { Easing, interpolate, spring } from "remotion";
 import type { Camera, Point, Pose, Score, Sound } from "./types";
-export const clamp = (v: number, a = 0, b = 1) => Math.max(a, Math.min(b, v));
-export const mix = (a: number, b: number, p: number) => a + (b - a) * p;
-export const smooth = (v: number) => {
-  const p = clamp(v);
-  return p * p * (3 - 2 * p);
-};
-export const easeOut = (p: number) => 1 - (1 - clamp(p)) ** 3;
+
+const SPRING_EVAL_FPS = 60;
+
+export const clamp = (v: number, a = 0, b = 1) =>
+  a === b
+    ? a
+    : interpolate(v, [a, b], [a, b], {
+        extrapolateLeft: "clamp",
+        extrapolateRight: "clamp",
+      });
+export const mix = (a: number, b: number, p: number) =>
+  interpolate(p, [0, 1], [a, b]);
+export const smooth = (v: number) =>
+  interpolate(v, [0, 1], [0, 1], {
+    extrapolateLeft: "clamp",
+    extrapolateRight: "clamp",
+    easing: (p) => p * p * (3 - 2 * p),
+  });
+export const easeOut = (p: number) =>
+  interpolate(p, [0, 1], [0, 1], {
+    extrapolateLeft: "clamp",
+    extrapolateRight: "clamp",
+    easing: Easing.out(Easing.cubic),
+  });
 export const progress = (t: number, start: number, end: number) =>
-  end === start ? Number(t >= end) : clamp((t - start) / (end - start));
+  end === start
+    ? Number(t >= end)
+    : interpolate(t, [start, end], [0, 1], {
+        extrapolateLeft: "clamp",
+        extrapolateRight: "clamp",
+      });
 export const phase = (t: number, start: number, end: number) =>
   smooth(progress(t, start, end));
 // Strict event gate: returns 0 before `at`, preventing premature ghost reveals.
 export const revealWindow = (t: number, at: number, duration = 0.28) =>
   t < at ? 0 : easeOut(progress(t, at, at + Math.max(1e-6, duration)));
 
-// Closed-form damped second-order spring presets (deterministic, no frame history).
-export type SpringPreset = { stiffness: number; damping: number };
+// Remotion spring presets (deterministic closed-form evaluation, no frame history).
+export type SpringPreset = { stiffness: number; damping: number; mass?: number };
 export const SPRING = {
   snappy: { stiffness: 320, damping: 30 },
   smooth: { stiffness: 170, damping: 26 },
@@ -25,21 +48,16 @@ export const SPRING = {
 
 export function springEase(
   dt: number,
-  stiffness = SPRING.smooth.stiffness,
-  damping = SPRING.smooth.damping,
+  stiffness: number = SPRING.smooth.stiffness,
+  damping: number = SPRING.smooth.damping,
+  mass: number = 1,
 ): number {
   if (dt <= 0) return 0;
-  const w0 = Math.sqrt(Math.max(1e-6, stiffness));
-  const zeta = damping / (2 * w0);
-  if (zeta < 1) {
-    const wd = w0 * Math.sqrt(1 - zeta * zeta);
-    return (
-      1 -
-      Math.exp(-zeta * w0 * dt) *
-        (Math.cos(wd * dt) + ((zeta * w0) / wd) * Math.sin(wd * dt))
-    );
-  }
-  return 1 - Math.exp(-w0 * dt) * (1 + w0 * dt);
+  return spring({
+    frame: dt * SPRING_EVAL_FPS,
+    fps: SPRING_EVAL_FPS,
+    config: { stiffness, damping, mass },
+  });
 }
 
 export function springMove(
@@ -49,7 +67,11 @@ export function springMove(
   to: number,
   preset: SpringPreset = SPRING.paper,
 ): number {
-  return from + (to - from) * springEase(t - start, preset.stiffness, preset.damping);
+  return interpolate(
+    springEase(t - start, preset.stiffness, preset.damping, preset.mass ?? 1),
+    [0, 1],
+    [from, to],
+  );
 }
 
 export function springTrack(
@@ -63,7 +85,7 @@ export function springTrack(
   for (let i = 1; i < sorted.length; i++) {
     value +=
       (sorted[i][1] - sorted[i - 1][1]) *
-      springEase(t - sorted[i][0], preset.stiffness, preset.damping);
+      springEase(t - sorted[i][0], preset.stiffness, preset.damping, preset.mass ?? 1);
   }
   return value;
 }

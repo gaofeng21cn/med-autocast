@@ -47,7 +47,7 @@ export async function collectRuntimeReceipt({ project, entry = 'index.html', aud
       seek_api: 'window.__seek(t_seconds)',
       random_access_required: true,
       master_clock: 'score.json',
-      frame_capture: 'Chrome screenshot -> FFmpeg',
+      frame_capture: config.engine === '@remotion/renderer' ? 'Remotion (@remotion/renderer) -> FFmpeg' : 'Chrome screenshot -> FFmpeg',
       config: { fps: config.fps ?? null, width: config.width ?? null, height: config.height ?? null },
     },
   };

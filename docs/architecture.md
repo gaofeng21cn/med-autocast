@@ -74,6 +74,6 @@ Score / Shot / Asset / Layout / Review
      └── webgl_three    (2.5D、粒子和三维结构)
 ```
 
-当前共用渲染入口按 HTML 项目的 `window.__seek(t)` 逐帧捕获；随包完整模板是 Canvas 2D，故 `paper_collage + canvas2d` 为稳定默认。renderer 注册表区分已激活、计划和实验项；renderer ID 不会自动安装或切换实现。未激活实现仍可用于前期导演规划，之后可选兼容的已激活 renderer 并如实记录质量债务。Remotion 与 HyperFrames 可作镜头预览、薄装配或特定 renderer 候选，不另建主时间轴；视频模型属于显式选择的后端能力，不是动画风格。
+当前共用渲染入口统一由 Remotion（`@remotion/renderer`）驱动，同时支持原生 `remotion_dom` Composition 与基于 `window.__seek(t)` 的 HTML 项目（通过同源 `remotion_seek_host` 宿主捕获）；随包纸剧场模板同时提供 `canvas2d`（`paper_collage` 稳定默认）与 `remotion_dom` 入口，动画弹簧与插值统一由 `remotion` 提供。renderer 注册表区分已激活、计划和实验项；renderer ID 不会自动安装或切换实现。未激活实现仍可用于前期导演规划，之后可选兼容的已激活 renderer 并如实记录质量债务。Remotion 与主时间轴（`score.json`）严格绑定，不另建第二条音画时码；视频模型属于显式选择的后端能力，不是动画风格。
 
 OPL 负责运行、阶段状态、生成接口、独立评测、包版本和激活。原十阶段与六个 OPL 阶段的完整职责对应见[制作 SOP](../agent/policies/production-policy.md)，实际工具和输入合同见[工作台接入](workspace-adapter.md)。同一个专业 Skill 可以参与多个阶段；合成由成片打包 Skill 实现，不能只交给后端 Skill。

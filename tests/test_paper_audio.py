@@ -93,3 +93,33 @@ class PaperAudioTests(unittest.TestCase):
         self.assertEqual(list((self.root / "audio").glob("*.flac")), [])
         self.assertEqual(hashlib.sha256((self.root / "mixed.wav").read_bytes()).hexdigest(), receipt["audio_sha256"])
         self.assertGreater(rms(self.root / "mixed.wav", 1.8, 2.8), .01)
+        self.assertEqual(receipt["premix_measurement"]["engine"], "pyloudnorm")
+        self.assertEqual(receipt["output_measurement"]["engine"], "pyloudnorm")
+        self.assertLessEqual(float(receipt["output_measurement"]["input_tp"]), -1.15)
+
+    def test_vectorized_foley_mixes_registered_material_and_procedural_cues(self):
+        click = self.root / "click.wav"
+        write_signal(click, 880, 0.2, lambda t: 0 <= t < 0.08)
+        (self.root / "asset_manifest.json").write_text(json.dumps({
+            "assets": [{"asset_id": "click", "path": "click.wav"}]
+        }))
+        (self.root / "score.json").write_text(json.dumps({
+            "duration": 7,
+            "shots": [{"id": "S01", "start": 0.0, "end": 7.0, "events": {"a": 0.5, "b": 1.2, "c": 4.5}}],
+            "sounds": [
+                {"shot": "S01", "event": "a", "kind": "custom", "asset_id": "click", "gain": 0.8},
+                {"shot": "S01", "event": "b", "kind": "paper", "gain": 1.0},
+                {"shot": "S01", "event": "c", "kind": "stamp", "gain": 1.0},
+                {"shot": "S01", "event": "missing", "kind": "tap"},
+            ],
+        }))
+        receipt = self.mix("--retain-intermediates")
+        self.assertEqual([e["source_type"] for e in receipt["events"]], [
+            "registered_audio",
+            "procedural_material_study",
+            "procedural_paper_foley",
+        ])
+        self.assertEqual(len(receipt["unresolved_foley"]), 1)
+        self.assertEqual(receipt["unresolved_foley"][0]["reason"], "event_not_found")
+        self.assertGreater(rms(self.root / "audio/foley.flac", 0.45, 0.65), 0.005)
+        self.assertGreater(rms(self.root / "audio/foley.flac", 4.45, 4.70), 0.0005)

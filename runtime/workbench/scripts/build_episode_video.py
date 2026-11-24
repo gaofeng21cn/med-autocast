@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 import argparse
+from functools import lru_cache
 import json
 import math
 import re
@@ -7,9 +8,14 @@ import subprocess
 from dataclasses import dataclass
 from pathlib import Path
 
+import pysubs2
 import yaml
 
 from workbench_config import load_author_profile, resolve_font, workspace_path
+
+OFFSET_RE = re.compile(r"([+-]\d+)([+-]\d+)")
+DEFAULT_CUE_OFFSET = "+0+16"
+DEFAULT_ANNOTATION_OFFSET = "+16+16"
 
 
 @dataclass(frozen=True)
@@ -34,12 +40,16 @@ class Canvas:
     def px(self, value: float) -> int:
         return max(1, round(value * min(self.width / 608, self.height / 352)))
 
-    def offset(self, value: str) -> str:
-        match = re.fullmatch(r"([+-]\d+)([+-]\d+)", value)
+    def offset_xy(self, value: str) -> tuple[int, int]:
+        match = OFFSET_RE.fullmatch(value)
         if not match:
             raise ValueError(f"Expected signed pixel offset, got {value!r}")
         x, y = map(int, match.groups())
-        return f"{round(x * self.width / 608):+d}{round(y * self.height / 352):+d}"
+        return round(x * self.width / 608), round(y * self.height / 352)
+
+    def offset(self, value: str) -> str:
+        dx, dy = self.offset_xy(value)
+        return f"{dx:+d}{dy:+d}"
 
 
 def run(command: list[str]) -> None:
@@ -65,29 +75,16 @@ def probe_duration(path: Path) -> float:
     return float(result.stdout.strip())
 
 
-def parse_timestamp(value: str) -> float:
-    hours, minutes, rest = value.split(":")
-    seconds, milliseconds = rest.split(",")
-    return int(hours) * 3600 + int(minutes) * 60 + int(seconds) + int(milliseconds) / 1000
-
-
 def strip_line_end_punctuation(text: str) -> str:
     return re.sub(r"[，。；：、！？,.!?;:]+$", "", text.strip())
 
 
 def parse_srt(path: Path) -> list[tuple[float, float, str]]:
-    blocks = re.split(r"\n\s*\n", path.read_text(encoding="utf-8-sig").strip())
-    cues = []
-    for block in blocks:
-        lines = block.splitlines()
-        if len(lines) < 3:
-            continue
-        match = re.match(r"(.+?)\s+-->\s+(.+)", lines[1])
-        if not match:
-            continue
-        text = "\n".join(lines[2:]).strip()
-        cues.append((parse_timestamp(match.group(1)), parse_timestamp(match.group(2)), text))
-    return cues
+    subs = pysubs2.load(str(path), encoding="utf-8-sig")
+    return [
+        (event.start / 1000.0, event.end / 1000.0, event.plaintext.strip())
+        for event in subs
+    ]
 
 
 def normalize_cues(cues: list[tuple[float, float, str]]) -> list[tuple[float, float, str]]:
@@ -207,38 +204,276 @@ def build_visual_base(timeline: list[dict], audio_duration: float, target: Path,
     run(command)
 
 
-def make_text_overlay(text: str, font: Path, target: Path, point_size: int, gravity: str, offset: str,
-                      text_color: str = "white", outline_color: str = "#252525", canvas: Canvas = Canvas()) -> None:
+def resolve_font_family(font: Path) -> str:
+    if font.is_file():
+        try:
+            from PIL import ImageFont
+
+            family = ImageFont.truetype(str(font), 16).getname()[0]
+            if family:
+                return family
+        except Exception:
+            pass
+    return font.stem or "Sans"
+
+
+def escape_ffmpeg_filter_value(value: str | Path) -> str:
+    text = str(value).replace("\\", "\\\\")
+    for ch in (":", "'", "[", "]", ";", ","):
+        text = text.replace(ch, f"\\{ch}")
+    return text
+
+
+def build_ass_filter(ass_path: Path, font: Path) -> str:
+    parts = [f"filename='{escape_ffmpeg_filter_value(ass_path)}'"]
+    if font.parent.is_dir():
+        parts.append(f"fontsdir='{escape_ffmpeg_filter_value(font.parent)}'")
+    return "ass=" + ":".join(parts)
+
+
+@lru_cache(maxsize=1)
+def ffmpeg_supports_ass() -> bool:
+    try:
+        result = subprocess.run(
+            ["ffmpeg", "-hide_banner", "-filters"],
+            check=True,
+            capture_output=True,
+            text=True,
+        )
+    except (OSError, subprocess.CalledProcessError):
+        return False
+    return bool(re.search(r"^\s*[T.S]{2,3}\s+ass\s+V->V\b", result.stdout, re.MULTILINE))
+
+
+def _ass_escape_text(text: str) -> str:
+    return text.replace("\\", r"\\").replace("{", r"\{").replace("}", r"\}").replace("\n", r"\N")
+
+
+def build_subtitle_ass(
+    cues: list[tuple[float, float, str]],
+    font: Path,
+    audio_duration: float,
+    target_ass: Path,
+    annotations: list[dict] | None = None,
+    canvas: Canvas = Canvas(),
+    cue_offsets: dict | None = None,
+) -> pysubs2.SSAFile:
+    offsets: dict[int, str] = {}
+    for key, value in (cue_offsets or {}).items():
+        index = int(key)
+        if str(index) != str(key) or not 1 <= index <= len(cues) or index in offsets:
+            raise ValueError(f"Invalid subtitle cue offset index: {key}")
+        canvas.offset(value)
+        offsets[index] = value
+
+    subs = pysubs2.SSAFile()
+    subs.info["PlayResX"] = str(canvas.width)
+    subs.info["PlayResY"] = str(canvas.height)
+    subs.info["ScaledBorderAndShadow"] = "yes"
+    subs.info["WrapStyle"] = "2"
+
+    font_family = resolve_font_family(font)
+    default_dx, default_dy = canvas.offset_xy(DEFAULT_CUE_OFFSET)
+    subs.styles["Default"] = pysubs2.SSAStyle(
+        fontname=font_family,
+        fontsize=canvas.px(18),
+        primarycolor=pysubs2.Color(255, 255, 255, 0),
+        secondarycolor=pysubs2.Color(255, 255, 255, 0),
+        outlinecolor=pysubs2.Color(37, 37, 37, 0),
+        backcolor=pysubs2.Color(0, 0, 0, 255),
+        outline=canvas.px(3),
+        shadow=0,
+        borderstyle=1,
+        alignment=pysubs2.Alignment.BOTTOM_CENTER,
+        marginl=canvas.px(16),
+        marginr=canvas.px(16),
+        marginv=max(0, default_dy),
+    )
+    ann_dx, ann_dy = canvas.offset_xy(DEFAULT_ANNOTATION_OFFSET)
+    subs.styles["Annotation"] = pysubs2.SSAStyle(
+        fontname=font_family,
+        fontsize=canvas.px(17),
+        primarycolor=pysubs2.Color(36, 64, 74, 0),
+        secondarycolor=pysubs2.Color(36, 64, 74, 0),
+        outlinecolor=pysubs2.Color(255, 255, 255, 0),
+        backcolor=pysubs2.Color(0, 0, 0, 255),
+        outline=canvas.px(3),
+        shadow=0,
+        borderstyle=1,
+        alignment=pysubs2.Alignment.TOP_LEFT,
+        marginl=max(0, ann_dx),
+        marginr=canvas.px(16),
+        marginv=max(0, ann_dy),
+    )
+
+    for index, (start, end, text) in enumerate(cues, 1):
+        offset_spec = offsets.get(index, DEFAULT_CUE_OFFSET)
+        dx, dy = canvas.offset_xy(offset_spec)
+        body = _ass_escape_text(text)
+        if offset_spec != DEFAULT_CUE_OFFSET:
+            pos_x = round(canvas.width / 2) + dx
+            pos_y = canvas.height - dy
+            body = f"{{\\an2\\pos({pos_x},{pos_y})}}{body}"
+        elif default_dx != 0:
+            pos_x = round(canvas.width / 2) + default_dx
+            pos_y = canvas.height - default_dy
+            body = f"{{\\an2\\pos({pos_x},{pos_y})}}{body}"
+        subs.events.append(
+            pysubs2.SSAEvent(
+                start=pysubs2.make_time(s=start),
+                end=pysubs2.make_time(s=end),
+                style="Default",
+                text=body,
+            )
+        )
+
+    for annotation in annotations or []:
+        start, end = float(annotation["start"]), float(annotation["end"])
+        text = annotation["text"].strip()
+        if not (0 <= start < end <= audio_duration + 0.001):
+            raise ValueError(f"Invalid annotation range: {annotation}")
+        if not text or len(text.splitlines()) > 2 or any(len(line) > 20 for line in text.splitlines()):
+            raise ValueError(f"Annotation does not fit the video: {text!r}")
+        offset_spec = annotation.get("offset", DEFAULT_ANNOTATION_OFFSET)
+        dx, dy = canvas.offset_xy(offset_spec)
+        body = _ass_escape_text(text)
+        if offset_spec != DEFAULT_ANNOTATION_OFFSET:
+            body = f"{{\\an7\\pos({dx},{dy})}}{body}"
+        subs.events.append(
+            pysubs2.SSAEvent(
+                start=pysubs2.make_time(s=start),
+                end=pysubs2.make_time(s=end),
+                style="Annotation",
+                text=body,
+            )
+        )
+
+    target_ass.parent.mkdir(parents=True, exist_ok=True)
+    subs.save(str(target_ass), encoding="utf-8")
+    return subs
+
+
+def _load_pil_font(font: Path, size: int):
+    from PIL import ImageFont
+
+    if font.is_file():
+        return ImageFont.truetype(str(font), size)
+    return ImageFont.load_default()
+
+
+def _render_ass_overlay_with_pillow(
+    subs: pysubs2.SSAFile,
+    font: Path,
+    duration: float,
+    work_dir: Path,
+    target: Path,
+    canvas: Canvas,
+) -> None:
+    """Fallback single-pass RGBA overlay renderer when host FFmpeg lacks libass."""
+    from PIL import Image, ImageDraw
+
+    frame_dir = work_dir / "subtitle_ass_fallback"
+    frame_dir.mkdir(parents=True, exist_ok=True)
+    boundaries = sorted(
+        {
+            0.0,
+            duration,
+            *(max(0.0, min(duration, e.start / 1000.0)) for e in subs.events),
+            *(max(0.0, min(duration, e.end / 1000.0)) for e in subs.events),
+        }
+    )
+    pos_re = re.compile(r"\\pos\((-?\d+(?:\.\d+)?),(-?\d+(?:\.\d+)?)\)")
+    font_cache: dict[int, object] = {}
+
+    def get_font(px: int):
+        if px not in font_cache:
+            font_cache[px] = _load_pil_font(font, px)
+        return font_cache[px]
+
+    def color_rgba(c: pysubs2.Color) -> tuple[int, int, int, int]:
+        return (c.r, c.g, c.b, 255 - c.a)
+
+    concat_lines = ["ffconcat version 1.0"]
+    last_png: Path | None = None
+    for idx in range(len(boundaries) - 1):
+        seg_start, seg_end = boundaries[idx], boundaries[idx + 1]
+        seg_dur = seg_end - seg_start
+        if seg_dur <= 1e-6:
+            continue
+        mid_ms = round(((seg_start + seg_end) / 2.0) * 1000.0)
+        active = [e for e in subs.events if e.start <= mid_ms < e.end]
+        img = Image.new("RGBA", (canvas.width, canvas.height), (0, 0, 0, 0))
+        draw = ImageDraw.Draw(img)
+        for event in active:
+            style = subs.styles.get(event.style) or subs.styles["Default"]
+            pil_font = get_font(max(1, round(style.fontsize)))
+            text = event.plaintext
+            stroke_w = max(0, round(style.outline))
+            fill = color_rgba(style.primarycolor)
+            stroke_fill = color_rgba(style.outlinecolor)
+            spacing = canvas.px(4)
+            pos_match = pos_re.search(event.text)
+            if style.alignment == pysubs2.Alignment.TOP_LEFT:
+                x = float(pos_match.group(1)) if pos_match else float(style.marginl)
+                y = float(pos_match.group(2)) if pos_match else float(style.marginv)
+                draw.multiline_text(
+                    (x, y),
+                    text,
+                    font=pil_font,
+                    fill=fill,
+                    stroke_width=stroke_w,
+                    stroke_fill=stroke_fill,
+                    spacing=spacing,
+                    align="left",
+                )
+            else:
+                x = float(pos_match.group(1)) if pos_match else canvas.width / 2.0
+                y = float(pos_match.group(2)) if pos_match else canvas.height - float(style.marginv)
+                draw.multiline_text(
+                    (x, y),
+                    text,
+                    font=pil_font,
+                    fill=fill,
+                    stroke_width=stroke_w,
+                    stroke_fill=stroke_fill,
+                    spacing=spacing,
+                    align="center",
+                    anchor="md",
+                )
+        png_path = frame_dir / f"seg-{idx:04d}.png"
+        img.save(png_path, format="PNG")
+        concat_lines.append(f"file '{png_path.resolve().as_posix()}'")
+        concat_lines.append(f"duration {seg_dur:.6f}")
+        last_png = png_path
+
+    if last_png is None:
+        last_png = frame_dir / "blank.png"
+        Image.new("RGBA", (canvas.width, canvas.height), (0, 0, 0, 0)).save(last_png, format="PNG")
+        concat_lines.append(f"file '{last_png.resolve().as_posix()}'")
+        concat_lines.append(f"duration {duration:.6f}")
+    concat_lines.append(f"file '{last_png.resolve().as_posix()}'")
+    manifest_path = frame_dir / "subtitles.ffconcat"
+    manifest_path.write_text("\n".join(concat_lines) + "\n", encoding="utf-8")
     run(
         [
-            "magick",
-            "-size",
-            canvas.size,
-            "xc:none",
-            "-gravity",
-            gravity,
-            "-font",
-            str(font),
-            "-pointsize",
-            str(canvas.px(point_size)),
-            "-interline-spacing",
-            str(canvas.px(4)),
-            "-fill",
-            text_color,
-            "-stroke",
-            outline_color,
-            "-strokewidth",
-            str(canvas.px(3)),
-            "-annotate",
-            canvas.offset(offset),
-            text,
-            "-stroke",
-            "none",
-            "-fill",
-            text_color,
-            "-annotate",
-            canvas.offset(offset),
-            text,
+            "ffmpeg",
+            "-hide_banner",
+            "-loglevel",
+            "error",
+            "-y",
+            "-f",
+            "concat",
+            "-safe",
+            "0",
+            "-i",
+            str(manifest_path),
+            "-vf",
+            "fps=24,format=rgba",
+            "-an",
+            "-t",
+            f"{duration:.3f}",
+            "-c:v",
+            "qtrle",
             str(target),
         ]
     )
@@ -254,137 +489,85 @@ def build_subtitle_video(
     canvas: Canvas = Canvas(),
     cue_offsets: dict | None = None,
 ) -> list[tuple[float, float, str]]:
-    offsets = {}
-    for key, value in (cue_offsets or {}).items():
-        index = int(key)
-        if str(index) != str(key) or not 1 <= index <= len(cues) or index in offsets:
-            raise ValueError(f"Invalid subtitle cue offset index: {key}")
-        canvas.offset(value)
-        offsets[index] = value
-    cue_dir = work_dir / "subtitle_frames"
-    cue_dir.mkdir(parents=True, exist_ok=True)
-    blank = cue_dir / "blank.png"
-    run(["magick", "-size", canvas.size, "xc:none", f"PNG32:{blank}"])
-    cue_paths = []
-    for index, (start, end, text) in enumerate(cues, 1):
-        cue_path = cue_dir / f"cue-{index:03d}.png"
-        make_text_overlay(text, font, cue_path, 18, "south", offsets.get(index, "+0+16"), canvas=canvas)
-        cue_paths.append(cue_path)
-
-    overlay_ranges = [(start, end) for start, end, _ in cues]
-    for index, annotation in enumerate(annotations or [], 1):
-        start, end = float(annotation["start"]), float(annotation["end"])
-        text = annotation["text"].strip()
-        if not (0 <= start < end <= audio_duration + 0.001):
-            raise ValueError(f"Invalid annotation range: {annotation}")
-        if not text or len(text.splitlines()) > 2 or any(len(line) > 20 for line in text.splitlines()):
-            raise ValueError(f"Annotation does not fit the video: {text!r}")
-        annotation_path = cue_dir / f"annotation-{index:03d}.png"
-        make_text_overlay(text, font, annotation_path, 17, "northwest", annotation.get("offset", "+16+16"),
-                          "#24404A", "white", canvas=canvas)
-        cue_paths.append(annotation_path)
-        overlay_ranges.append((start, end))
+    ass_path = target if target.suffix.lower() == ".ass" else work_dir / "subtitles.ass"
+    subs = build_subtitle_ass(
+        cues,
+        font,
+        audio_duration,
+        ass_path,
+        annotations=annotations,
+        canvas=canvas,
+        cue_offsets=cue_offsets,
+    )
+    if target.suffix.lower() == ".ass":
+        return cues
 
     duration = audio_duration + 0.45
-    command = [
-        "ffmpeg", "-hide_banner", "-loglevel", "error", "-y", "-filter_complex_threads", "2",
-        "-loop", "1", "-framerate", "24", "-t", f"{duration:.3f}", "-i", str(blank),
-    ]
-    for cue_path in cue_paths:
-        command += [
-            "-loop", "1", "-framerate", "24", "-t", f"{duration:.3f}", "-i", str(cue_path)
-        ]
-    filters = ["[0:v]format=rgba[base]"]
-    previous = "base"
-    for index, (start, end) in enumerate(overlay_ranges, 1):
-        output = f"caption{index}"
-        filters.append(
-            f"[{previous}][{index}:v]overlay=shortest=0:"
-            f"enable='between(t,{start:.3f},{end:.3f})'[{output}]"
+    if ffmpeg_supports_ass():
+        run(
+            [
+                "ffmpeg",
+                "-hide_banner",
+                "-loglevel",
+                "error",
+                "-y",
+                "-f",
+                "lavfi",
+                "-i",
+                f"color=c=black@0.0:s={canvas.size}:r=24:d={duration:.3f}",
+                "-vf",
+                f"format=rgba,{build_ass_filter(ass_path, font)},fps=24,format=rgba",
+                "-an",
+                "-t",
+                f"{duration:.3f}",
+                "-c:v",
+                "qtrle",
+                str(target),
+            ]
         )
-        previous = output
-    filters.append(f"[{previous}]fps=24,format=rgba[subtitles]")
-    command += [
-        "-filter_complex", ";".join(filters), "-map", "[subtitles]", "-an", "-t",
-        f"{duration:.3f}", "-c:v", "qtrle", str(target),
-    ]
-    run(command)
+    else:
+        _render_ass_overlay_with_pillow(subs, font, duration, work_dir, target, canvas)
     return cues
 
 
 def make_brand(font: Path, target: Path, text: str, canvas: Canvas = Canvas()) -> None:
-    if not text:
-        run(["magick", "-size", canvas.size, "xc:none", f"PNG32:{target}"])
-        return
-    run(
-        [
-            "magick",
-            "-size",
-            canvas.size,
-            "xc:none",
-            "-gravity",
-            "northeast",
-            "-font",
-            str(font),
-            "-pointsize",
-            str(canvas.px(15)),
-            "-fill",
-            "#214F55",
-            "-stroke",
-            "white",
-            "-strokewidth",
-            str(canvas.px(2)),
-            "-annotate",
-            canvas.offset("+14+10"),
+    from PIL import Image, ImageDraw
+
+    img = Image.new("RGBA", (canvas.width, canvas.height), (0, 0, 0, 0))
+    if text:
+        draw = ImageDraw.Draw(img)
+        dx, dy = canvas.offset_xy("+14+10")
+        pil_font = _load_pil_font(font, canvas.px(15))
+        draw.text(
+            (canvas.width - dx, dy),
             text,
-            "-stroke",
-            "none",
-            "-fill",
-            "#214F55",
-            "-annotate",
-            canvas.offset("+14+10"),
-            text,
-            f"PNG32:{target}",
-        ]
-    )
+            font=pil_font,
+            fill="#214F55",
+            stroke_width=canvas.px(2),
+            stroke_fill="white",
+            anchor="ra",
+        )
+    target.parent.mkdir(parents=True, exist_ok=True)
+    img.save(target, format="PNG")
 
 
 def make_avatar(source: Path, target: Path, canvas: Canvas = Canvas()) -> None:
+    from PIL import Image, ImageDraw, ImageOps
+
     side = canvas.px(108)
-    size = f"{side}x{side}"
-    crop = target.with_name("avatar-crop.png")
-    mask = target.with_name("avatar-mask.png")
-    run(
-        [
-            "magick",
-            str(source),
-            "-resize",
-            size + "^",
-            "-gravity",
-            "center",
-            "-extent",
-            size,
-            str(crop),
-        ]
-    )
-    run(
-        [
-            "magick",
-            "-size",
-            size,
-            "xc:none",
-            "-fill",
-            "white",
-            "-stroke",
-            "#2F777C",
-            "-strokewidth",
-            str(canvas.px(4)),
-            "-draw",
-            f"circle {side/2},{side/2} {side/2},{canvas.px(3)}",
-            str(mask),
-        ]
-    )
-    run(["magick", str(crop), str(mask), "-alpha", "off", "-compose", "CopyOpacity", "-composite", str(target)])
+    border = canvas.px(4)
+    inset = canvas.px(3)
+    with Image.open(source) as raw:
+        cropped = ImageOps.fit(raw.convert("RGBA"), (side, side), method=Image.Resampling.LANCZOS)
+    mask = Image.new("L", (side, side), 0)
+    mask_draw = ImageDraw.Draw(mask)
+    mask_draw.ellipse((inset, inset, side - inset, side - inset), fill=255)
+    result = Image.new("RGBA", (side, side), (0, 0, 0, 0))
+    result.paste(cropped, (0, 0), mask)
+    ring_draw = ImageDraw.Draw(result)
+    ring_draw.ellipse((inset, inset, side - inset, side - inset), outline="#2F777C", width=border)
+    target.parent.mkdir(parents=True, exist_ok=True)
+    result.save(target, format="PNG")
 
 
 def build_final(
@@ -399,41 +582,50 @@ def build_final(
     target: Path,
     mix: dict,
     canvas: Canvas = Canvas(),
+    font: Path | None = None,
 ) -> None:
-    command = [
+    use_ass_filter = subtitles.suffix.lower() == ".ass"
+    if use_ass_filter:
+        command = [
             "ffmpeg",
             "-hide_banner",
             "-loglevel",
             "error",
             "-y",
             "-filter_complex_threads", "2",
-            "-i",
-            str(visual),
-            "-i",
-            str(subtitles),
-            "-loop",
-            "1",
-            "-framerate",
-            "24",
-            "-i",
-            str(brand),
-            "-loop",
-            "1",
-            "-framerate",
-            "24",
-            "-i",
-            str(avatar),
-            "-i",
-            str(audio),
+            "-i", str(visual),
+            "-loop", "1", "-framerate", "24", "-i", str(brand),
+            "-loop", "1", "-framerate", "24", "-i", str(avatar),
+            "-i", str(audio),
         ]
+        brand_idx, avatar_idx, audio_idx, bgm_idx = 1, 2, 3, 4
+        ass_font = font if font is not None else subtitles
+        subtitle_stage = f"[0:v]{build_ass_filter(subtitles, ass_font)}[v1];"
+    else:
+        command = [
+            "ffmpeg",
+            "-hide_banner",
+            "-loglevel",
+            "error",
+            "-y",
+            "-filter_complex_threads", "2",
+            "-i", str(visual),
+            "-i", str(subtitles),
+            "-loop", "1", "-framerate", "24", "-i", str(brand),
+            "-loop", "1", "-framerate", "24", "-i", str(avatar),
+            "-i", str(audio),
+        ]
+        brand_idx, avatar_idx, audio_idx, bgm_idx = 2, 3, 4, 5
+        subtitle_stage = "[0:v][1:v]overlay=shortest=1[v1];"
+
     if bgm:
         command += ["-i", str(bgm)]
-    audio_filter = "[4:a]apad=pad_dur=0.45"
+    audio_filter = f"[{audio_idx}:a]apad=pad_dur=0.45"
     if bgm:
         audio_filter += ",asplit=2[narration_sc][narration_mix]"
         bgm_start = max(0.0, audio_duration - mix["fade_out_seconds"])
         audio_filter += (
-            f";[5:a]atrim=duration={audio_duration + 0.45:.3f},"
+            f";[{bgm_idx}:a]atrim=duration={audio_duration + 0.45:.3f},"
             f"volume={mix['gain_db']:.6f}dB,"
             f"afade=t=in:st=0:d={mix['fade_in_seconds']},"
             f"afade=t=out:st={bgm_start:.3f}:d={mix['fade_out_seconds']}[bgm]"
@@ -445,42 +637,42 @@ def build_final(
     else:
         audio_filter += ",aresample=22050,pan=mono|c0=c0[mixed]"
     command += [
-            "-filter_complex",
-            (
-                "[0:v][1:v]overlay=shortest=1[v1];"
-                "[v1][2:v]overlay=shortest=1[v2];"
-                f"[v2][3:v]overlay="
-                f"x='if(gte(t,3.2),{round(482*canvas.width/608)},{round(18*canvas.width/608)})':"
-                f"y='if(gte(t,3.2),{round(32*canvas.height/352)},{round(18*canvas.height/352)})':"
-                f"enable='{avatar_enable_expression}'[video];"
-                + audio_filter
-            ),
-            "-map",
-            "[video]",
-            "-map",
-            "[mixed]",
-            "-t",
-            f"{audio_duration + 0.45:.3f}",
-            "-c:v",
-            "libx264",
-            "-preset",
-            "slow",
-            "-crf",
-            "18",
-            "-pix_fmt",
-            "yuv420p",
-            "-c:a",
-            "aac",
-            "-b:a",
-            "160k",
-            "-ar",
-            "22050",
-            "-ac",
-            "1",
-            "-movflags",
-            "+faststart",
-            str(target),
-        ]
+        "-filter_complex",
+        (
+            subtitle_stage
+            + f"[v1][{brand_idx}:v]overlay=shortest=1[v2];"
+            + f"[v2][{avatar_idx}:v]overlay="
+            + f"x='if(gte(t,3.2),{round(482*canvas.width/608)},{round(18*canvas.width/608)})':"
+            + f"y='if(gte(t,3.2),{round(32*canvas.height/352)},{round(18*canvas.height/352)})':"
+            + f"enable='{avatar_enable_expression}'[video];"
+            + audio_filter
+        ),
+        "-map",
+        "[video]",
+        "-map",
+        "[mixed]",
+        "-t",
+        f"{audio_duration + 0.45:.3f}",
+        "-c:v",
+        "libx264",
+        "-preset",
+        "slow",
+        "-crf",
+        "18",
+        "-pix_fmt",
+        "yuv420p",
+        "-c:a",
+        "aac",
+        "-b:a",
+        "160k",
+        "-ar",
+        "22050",
+        "-ac",
+        "1",
+        "-movflags",
+        "+faststart",
+        str(target),
+    ]
     run(command)
 
 
@@ -575,28 +767,33 @@ def main() -> None:
     validate_visual_timeline(timeline, cues, audio_duration)
 
     visual = args.work_dir / "visual-base.mp4"
-    subtitle_video = args.work_dir / "subtitles.mov"
+    use_libass = ffmpeg_supports_ass()
+    subtitle_asset = args.work_dir / ("subtitles.ass" if use_libass else "subtitles.mov")
     brand = args.work_dir / "brand.png"
     avatar = args.work_dir / "avatar.png"
     build_visual_base(timeline, audio_duration, visual, canvas)
     annotations = plan_data.get("visual_annotations", [])
     cue_offsets = plan_data.get("subtitles", {}).get("cue_offsets", {})
-    cues = build_subtitle_video(cues, args.font, audio_duration, args.work_dir, subtitle_video,
+    cues = build_subtitle_video(cues, args.font, audio_duration, args.work_dir, subtitle_asset,
                                annotations, canvas, cue_offsets)
     make_brand(args.font, brand, brand_text, canvas)
     if args.avatar:
         make_avatar(args.avatar, avatar, canvas)
     else:
-        run(["magick", "-size", f"{canvas.px(108)}x{canvas.px(108)}", "xc:none", f"PNG32:{avatar}"])
+        from PIL import Image
+
+        Image.new("RGBA", (canvas.px(108), canvas.px(108)), (0, 0, 0, 0)).save(avatar, format="PNG")
         avatar_expression = "0"
     build_final(
-        visual, subtitle_video, brand, avatar, args.audio, args.bgm, audio_duration,
-        avatar_expression, args.output, mix, canvas,
+        visual, subtitle_asset, brand, avatar, args.audio, args.bgm, audio_duration,
+        avatar_expression, args.output, mix, canvas, font=args.font,
     )
 
     manifest = {
         "format": {"width": canvas.width, "height": canvas.height, "fps": 24},
         "overlay_coordinate_space": "608x352_scaled_to_canvas",
+        "subtitle_renderer": "ffmpeg_libass" if use_libass else "pysubs2_pillow_overlay",
+        "subtitle_ass": str(args.work_dir / "subtitles.ass"),
         "author_profile": author["profile_id"],
         "author_profile_path": str(author_path),
         "brand_text": brand_text,

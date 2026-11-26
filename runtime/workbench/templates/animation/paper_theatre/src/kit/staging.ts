@@ -1,6 +1,7 @@
-import type { Camera } from "./types";
+import type { Camera, Pose } from "./types";
 import { Stage } from "./stage";
 import { tornEllipse } from "./materials";
+import { landPose, shotBreath, SPRING, type SpringPreset } from "./motion";
 
 /**
  * Unify the whole frame into one medium.
@@ -248,4 +249,91 @@ export function paperPlate(
   } finally {
     g.restore();
   }
+}
+
+/** Draw a height-responsive tabletop contact shadow underneath a lifted paper cutout. */
+export function contactShadow(
+  stage: Stage,
+  x: number,
+  y: number,
+  radiusX: number,
+  radiusY: number,
+  lift01: number,
+  opacity = 1,
+) {
+  if (lift01 <= 0.02 || opacity <= 0.02) return;
+  const g = stage.g;
+  g.save();
+  try {
+    g.fillStyle = `rgba(38,32,20,${0.14 * lift01 * opacity})`;
+    g.beginPath();
+    g.ellipse(
+      x,
+      y,
+      Math.max(4, radiusX * (0.72 + lift01 * 0.22)),
+      Math.max(2, radiusY * (0.67 + lift01 * 0.33)),
+      0,
+      0,
+      Math.PI * 2,
+    );
+    g.fill();
+  } finally {
+    g.restore();
+  }
+}
+
+/** Drop a paper piece onto the desk with parabolic arc, contact shadow, and optional settled breathing. */
+export function landGroup(
+  stage: Stage,
+  t: number,
+  start: number,
+  from: Pose,
+  to: Pose,
+  opts: {
+    lift?: number;
+    entryTilt?: number;
+    preset?: SpringPreset;
+    settleWindow?: number;
+    shadowW?: number;
+    shadowY?: number;
+    shadowRY?: number;
+    breatheSeed?: number;
+    shotSpan?: number;
+    ampY?: number;
+    ampRot?: number;
+  },
+  draw: (lift: number) => void,
+) {
+  const landed = landPose(t, start, from, to, {
+    lift: opts.lift ?? 24,
+    entryTilt: opts.entryTilt ?? 0.04,
+    preset: opts.preset ?? SPRING.paper,
+    settleWindow: opts.settleWindow ?? 0.55,
+  });
+  const breath =
+    opts.breatheSeed !== undefined && opts.shotSpan !== undefined
+      ? shotBreath(t, opts.shotSpan, opts.breatheSeed, {
+          ampY: opts.ampY ?? 1.4,
+          ampRot: opts.ampRot ?? 0.006,
+        })
+      : { dx: 0, dy: 0, rotation: 0 };
+  contactShadow(
+    stage,
+    landed.x,
+    to.y + (opts.shadowY ?? 18),
+    opts.shadowW ?? 110,
+    opts.shadowRY ?? 18,
+    landed.lift01,
+    landed.opacity ?? 1,
+  );
+  stage.group(
+    {
+      x: landed.x + breath.dx,
+      y: landed.y + breath.dy,
+      rotation: (landed.rotation ?? 0) + breath.rotation,
+      scale: landed.scale,
+      opacity: landed.opacity,
+    },
+    () => draw(2 + landed.lift01 * 11),
+  );
 }

@@ -7,6 +7,7 @@ import importlib.util
 import json
 import os
 import platform
+import re
 import shlex
 import shutil
 import subprocess
@@ -59,6 +60,90 @@ def node_playwright(root: Path) -> dict:
     output = {k: v for k, v in probed.items() if k not in ('ok', 'detail', 'executable_path', 'canvas_ok')}
     output.update(runtime_root=str(root), fix=fix)
     return output
+
+
+def node_remotion(root: Path) -> dict:
+    fix = f'bash {shlex.quote(str(root / "scripts/setup_workbench.sh"))}'
+    node_bin = shutil.which('node')
+    if not node_bin:
+        return {'state': 'blocked', 'reason': 'node_missing', 'fix': fix}
+    probe_js = """
+import fs from 'node:fs';
+import path from 'node:path';
+import { createRequire } from 'node:module';
+const root = path.resolve(process.argv[1]);
+const roots = [process.env.MED_AUTOCAST_REMOTION_ROOT, root].filter(Boolean);
+const pkgs = ['remotion', '@remotion/bundler', '@remotion/renderer'];
+const versions = {};
+const missing = [];
+for (const name of pkgs) {
+  let found = false;
+  for (const base of roots) {
+    const pkgJson = path.join(base, 'package.json');
+    const directMeta = path.join(base, 'node_modules', name, 'package.json');
+    try {
+      const req = createRequire(fs.existsSync(pkgJson) ? pkgJson : path.join(base, '__probe__.cjs'));
+      const resolved = req.resolve(name);
+      if (resolved) {
+        if (fs.existsSync(directMeta)) {
+          versions[name] = JSON.parse(fs.readFileSync(directMeta, 'utf8')).version;
+        } else {
+          versions[name] = 'installed';
+        }
+        found = true;
+        break;
+      }
+    } catch {}
+  }
+  if (!found) missing.push(name);
+}
+console.log(JSON.stringify({ state: missing.length ? 'missing' : 'ready', missing, versions }));
+"""
+    try:
+        proc = subprocess.run(
+            [node_bin, '--input-type=module', '-e', probe_js, str(root)],
+            capture_output=True,
+            text=True,
+            timeout=15,
+            check=True,
+        )
+        payload = json.loads(proc.stdout.strip())
+        payload.update(runtime_root=str(root), fix=fix)
+        return payload
+    except (OSError, ValueError, subprocess.SubprocessError) as exc:
+        return {'state': 'error', 'error': str(exc), 'runtime_root': str(root), 'fix': fix}
+
+
+def ffmpeg_libass(ffmpeg_entry: dict) -> dict:
+    if ffmpeg_entry.get('state') != 'ready':
+        return {
+            'state': 'missing',
+            'renderer': 'pysubs2_pillow_overlay',
+            'fix': '先确保 ffmpeg 可用；如需 libass 硬字幕滤镜，请安装含 --enable-libass 的 ffmpeg',
+        }
+    try:
+        proc = subprocess.run(
+            ['ffmpeg', '-hide_banner', '-filters'],
+            capture_output=True,
+            text=True,
+            timeout=10,
+            check=True,
+        )
+        supported = bool(re.search(r'^\s*[T.S]{2,3}\s+ass\s+V->V\b', proc.stdout, re.MULTILINE))
+    except (OSError, subprocess.SubprocessError) as exc:
+        return {
+            'state': 'error',
+            'renderer': 'pysubs2_pillow_overlay',
+            'error': str(exc),
+            'fix': '安装含 libass 的 ffmpeg，否则字幕阶段回退 pysubs2 Pillow 透明叠层',
+        }
+    if supported:
+        return {'state': 'ready', 'renderer': 'ffmpeg_libass'}
+    return {
+        'state': 'fallback_only',
+        'renderer': 'pysubs2_pillow_overlay',
+        'fix': '当前 ffmpeg 不含 libass ass 滤镜，将使用 pysubs2 + Pillow 透明叠层（推荐 brew install ffmpeg-full）',
+    }
 
 
 def narration_dependencies(workspace: Path, packages: dict) -> dict:
@@ -135,7 +220,7 @@ def check(workspace: Path) -> dict:
         except (KeyError, ValueError):
             node.update(state='error', fix='无法识别 Node.js 版本')
     packages = {}
-    for name in ('yaml', 'PIL', 'edge_tts'):
+    for name in ('yaml', 'PIL', 'pysubs2', 'pyloudnorm', 'soundfile', 'numpy', 'edge_tts'):
         mod_probe = probe_python_module(name, find_spec=importlib.util.find_spec)
         present = bool(mod_probe['ok'])
         source = 'system' if present else None
@@ -149,7 +234,7 @@ def check(workspace: Path) -> dict:
             present = bool(venv_probe['modules'].get(name))
             source = 'workspace_venv' if present else None
         packages[name] = {'state': 'ready' if present else 'missing', 'source': source, 'fix': setup}
-    for name in ('yaml', 'PIL'):
+    for name in ('yaml', 'PIL', 'pysubs2', 'pyloudnorm', 'soundfile', 'numpy'):
         required[name] = packages[name]
     try:
         from workbench_config import resolve_font
@@ -159,6 +244,8 @@ def check(workspace: Path) -> dict:
         required['font'] = {'state': 'missing', 'error': str(exc),
                             'fix': '安装中文字体（如 Noto Sans CJK），或设置 WORKBENCH_FONT / 部署档案 tools.font'}
     required['playwright_chromium'] = node_playwright(workspace)
+    required['remotion'] = node_remotion(workspace)
+    libass_probe = ffmpeg_libass(required['ffmpeg'])
     try:
         from workbench_config import validate
         config = validate(root=workspace)
@@ -174,7 +261,9 @@ def check(workspace: Path) -> dict:
             'workspace_layout': layout,
             'platform': platform.platform(), 'required': required, 'configuration': configuration,
             'selected_narration': narration,
+            'subtitle_renderer_capability': libass_probe,
             'optional_media': {
+                'ffmpeg_libass': libass_probe,
                 'edge_tts_fallback': {**packages['edge_tts'], 'network_required': True, 'synthesis_verified': False},
                 'whisper_alignment': {'state': 'not_probed', 'fix': '按需安装 requirements-alignment.txt 和模型'},
                 'imagegen': {'state': 'session_dependent',

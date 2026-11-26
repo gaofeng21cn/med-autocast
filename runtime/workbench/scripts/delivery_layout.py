@@ -32,9 +32,43 @@ def _compact_archived_wavs(backup: Path) -> None:
     )
 
 
+def is_pinned_delivery_snapshot(snapshot_dir: Path) -> tuple[bool, str | None]:
+    """Return whether an archived delivery snapshot is pinned for long-term retention."""
+    if not snapshot_dir.is_dir():
+        return False, None
+    if (snapshot_dir / '.pinned.json').is_file():
+        return True, 'pin_marker'
+    for rel, source in (('record/manifest.json', 'manifest'), ('record/review.json', 'review')):
+        p = snapshot_dir / rel
+        if not p.is_file():
+            continue
+        try:
+            data = json.loads(p.read_text(encoding='utf-8'))
+        except (OSError, ValueError):
+            continue
+        if not isinstance(data, dict):
+            continue
+        if data.get('release_pinned') is True or data.get('published_release') is True:
+            return True, f'{source}_release_pinned'
+        reviews = data.get('reviews')
+        if isinstance(reviews, dict) and reviews.get('medical') in ('approved', 'passed'):
+            return True, f'{source}_medical_approved'
+    return False, None
+
+
 def _prune_old_archived_deliveries(archive_episode_dir: Path, keep_latest: int) -> list[str]:
-    """Keep only the newest `keep_latest` rollback backups per episode."""
-    return prune_archived_versions(archive_episode_dir, keep_latest=keep_latest)
+    """Keep only the newest `keep_latest` unpinned rollback backups while preserving pinned snapshots."""
+    if keep_latest < 0 or not archive_episode_dir.is_dir():
+        return []
+    pinned_names = [
+        d.name for d in archive_episode_dir.iterdir()
+        if d.is_dir() and is_pinned_delivery_snapshot(d)[0]
+    ]
+    return prune_archived_versions(
+        archive_episode_dir,
+        keep_latest=keep_latest,
+        protected_names=pinned_names,
+    )
 
 
 def locations(workspace: Path, series: str, episode: str, *, config: dict | None = None) -> dict:

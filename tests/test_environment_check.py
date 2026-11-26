@@ -81,33 +81,99 @@ class EnvironmentTests(unittest.TestCase):
         with patch('environment_check.shutil.which', return_value=None):
             self.assertEqual(envcheck.command('missing')['state'], 'missing')
             self.assertIn('fix', envcheck.node_playwright(self.root))
+            self.assertIn('fix', envcheck.node_remotion(self.root))
         with patch('environment_check.shutil.which', return_value='/node'), patch('environment_check.subprocess.run', return_value=subprocess.CompletedProcess([], 0, '{"state":"missing","error":"no browser"}')):
             self.assertEqual(envcheck.node_playwright(self.root)['state'], 'missing')
 
     def test_optional_models_do_not_block_core_but_pillow_does(self):
         initialize(self.root)
         def cmd(name, args=None): return {'state':'ready', 'version':'v22.0.0'}
-        with patch('environment_check.command', side_effect=cmd), patch('environment_check.node_playwright', return_value={'state':'ready'}), patch('workbench_config.resolve_font', return_value=self.root/'font'), patch('environment_check.importlib.util.find_spec', return_value=object()):
+        with (
+            patch('environment_check.command', side_effect=cmd),
+            patch('environment_check.node_playwright', return_value={'state':'ready'}),
+            patch('environment_check.node_remotion', return_value={'state':'ready'}),
+            patch('environment_check.ffmpeg_libass', return_value={'state':'fallback_only', 'renderer':'pysubs2_pillow_overlay'}),
+            patch('workbench_config.resolve_font', return_value=self.root/'font'),
+            patch('environment_check.importlib.util.find_spec', return_value=object()),
+        ):
             report = envcheck.check(self.root)
             self.assertEqual(report['status'], 'ready')
             self.assertFalse(report['production_ready'])
             self.assertEqual(report['optional_media']['imagegen']['state'], 'session_dependent')
             self.assertNotIn('model', report['optional_media']['imagegen'])
         actual = importlib.util.find_spec
-        with patch('environment_check.command', side_effect=cmd), patch('environment_check.node_playwright', return_value={'state':'ready'}), patch('workbench_config.resolve_font', return_value=self.root/'font'), patch('environment_check.importlib.util.find_spec', side_effect=lambda n: None if n=='PIL' else actual(n)):
+        with (
+            patch('environment_check.command', side_effect=cmd),
+            patch('environment_check.node_playwright', return_value={'state':'ready'}),
+            patch('environment_check.node_remotion', return_value={'state':'ready'}),
+            patch('environment_check.ffmpeg_libass', return_value={'state':'ready', 'renderer':'ffmpeg_libass'}),
+            patch('workbench_config.resolve_font', return_value=self.root/'font'),
+            patch('environment_check.importlib.util.find_spec', side_effect=lambda n: None if n=='PIL' else actual(n)),
+        ):
             self.assertEqual(envcheck.check(self.root)['status'], 'needs_setup')
+
+    def test_missing_pysubs2_pyloudnorm_or_remotion_marks_needs_setup(self):
+        initialize(self.root)
+        def cmd(name, args=None): return {'state':'ready', 'version':'v22.0.0'}
+        actual = importlib.util.find_spec
+        for mod_name in ('pysubs2', 'pyloudnorm', 'soundfile', 'numpy'):
+            with (
+                patch('environment_check.command', side_effect=cmd),
+                patch('environment_check.node_playwright', return_value={'state':'ready'}),
+                patch('environment_check.node_remotion', return_value={'state':'ready'}),
+                patch('environment_check.ffmpeg_libass', return_value={'state':'fallback_only', 'renderer':'pysubs2_pillow_overlay'}),
+                patch('workbench_config.resolve_font', return_value=self.root/'font'),
+                patch('environment_check.importlib.util.find_spec', side_effect=lambda n, target=mod_name: None if n == target else object()),
+            ):
+                rep = envcheck.check(self.root)
+                self.assertEqual(rep['status'], 'needs_setup', mod_name)
+                self.assertEqual(rep['required'][mod_name]['state'], 'missing', mod_name)
+        with (
+            patch('environment_check.command', side_effect=cmd),
+            patch('environment_check.node_playwright', return_value={'state':'ready'}),
+            patch('environment_check.node_remotion', return_value={'state':'missing', 'missing':['remotion']}),
+            patch('environment_check.ffmpeg_libass', return_value={'state':'fallback_only', 'renderer':'pysubs2_pillow_overlay'}),
+            patch('workbench_config.resolve_font', return_value=self.root/'font'),
+            patch('environment_check.importlib.util.find_spec', return_value=object()),
+        ):
+            rep = envcheck.check(self.root)
+            self.assertEqual(rep['status'], 'needs_setup')
+            self.assertEqual(rep['required']['remotion']['state'], 'missing')
+
+    def test_ffmpeg_libass_probe_reports_ready_or_fallback(self):
+        with patch('environment_check.subprocess.run', return_value=subprocess.CompletedProcess([], 0, 'Filters:\n ... ass V->V Render subtitles\n')):
+            res = envcheck.ffmpeg_libass({'state': 'ready'})
+            self.assertEqual(res['state'], 'ready')
+            self.assertEqual(res['renderer'], 'ffmpeg_libass')
+        with patch('environment_check.subprocess.run', return_value=subprocess.CompletedProcess([], 0, 'Filters:\n ... scale V->V Scale\n')):
+            res = envcheck.ffmpeg_libass({'state': 'ready'})
+            self.assertEqual(res['state'], 'fallback_only')
+            self.assertEqual(res['renderer'], 'pysubs2_pillow_overlay')
 
     def test_invalid_yaml_is_reported_not_a_traceback(self):
         initialize(self.root)
         (self.root/'workbench.yaml').write_text('active_profiles: [broken')
-        with patch('environment_check.command', return_value={'state':'missing'}), patch('environment_check.node_playwright', return_value={'state':'missing'}), patch.dict(os.environ, WORKBENCH_FONT=''):
+        with (
+            patch('environment_check.command', return_value={'state':'missing'}),
+            patch('environment_check.node_playwright', return_value={'state':'missing'}),
+            patch('environment_check.node_remotion', return_value={'state':'missing'}),
+            patch('environment_check.ffmpeg_libass', return_value={'state':'missing', 'renderer':'pysubs2_pillow_overlay'}),
+            patch.dict(os.environ, WORKBENCH_FONT=''),
+        ):
             report = envcheck.check(self.root)
         self.assertEqual(report['status'], 'needs_setup')
         self.assertTrue(report['configuration']['errors'])
 
     def test_selected_edge_dependency_is_required_without_blocking_js_core(self):
         initialize(self.root)
-        with patch('environment_check.command', return_value={'state':'ready', 'version':'v22.0.0'}), patch('environment_check.node_playwright', return_value={'state':'ready'}), patch('workbench_config.resolve_font', return_value=self.root/'font'), patch('environment_check.importlib.util.find_spec', side_effect=lambda n: None if n=='edge_tts' else object()):
+        with (
+            patch('environment_check.command', return_value={'state':'ready', 'version':'v22.0.0'}),
+            patch('environment_check.node_playwright', return_value={'state':'ready'}),
+            patch('environment_check.node_remotion', return_value={'state':'ready'}),
+            patch('environment_check.ffmpeg_libass', return_value={'state':'fallback_only', 'renderer':'pysubs2_pillow_overlay'}),
+            patch('workbench_config.resolve_font', return_value=self.root/'font'),
+            patch('environment_check.importlib.util.find_spec', side_effect=lambda n: None if n=='edge_tts' else object()),
+        ):
             report = envcheck.check(self.root)
         self.assertTrue(report['core_ready'])
         self.assertEqual(report['status'], 'needs_setup')

@@ -111,6 +111,100 @@ export const hash = (n: number) => {
   const v = Math.sin(n * 127.13 + 41.17) * 43758.5453;
   return v - Math.floor(v);
 };
+
+/** Parabolic paper-card arrival onto the desk: deterministic spring settle
+ * paired with vertical lift, dynamic tilt, and a normalized `lift01` signal for shadow spread.
+ */
+export function landPose(
+  t: number,
+  start: number,
+  from: Pose,
+  to: Pose,
+  options: { lift?: number; entryTilt?: number; preset?: SpringPreset; settleWindow?: number } = {},
+): Pose & { lift01: number } {
+  const preset: SpringPreset = options.preset ?? SPRING.paper;
+  const dt = t - start;
+  const p = dt <= 0 ? 0 : springEase(dt, preset.stiffness, preset.damping, preset.mass ?? 1);
+  const win = Math.max(0.12, options.settleWindow ?? 0.55);
+  const arcP = dt <= 0 ? 0 : progress(t, start, start + win);
+  const lift01 = dt <= 0 || arcP >= 1 ? 0 : Math.max(0, Math.sin(Math.PI * arcP));
+  return {
+    x: mix(from.x, to.x, p),
+    y: mix(from.y, to.y, p) - (options.lift ?? 26) * lift01,
+    rotation: mix(from.rotation ?? 0, to.rotation ?? 0, p) + (options.entryTilt ?? 0.045) * lift01,
+    scale: mix(from.scale ?? 1, to.scale ?? 1, p),
+    ...(from.opacity !== undefined || to.opacity !== undefined
+      ? { opacity: mix(from.opacity ?? 1, to.opacity ?? 1, p) }
+      : {}),
+    lift01,
+  };
+}
+
+/** Subtle organic breathing offset for settled paper pieces without jittering the stage.
+ * Pass `settleBefore` (with optional `fadeWindow`) to damp motion cleanly to zero before a cut.
+ */
+export function aliveBreath(
+  t: number,
+  seed = 1,
+  options: { ampY?: number; ampRot?: number; hz?: number; settleBefore?: number; fadeWindow?: number } = {},
+): { dx: number; dy: number; rotation: number } {
+  let env = 1;
+  if (options.settleBefore !== undefined) {
+    if (t >= options.settleBefore) return { dx: 0, dy: 0, rotation: 0 };
+    const win = Math.max(0.05, options.fadeWindow ?? 0.6);
+    const fadeStart = options.settleBefore - win;
+    if (t > fadeStart) {
+      env = 1 - smooth(phase(t, fadeStart, options.settleBefore));
+    }
+  }
+  const phi = hash(seed) * Math.PI * 2;
+  const w = t * Math.PI * 2 * (options.hz ?? 0.42) + phi;
+  const ampY = (options.ampY ?? 2.2) * env;
+  const ampRot = (options.ampRot ?? 0.011) * env;
+  return {
+    dx: Math.cos(w * 0.7) * (ampY * 0.35),
+    dy: Math.sin(w) * ampY,
+    rotation: Math.sin(w * 0.85 + 0.6) * ampRot,
+  };
+}
+
+/** Shot-aware breathing that fades smoothly to exact zero before the 15/16 tail sample (`pose11`). */
+export function settledBreath(
+  t: number,
+  span: number,
+  seed = 1,
+  options: { ampY?: number; ampRot?: number; hz?: number; tailMargin?: number; fadeWindow?: number } = {},
+): { dx: number; dy: number; rotation: number } {
+  const margin = Math.max(0.2, options.tailMargin ?? 1.6);
+  return aliveBreath(t, seed, {
+    ampY: options.ampY,
+    ampRot: options.ampRot,
+    hz: options.hz,
+    settleBefore: Math.max(0, span - margin),
+    fadeWindow: options.fadeWindow,
+  });
+}
+
+/** Shot-aware breathing convenience wrapper supporting numeric span or `{ start, end }` beat. */
+export function shotBreath(
+  t: number,
+  spanOrBeat: number | { start: number; end: number },
+  seed = 1,
+  options: { ampY?: number; ampRot?: number; hz?: number; tailMargin?: number; fadeWindow?: number } = {},
+): { dx: number; dy: number; rotation: number } {
+  const span =
+    typeof spanOrBeat === "number"
+      ? Math.max(0.5, spanOrBeat)
+      : Math.max(0.5, spanOrBeat.end - spanOrBeat.start);
+  const margin = Math.max(options.tailMargin ?? 1.65, span * 0.17);
+  return settledBreath(t, span, seed, { ...options, tailMargin: margin });
+}
+
+/** Discrete stepped index with phase offset to keep global progress/calendar switches clear of shot cuts. */
+export function phaseShiftStep(progress01: number, steps: number, offset = 0.25): number {
+  const count = Math.max(1, Math.floor(steps));
+  return Math.min(count - 1, Math.max(0, Math.floor(clamp(progress01) * count + offset)));
+}
 // Damped ring-down shared by clips and dropped sheets. `tracks.settle` re-exports
 // the same curve; it lives here so action solvers stay free of a cycle.
 const ringDown = (t: number, contact: number, amplitude: number, decay: number, hz: number) => {

@@ -63,6 +63,17 @@ LINEAGE_TEXT_EXTS = {
 }
 LINEAGE_SKIP_DIRS = {"assets", "qa", "out", "dist", "node_modules", "__pycache__", "entries"}
 LINEAGE_AUDIO_KEEP = {"narration_beats.json", "mix-receipt.json", "timing-receipt.json", "narration.json", "pronunciation-review.json"}
+SCRIPT_DIR = Path(__file__).resolve().parent
+if str(SCRIPT_DIR) not in sys.path:
+    sys.path.insert(0, str(SCRIPT_DIR))
+DELIVERY_REQUIRED_FILES = (
+    "video.mp4",
+    "封面.jpg",
+    "subtitles.srt",
+    "小红书文案.txt",
+    "微信视频号文案.txt",
+    "发布交付包.md",
+)
 
 
 def dir_stats(directory: Path) -> tuple[int, int]:
@@ -533,7 +544,7 @@ def retire_revisions(
 
     if not apply:
         return {
-            "status": "planned",
+            "status": "planned" if candidates else "noop_no_candidates",
             "retired_revisions_count": len(candidates),
             "total_files": total_files,
             "total_allocated_bytes": total_alloc,
@@ -542,10 +553,38 @@ def retire_revisions(
             "samples": [c["relative_project"] for c in candidates[:10]],
         }
 
+    if not candidates:
+        return {
+            "schema": "medical_video_retired_revisions_archive/v1",
+            "status": "noop_no_candidates",
+            "created_at": stamp(),
+            "archive": None,
+            "lineage_archive": None,
+            "archive_sha256": None,
+            "archive_bytes": 0,
+            "retired_revisions": 0,
+            "retired_revisions_removed": 0,
+            "lineage_files_archived": 0,
+            "removed_files": 0,
+            "reclaimed_allocated_bytes": 0,
+            "reclaimed_allocated_gib": 0.0,
+            "protected_projects_count": len(protected),
+            "revisions": [],
+        }
+
     retention.assert_idle(workspace)
     if archive_path is None:
-        archive_path = workspace / f"archive/retired-revisions-lineage-{time.strftime('%Y%m%d')}.tar.gz"
-    archive_path = archive_path.resolve()
+        base_stem = f"retired-revisions-lineage-{time.strftime('%Y%m%d-%H%M%S')}"
+        candidate_archive = workspace / f"archive/{base_stem}.tar.gz"
+        suffix = 2
+        while candidate_archive.exists():
+            candidate_archive = workspace / f"archive/{base_stem}-{suffix}.tar.gz"
+            suffix += 1
+        archive_path = candidate_archive.resolve()
+    else:
+        archive_path = archive_path.resolve()
+        if archive_path.exists():
+            raise FileExistsError(f"Refusing to overwrite existing lineage archive: {archive_path}")
     archive_path.parent.mkdir(parents=True, exist_ok=True)
 
     # 1. Pack 100% of lightweight creative/review lineage into verified tar.gz before deleting anything
@@ -618,14 +657,16 @@ def retire_revisions(
 
 
 def prune_archived_deliveries(workspace: Path, *, keep_latest: int = 1, apply: bool = False) -> dict:
-    """Retain at most `keep_latest` newest rollback delivery backups per episode."""
+    """Retain all pinned snapshots plus at most `keep_latest` newest unpinned rollback backups per episode."""
     workspace = workspace.resolve()
+    import delivery_layout
     import plan_workspace_retention as retention
 
     if keep_latest < 0:
         raise ValueError("keep_latest must be >= 0")
     arch_root = workspace / "archive/deliveries"
     to_remove = []
+    pinned_preserved = []
     kept = 0
     if arch_root.is_dir():
         for sdir in sorted(arch_root.iterdir()):
@@ -635,11 +676,22 @@ def prune_archived_deliveries(workspace: Path, *, keep_latest: int = 1, apply: b
                 if not edir.is_dir():
                     continue
                 snaps = sorted([d for d in edir.iterdir() if d.is_dir()], key=lambda p: p.name)
-                if len(snaps) <= keep_latest:
-                    kept += len(snaps)
+                unpinned = []
+                for snap_dir in snaps:
+                    is_pinned, pin_reason = delivery_layout.is_pinned_delivery_snapshot(snap_dir)
+                    if is_pinned:
+                        kept += 1
+                        pinned_preserved.append({
+                            "relative_path": str(snap_dir.relative_to(workspace)),
+                            "reason": pin_reason,
+                        })
+                    else:
+                        unpinned.append(snap_dir)
+                if len(unpinned) <= keep_latest:
+                    kept += len(unpinned)
                     continue
                 kept += keep_latest
-                stale = snaps[: len(snaps) - keep_latest] if keep_latest > 0 else snaps
+                stale = unpinned[: len(unpinned) - keep_latest] if keep_latest > 0 else unpinned
                 for st_dir in stale:
                     fc, al = dir_stats(st_dir)
                     to_remove.append({
@@ -656,6 +708,8 @@ def prune_archived_deliveries(workspace: Path, *, keep_latest: int = 1, apply: b
             "status": "planned",
             "keep_latest": keep_latest,
             "snapshots_kept": kept,
+            "pinned_preserved_count": len(pinned_preserved),
+            "pinned_preserved_samples": pinned_preserved[:20],
             "snapshots_to_remove": len(to_remove),
             "files_to_remove": total_files,
             "allocated_bytes_to_reduce": total_alloc,
@@ -669,10 +723,150 @@ def prune_archived_deliveries(workspace: Path, *, keep_latest: int = 1, apply: b
         "status": "pruned",
         "keep_latest": keep_latest,
         "snapshots_kept": kept,
+        "pinned_preserved_count": len(pinned_preserved),
+        "pinned_preserved_samples": pinned_preserved[:20],
         "snapshots_removed": len(to_remove),
         "files_removed": total_files,
         "allocated_bytes_reduced": total_alloc,
         "allocated_gib_reduced": round(total_alloc / 1024**3, 2),
+    }
+
+
+def pin_delivery_snapshot(
+    workspace: Path,
+    snapshot_dir: Path,
+    *,
+    reason: str = "published_release",
+    release_tag: str | None = None,
+) -> dict:
+    """Pin an archived delivery snapshot so rolling retention never removes it."""
+    workspace = workspace.resolve()
+    arch_root = (workspace / "archive/deliveries").resolve()
+    snap = snapshot_dir.resolve()
+    if not snap.is_dir() or not snap.is_relative_to(arch_root):
+        raise ValueError(f"Snapshot must be a directory inside {arch_root}: {snapshot_dir}")
+    video = snap / "publish/video.mp4"
+    marker = {
+        "schema": "medical_video_delivery_pin/v1",
+        "pinned_at": stamp(),
+        "reason": reason,
+        "release_tag": release_tag,
+        "snapshot": str(snap.relative_to(workspace)),
+        "video_sha256": sha256_file(video) if video.is_file() else None,
+    }
+    write_json(snap / ".pinned.json", marker)
+    return {"status": "pinned", **marker}
+
+
+def verify_delivery_rollback(
+    workspace: Path,
+    snapshot_dir: Path,
+    *,
+    restore_to: Path | None = None,
+) -> dict:
+    """Verify archived delivery completeness/SHA-256 and optionally restore + decode FLACs."""
+    workspace = workspace.resolve()
+    snap = snapshot_dir.resolve()
+    errors: list[str] = []
+    pub = snap / "publish"
+    rec = snap / "record"
+    if not pub.is_dir():
+        errors.append("missing publish/ directory")
+    if not rec.is_dir():
+        errors.append("missing record/ directory")
+
+    manifest_path = rec / "manifest.json"
+    manifest: dict = {}
+    if not manifest_path.is_file():
+        errors.append("missing record/manifest.json")
+    else:
+        try:
+            manifest = read_json(manifest_path)
+        except (OSError, ValueError) as exc:
+            errors.append(f"invalid record/manifest.json: {exc}")
+
+    debt_codes = {
+        d.get("code") for d in (manifest.get("quality_debt") or []) if isinstance(d, dict)
+    }
+    required_files = [
+        fn
+        for fn in DELIVERY_REQUIRED_FILES
+        if not ("release_copy_pending" in debt_codes and fn in ("小红书文案.txt", "微信视频号文案.txt"))
+    ]
+    missing_files = [
+        fn for fn in required_files if not (pub / fn).is_file() or (pub / fn).stat().st_size == 0
+    ]
+    if missing_files:
+        errors.append(f"missing or empty publish files: {missing_files}")
+
+    video_path = pub / "video.mp4"
+    actual_sha = sha256_file(video_path) if video_path.is_file() else None
+    expected_sha = manifest.get("sha256")
+    if expected_sha and actual_sha != expected_sha:
+        errors.append(f"video.mp4 SHA mismatch: expected {expected_sha}, got {actual_sha}")
+
+    compaction_path = rec / "storage-compaction.json"
+    compaction_records: list[dict] = []
+    if compaction_path.is_file():
+        try:
+            comp = read_json(compaction_path)
+            compaction_records = list(comp.get("records") or [])
+            for item in compaction_records:
+                flac_name = Path(str(item.get("target", ""))).name
+                if not flac_name or not (rec / flac_name).is_file():
+                    errors.append(f"missing archived FLAC: {flac_name}")
+        except (OSError, ValueError) as exc:
+            errors.append(f"invalid storage-compaction.json: {exc}")
+
+    restored_audio_verified = 0
+    restored_video_sha = None
+    if restore_to is not None and not errors:
+        restore_root = restore_to.resolve()
+        if restore_root.exists() and any(restore_root.iterdir()):
+            raise ValueError(f"restore_to directory must be empty or absent: {restore_root}")
+        restore_root.mkdir(parents=True, exist_ok=True)
+        shutil.copytree(pub, restore_root / "publish", dirs_exist_ok=True)
+        shutil.copytree(rec, restore_root / "record", dirs_exist_ok=True)
+        restored_video_sha = sha256_file(restore_root / "publish/video.mp4")
+        if expected_sha and restored_video_sha != expected_sha:
+            errors.append(f"restored video SHA mismatch: {restored_video_sha} != {expected_sha}")
+        if compaction_records:
+            flac_bin = shutil.which("flac")
+            if not flac_bin:
+                errors.append("flac binary missing; cannot restore archived WAV records")
+            else:
+                for item in compaction_records:
+                    src_name = Path(str(item.get("source", ""))).name
+                    tgt_name = Path(str(item.get("target", ""))).name
+                    want_sha = item.get("restored_wav_sha256") or item.get("source_sha256")
+                    flac_file = restore_root / "record" / tgt_name
+                    wav_file = restore_root / "record" / src_name
+                    try:
+                        subprocess.run(
+                            [flac_bin, "-s", "-d", "--keep-foreign-metadata", "-f", str(flac_file), "-o", str(wav_file)],
+                            check=True,
+                            stdout=subprocess.DEVNULL,
+                            stderr=subprocess.DEVNULL,
+                        )
+                        got_wav_sha = sha256_file(wav_file)
+                        if want_sha and got_wav_sha != want_sha:
+                            errors.append(f"restored WAV SHA mismatch for {src_name}: {got_wav_sha} != {want_sha}")
+                        else:
+                            restored_audio_verified += 1
+                    except (OSError, subprocess.CalledProcessError) as exc:
+                        errors.append(f"flac decode failed for {tgt_name}: {exc}")
+
+    return {
+        "schema": "medical_video_delivery_rollback_verify/v1",
+        "status": "verified" if not errors else "failed",
+        "checked_at": stamp(),
+        "snapshot": str(snap.relative_to(workspace)) if snap.is_relative_to(workspace) else str(snap),
+        "expected_video_sha256": expected_sha,
+        "actual_video_sha256": actual_sha,
+        "restored_to": str(restore_to.resolve()) if restore_to is not None else None,
+        "restored_video_sha256": restored_video_sha,
+        "restored_audio_verified_count": restored_audio_verified,
+        "errors": errors,
     }
 
 
@@ -1063,6 +1257,19 @@ def main() -> None:
     p.add_argument("--apply", action="store_true")
     p.add_argument("--output", type=Path)
 
+    p = sub.add_parser("pin-delivery")
+    p.add_argument("--workspace", type=Path, required=True)
+    p.add_argument("--snapshot", type=Path, required=True)
+    p.add_argument("--reason", default="published_release")
+    p.add_argument("--release-tag")
+    p.add_argument("--output", type=Path)
+
+    p = sub.add_parser("verify-rollback")
+    p.add_argument("--workspace", type=Path, required=True)
+    p.add_argument("--snapshot", type=Path, required=True)
+    p.add_argument("--restore-to", type=Path)
+    p.add_argument("--output", type=Path)
+
     p = sub.add_parser("cow-dedup")
     p.add_argument("--workspace", type=Path, required=True)
     p.add_argument("--min-size", type=int, default=65536)
@@ -1104,6 +1311,10 @@ def main() -> None:
         res = retire_revisions(ws, archive_path=args.archive, apply=args.apply)
     elif args.command == "prune-delivery-archives":
         res = prune_archived_deliveries(ws, keep_latest=args.keep_latest, apply=args.apply)
+    elif args.command == "pin-delivery":
+        res = pin_delivery_snapshot(ws, args.snapshot, reason=args.reason, release_tag=args.release_tag)
+    elif args.command == "verify-rollback":
+        res = verify_delivery_rollback(ws, args.snapshot, restore_to=args.restore_to)
     elif args.command == "cow-dedup":
         res = cow_dedup(ws, min_size=args.min_size, apply=args.apply)
     elif args.command == "prune-work":

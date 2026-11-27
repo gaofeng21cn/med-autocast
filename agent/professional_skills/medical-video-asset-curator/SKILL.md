@@ -13,7 +13,7 @@ description: 保管、检索和策展医学代码动画的可复用纸件、环�
 
 人物准备先运行 `media_asset_library character-coverage`，再用 `query --character-role <角色> --pose <姿态>` 定位精确版本并看原件。覆盖表只说明登记候选，发型/服装不同的姿态不能冒充同一角色。新版本先真实 `use` 到小样项目，回读 `registration_readback` 和 manifest 的 bounds/anchors，再交导演试装；版本号遵循含载荷描述的原记录合同。锚点只登记真实部位和可见手，坐面在臀部承托边缘。进入初稿前运行 `scripts/first_draft_preflight.py --project <单集工程> --pretty`，把缺标定、程序拼片和小尺寸复杂对象保留为待审定位。完整方法见人物与尺度契约。
 
-作者档案启用 `default_for_clinician` 时，所有医生身份、`generic` 查询、精确外库医生 ID 与自定义医生别名均解析到作者私有身份；本机当前作者为 Dr.咩 时直接使用 Dr.咩，缺姿态沿作者母版补齐，不退回公共医生。历史工程修订时建立独立版本，查询并真实取用作者精确姿态，更新源码和逐镜清单，再回读实际图像、锚点和身份；作者人物不进入公共 MAC 资产库。
+作者档案启用 `default_for_clinician` 时，所有医生身份、`generic` 查询、精确外库医生 ID 与自定义医生别名均解析到作者私有身份，缺姿态沿作者母版补齐，不退回公共医生。历史工程修订时建立独立版本，查询并真实取用作者精确姿态，更新源码和逐镜清单，再回读实际图像、锚点和身份；作者人物不进入公共 MAC 资产库。
 
 先以明确的 `workspace_root` 和当前单集登记定位材料。方法见[素材保管与策展](../../../runtime/workbench/docs/23_可复用素材保管与策展.md)，实际调用见[工作台工具接入](../../../docs/workspace-adapter.md)。素材文件属于制作工作区，不复制进智能体源码或随包示例。
 
@@ -65,3 +65,9 @@ description: 保管、检索和策展医学代码动画的可复用纸件、环�
 新素材登记可附 `discovery` 标签：category、aliases、story_roles、actions等；外库同步保留人工策展发现层。几何绑定原件revision，换图不沿用旧bounds。缺少分类不阻断按标题、用途发现和新创。完整方法见随包 docs/32_资产发现与可重组事件SOP.md。
 
 制作、修订收尾和清理前按[媒体文件生命周期规范](../../../runtime/workbench/docs/50_媒体文件生命周期与存储治理规范.md)先判定保留必要性，再清理派生物或无损保留必要证据。严禁在单集目录长期留存项目级 `node_modules`（构建统一使用共享依赖池 `shared_node_deps`），收尾运行 `paper_project prune --apply` 或 `plan_workspace_retention check` 复核。源文件、来源/许可、当前输入、在制返修和问题单引用受保护；不可重建的唯一来源先保全。默认不跨集复制缓存、历史混音和整套审看片。
+
+## 稀疏素材补强、通用原语沉淀与资产使用边界
+
+- 面对 `audit_fullstack_opportunity.py` 标出的稀疏素材集或高几何占比剧集，优先检索复用或新创真正分层的透明组件，按实际可见内容 `visible_bounds` 与 `human_scale` 校准并入库；完整库包须在 `record.json` 写齐 `revision`、`entry`、`files`（含精确 `sha256`/`bytes`）与 `asset` 声明，并在 `catalog.json` 登记，确保 `paper_project.py library --use` 一次可用。
+- 每批实战提炼出的通用质感与表演原语及时沉淀到 `templates/animation/paper_theatre/src/kit/`（如 `contactShadow`、`landGroup`、`shotBreath`、`actor.ts` `drawForegroundDesk`、`rooms.ts` `drawCloseWallBackdrop`），并保持公共模板与公共资产库零作者私有绑定（作者私有主讲人形象与声线始终保持 `public_export: false`）。
+- 入库资产须标明适用景别与物理边界：半身表演图集须配无地板纯墙与实心贴底前景桌，严禁配带腿镂空桌；高举指墙类立绘限高墙挂图/白板远景慎用；手部特写组件仅限真实物理比例+物理接触镜头，严禁与抽象放大图解混拼。

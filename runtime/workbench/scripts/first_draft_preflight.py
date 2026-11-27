@@ -18,6 +18,7 @@ from pathlib import Path
 from typing import Any
 
 from audit_character_and_scale_contract import inspect_source, manifest_assets, project_sources
+from audit_fullstack_opportunity import analyze_project as analyze_fullstack_opportunity
 from check_animation_assets import check_assets
 from scene_scale_contract import (
     READY_STATUSES,
@@ -65,7 +66,27 @@ def _manifest_brief(manifest_path: Path) -> dict[str, Any]:
             "check": {"status": "missing_manifest"},
         }
     manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
-    check = check_assets(manifest_path)
+    hydration_path = manifest_path.parent / "storage-hydration.json"
+    hydrated_shas: dict[str, str] = {}
+    if hydration_path.is_file():
+        try:
+            hdata = json.loads(hydration_path.read_text(encoding="utf-8"))
+            hydrated_shas = {
+                str(e.get("rel_path")): str(e.get("sha256"))
+                for e in (hdata.get("entries") or [])
+                if isinstance(e, dict) and e.get("rel_path") and e.get("sha256")
+            }
+        except (OSError, ValueError):
+            hydrated_shas = {}
+    try:
+        check = check_assets(manifest_path)
+    except ValueError as exc:
+        msg = str(exc)
+        prefix = "Missing asset or evidence: "
+        if hydrated_shas and msg.startswith(prefix) and msg[len(prefix):] in hydrated_shas:
+            check = {"status": "sealed_dehydrated", "hydrated_entries": len(hydrated_shas)}
+        else:
+            raise
     assets = manifest.get("assets", [])
     by_id = {item.get("asset_id"): item for item in assets if isinstance(item, dict)}
     used_ids = _used_asset_ids(manifest)
@@ -86,8 +107,14 @@ def _manifest_brief(manifest_path: Path) -> dict[str, Any]:
         scale = item.get("human_scale") or {}
         calibration = scale.get("calibration") or {}
         if calibration.get("status") == "calibrated" and calibration.get("source_sha256"):
-            source = (manifest_path.parent / item.get("path", "")).resolve()
-            if source.is_file() and sha256_file(source) == calibration.get("source_sha256"):
+            rel_item = item.get("path", "")
+            source = (manifest_path.parent / rel_item).resolve()
+            actual_sha = (
+                sha256_file(source)
+                if source.is_file()
+                else hydrated_shas.get(rel_item)
+            )
+            if actual_sha == calibration.get("source_sha256"):
                 calibrated += 1
                 continue
         pending.append(item.get("asset_id"))
@@ -301,6 +328,37 @@ def preflight(project: Path, manifest_ref: Path | None = None,
         debts.append("shared_scene_scale_visual_review_pending")
     if brief.get("complex_assets"):
         debts.append("complex_object_readability_review_pending")
+    full_audit = analyze_fullstack_opportunity(project) or {}
+    actor_opp = full_audit.get("actor_opportunities") or {}
+    sb_opp = full_audit.get("storyboard_opportunities") or {}
+    hints: list[str] = []
+    if actor_opp.get("bust_behind_hollow_desk", 0) > 0:
+        debts.append("bust_behind_hollow_desk_detected")
+        hints.append("发现 drawActorAtlas 半身图集搭配带腿镂空 desk()，须改为无地板纯墙 drawCloseWallBackdrop + drawForegroundDesk 实心前景桌")
+    if actor_opp.get("rapid_actor_switches", 0) > 0:
+        debts.append("rapid_actor_switches_detected")
+        hints.append("发现短间隔急促换姿（<1.4s），按稳健自然优先原则收敛为单镜 <= 1 次自然切换且停留 >= 1.8s")
+    if actor_opp.get("hard_cut_pose_switches", 0) > 0:
+        debts.append("hard_cut_pose_switches_detected")
+        hints.append("发现源码内三元硬切换姿，请迁移至 kit/actor.ts 的 drawActorPose / drawActorAtlas")
+    if sb_opp.get("heading_inside_camera", 0) > 0:
+        debts.append("heading_inside_camera_detected")
+        hints.append("发现 heading() 放在 stage.camera() 作用域内，推镜时易将顶栏标题推出画布上沿（y < 0），请移到 camera() 之外")
+    if actor_opp.get("uses_legacy_stiff_poses"):
+        debts.append("legacy_stiff_actor_assets_present")
+        hints.append(f"清单仍含旧代僵硬姿态资产 {actor_opp['uses_legacy_stiff_poses']}，建议优先替换为自然表演图集/姿态")
+    actor_naturalness = {
+        "has_actor": bool(actor_opp.get("has_actor")),
+        "uses_actor_kit": bool(actor_opp.get("uses_actor_kit")),
+        "has_acting_atlas": bool(actor_opp.get("has_acting_atlas")),
+        "bust_behind_hollow_desk": int(actor_opp.get("bust_behind_hollow_desk") or 0),
+        "rapid_actor_switches": int(actor_opp.get("rapid_actor_switches") or 0),
+        "hard_cut_pose_switches": int(actor_opp.get("hard_cut_pose_switches") or 0),
+        "heading_inside_camera": int(sb_opp.get("heading_inside_camera") or 0),
+        "legacy_stiff_used": list(actor_opp.get("uses_legacy_stiff_poses") or []),
+        "stiff_actor_risk": bool(actor_opp.get("stiff_actor_risk")),
+        "hints": hints,
+    }
     # Naturalness is intentionally not a JSON-form gate.  Keep deterministic
     # evidence binding visible, while leaving the semantic decision to visual
     # QA.  Missing or stale bindings are reported in the brief itself.
@@ -316,6 +374,7 @@ def preflight(project: Path, manifest_ref: Path | None = None,
         ),
         "manifest": brief,
         "naturalness": naturalness,
+        "actor_naturalness": actor_naturalness,
         "interaction_source": interactions,
         "sources": source_reports,
         "character_scale_locator_count": len(character_locators),
@@ -325,7 +384,7 @@ def preflight(project: Path, manifest_ref: Path | None = None,
             "首次真实素材试装用原尺寸和手机宽核对人物身体段、躯干与腿和椅子朝向、座面承托及脚底。查看接近、承重、落定、遮挡最大处和邻镜",
             "按源码定位的镜号和时码核对落脚、椅背、持物接触和前景。首轮预览同时看整件道具的遮挡极值、纸面露出与文字显隐",
             "复杂主体按解释任务取得足够阅读面积；必要时改近景、拆分或换简化版本",
-            "确认医生镜头实际加载作者私有 Dr.咩，回读源码路径与当前图像",
+            "确认医生镜头实际加载当前作者私有主讲人形象，回读源码路径与当前图像",
             "核对有意遮挡是否仍让观众读清关键脸部、手部、身体连接与握持点。查文字归属、动作因果和去文字读图，并写入qa/naturalness-review.json",
             "完成代表镜头、整集 animatic、正常速度动态、最终 MP4 听辨和医学复核",
         ],

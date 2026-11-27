@@ -210,6 +210,75 @@ function patient() {
             self.assertIn("scale_contract_human_asset_ids_mismatch", report["quality_debt"])
             self.assertIn("same_scene_test_fit_pending", report["quality_debt"])
 
+    def test_actor_naturalness_heading_in_camera_and_revise_refresh_kit(self):
+        import paper_project
+
+        with tempfile.TemporaryDirectory() as tmp:
+            ws = Path(tmp).resolve()
+            (ws / "workbench.yaml").write_text("schema: test\n", encoding="utf-8")
+            project = ws / "productions/s/e/v1"
+            (project / "src/kit").mkdir(parents=True)
+            (project / "src/kit/acting.ts").write_text("// custom helper\n", encoding="utf-8")
+            (project / "src/kit/actor.ts").write_text("// stale kit\n", encoding="utf-8")
+            (project / "score.json").write_text(
+                json.dumps({"duration": 5.0, "shots": [{"id": "S01", "start": 0.0, "end": 5.0}]}),
+                encoding="utf-8",
+            )
+            (project / "narration.json").write_text("{}\n", encoding="utf-8")
+            (project / "project.json").write_text(
+                json.dumps({
+                    "schema": "paper_project/v1",
+                    "series_id": "s",
+                    "episode_id": "e",
+                    "narration": "narration.json",
+                    "score": "score.json",
+                    "assets": "asset_manifest.json",
+                }),
+                encoding="utf-8",
+            )
+            (project / "sheet.png").write_bytes(b"sheet")
+            (project / "asset_manifest.json").write_text(
+                json.dumps({
+                    "schema": "medical_animation_assets/v1",
+                    "assets": [{
+                        "asset_id": "presenter_acting_v2__sheet",
+                        "path": "sheet.png",
+                        "visual_layer": "character",
+                        "visual_meaning": "presenter atlas",
+                        "must_not_imply": "not a diagnosis",
+                        "medical": False,
+                        "source_type": "authored_graphic",
+                        "requires_alpha": False,
+                    }],
+                    "shots": [{"shot_id": "S01", "asset_ids": ["presenter_acting_v2__sheet"]}],
+                }),
+                encoding="utf-8",
+            )
+            (project / "src/episodeshots.ts").write_text(
+                "import { drawActorAtlas } from './kit/actor';\n"
+                "export const shots = [{ id: 'S01', render(c: any) {\n"
+                "  c.stage.camera({x:640,y:360,zoom:1.1}, () => { heading(c, 'title'); });\n"
+                "  drawActorAtlas(c.stage, c.t, { spec: {} as any, beats: [{ at: 0, pose: 'a' }, { at: 0.8, pose: 'b' }], x: 960, y: 500, spanOrBeat: 5, context: c });\n"
+                "  desk(c, 960, 440, 560, 560);\n"
+                "} }];\n",
+                encoding="utf-8",
+            )
+            report = preflight(project, scan_interactions=False)
+            an = report["actor_naturalness"]
+            self.assertEqual(an["bust_behind_hollow_desk"], 1)
+            self.assertEqual(an["rapid_actor_switches"], 1)
+            self.assertEqual(an["heading_inside_camera"], 1)
+            self.assertIn("bust_behind_hollow_desk_detected", report["quality_debt"])
+            self.assertIn("heading_inside_camera_detected", report["quality_debt"])
+
+            rev = ws / "productions/s/e/v2"
+            args = type("Args", (), {"workspace": ws, "project": rev, "from_project": project, "refresh_kit": True})()
+            res = paper_project.revise(args)
+            self.assertTrue(res["refreshed_kit"])
+            self.assertTrue((rev / "src/kit/acting.ts").is_file())
+            self.assertIn("drawForegroundDesk", (rev / "src/kit/actor.ts").read_text(encoding="utf-8"))
+            self.assertIn("drawCloseWallBackdrop", (rev / "src/kit/rooms.ts").read_text(encoding="utf-8"))
+
 
 if __name__ == "__main__":
     unittest.main()

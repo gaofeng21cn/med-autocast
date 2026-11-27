@@ -154,3 +154,8 @@ H3对照按[研究方案第6节](../../../runtime/workbench/docs/12_H3调研与�
 相机有推进、缩放或漂移不构成基本意思、纵深或动作达标的证据。判定与返修边界见[纵深与媒介统一](../../../runtime/workbench/docs/35_纸剧场纵深与媒介统一SOP.md)。
 
 分段配音逐段核对正文/配音输入→源 take→拼接轨→归一化轨→最终 mix→MP4 音轨的首词、尾词和真实采样边界。先区分源 take 漏读、拼接截字或错位、混音遮盖以及旧轨错配；前导静音可能推迟起声，但本身不会删除词。能量、频谱和 ASR 仅用于定位，不能按阈值裁掉清辅音或宣布首字完整。修复真实音轨后按新时长 retime、build、mix、render，并核对最终交付，不能为保持旧时长删声或变速。逐段接缝与完整听感分别记录，没有实际听辨的范围保留 pending。详见[旁白拼接边界](../../../runtime/workbench/docs/33_旁白拼接边界SOP.md)与[逐集表意与段首完整性验收](../../../runtime/workbench/docs/39_逐集表意与段首完整性验收.md)。
+
+## 四层问题根因路由与自然度四问复核
+
+- 结合 `scripts/audit_fullstack_opportunity.py` 与 `scripts/first_draft_preflight.py` 做多层归因路由：均等节拍或 `>= 13s` 复合长镜退回导演按 `cues` 边界零漂移重切；口播过载退回策划精炼；素材稀疏退回策展补分层透明件；源码结构定位须核对 `stiff_actor_risk == False`、`hard_cut_pose_switches == 0`、`rapid_actor_switches == 0`、`bust_behind_hollow_desk == 0`、`heading_inside_camera == 0`。
+- **自然度四问与 360px 实宽复核**：除联系表与 `mobile-360.jpg`（重点查楷体细笔画、空纸先出孤点与小卡压桌沿）外，代表片须抽取 `~0.35s` 连续动态条（审手势细节时附 1 张原分辨率帧避免缩略图误判），严问四题：① 抽掉该手势是否损表意？② 真人诊室交谈会不会这样做？③ 是否混拼“抽象放大图解”与“写实人手/物体”？④ 若为齐腰半身像，是否严格配无地板纯墙 `drawCloseWallBackdrop` + 贴底实心前景桌 `drawForegroundDesk()` 无镂空悬空感？同步核查落地接触影、`pose11` 归零与透明边缘干净度。

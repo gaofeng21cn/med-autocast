@@ -9,7 +9,7 @@ metadata:
 
 人物储备先查 `media_asset_library character-coverage`，按角色/姿态查精确候选并看原件，缺口回素材准备。新增入库需验证真实取用与 manifest 的锚点回读，再由代表动作与完整代表集验证下限；覆盖槽位和资产版本数量不能当动画成熟度。将已证问题回写导演、制作、策展与QA的最早责任入口，旧片按实际影响更新。
 
-作者档案启用 `default_for_clinician` 时，所有医生身份、性别称谓、`generic` 查询、精确外库医生 ID、自定义别名或素材命中都解析到作者私有完整人物；本机当前作者为 Dr.咩 时直接使用 Dr.咩。恢复历史工程时同时检查源码实际加载路径与 manifest，建立独立修订并逐集回看；作者资产不进入公共库，也不为品牌一致性强制每集露脸。
+作者档案启用 `default_for_clinician` 时，所有医生身份、性别称谓、`generic` 查询、精确外库医生 ID、自定义别名或素材命中都解析到作者私有完整人物。恢复历史工程时同时检查源码实际加载路径与 manifest，建立独立修订并逐集回看；作者资产不进入公共库，也不为品牌一致性强制每集露脸。
 
 ## 模块化纸剧场生产
 
@@ -122,3 +122,8 @@ H3按[调研策略](../../../runtime/workbench/docs/12_H3调研与制作策略.m
 制作、修订收尾和清理前按[媒体文件生命周期规范](../../../runtime/workbench/docs/50_媒体文件生命周期与存储治理规范.md)区分**制作态过程数据**与**必存权威数据**（`working` → `sealed` → `retired`）。严禁在单集目录单独执行 `npm ci`/`npm install` 生成项目级 `node_modules`，统一通过 `paper_project build` 复用工作区共享构建依赖池（`.cache/node-deps/<fingerprint>`）；单集审看收尾运行 `paper_project prune --apply`，正式交付验收后运行 `paper_project seal --apply` 转入封存态（后续返修或构建会自动 `hydrate` 还原）；批次结束后运行 `project_lifecycle optimize --apply`（一键完成常规清理、退役修订谱系归档退场、交付备份限额裁剪、批量封存、APFS CoW 物理块去重与可选 `--include-work-prune`），并以 `plan_workspace_retention check` + `project_lifecycle report` 核对膨胀项归零。源文件、来源/许可、在制返修和问题单引用受保护；不可重建的唯一来源先保全。
 
 初稿逐集消费[重拍经验与初稿进化](../../../runtime/workbench/docs/50_纸剧场重拍经验与初稿进化.md)：核对相邻集实际故事、构图与事件、手物接触、现实尺度和图解层；缺失或低质量主体用 ImageGen 补透明原件，并在浅、深、彩底实际合成看边缘；去除“非真实影像”等无医学作用文字。完成后填写[单集经验沉淀卡](../../../runtime/workbench/templates/series/09_episode_experience_note.md)，把真实证据、可复用范围和失败条件带入下一集。
+
+## 稳健自然批次验收、修订同步与精确分层台账
+
+- 新制作或返修批次统一采用 `paper_project.py revise --from-project <old> --refresh-kit` 同步最新模板 `src/kit/*.ts`；纯视觉或分镜说明更新时 `mix --reuse-from-project <old>` 自动唤醒已封存脱水源工程并保持 `audio_sha256` 零漂移；打包交付后及时执行 `project_lifecycle.py verify-rollback` 抽检回滚包并用 `paper_project.py seal --apply` 封存已验收工程，用 `project_lifecycle.py pin-delivery` 保护已审定/上线版本。
+- 批次验收除核验音画 SHA-256、预览 0 错与 `audit_motion` 0 债外，须确认含人物集通过 `audit_fullstack_opportunity.py` 与 `first_draft_preflight.py` 定位项（`stiff_actor_risk == False`、`bust_behind_hollow_desk == 0`、`rapid_actor_switches == 0`、`hard_cut_pose_switches == 0`、`heading_inside_camera == 0`），并按实际版本档位如实统计台账（严禁把尚未完成新版动态与表演升级的早期交付混算进已达标集数）。

@@ -94,3 +94,9 @@ python3 scripts/resolve_motion_audit.py --workspace <workspace>
 该工具只汇集当前 Score 声明与实际引用，生成 work/review/ 下的待审材料；不写 Score，不读取源码/帧后假称动作已发生，不自动认证停留或跨镜连续性。历史 motion_director_evidence/v1 自动补写按未核实声明处理；不要为改变审计数量重渲染全季。真实画面改动后再重跑受影响构建/预览/混音/编码。
 
 声明只帮助导航。是否已经发生、是否清楚和生动，必须查看真实动作及邻镜；没有发展与结果就改本集导演稿/实现，不能用 motion_quality_review 字段掩盖空洞。
+
+## 一等触感与自然表演原语及初稿防线
+
+- **模板一等原语优先**：修订旧工程优先用 `paper_project.py revise --from-project <old> --refresh-kit` 同步最新 `src/kit/{motion,labels,tracks,staging,rooms,actor,types,player}.ts`；桌面落地优先调用 `kit/staging.ts` 的 `contactShadow()` 与 `landGroup()`，温和呼吸用 `kit/motion.ts` 的 `shotBreath()` 保证镜尾 `pose11` 归零停稳；人物动作统一走 `kit/actor.ts`（`drawActorAtlas` / `drawActorPose` / `drawActorWalk`），局部微动模块 `kit/microActor.ts` 仅作重点特写按需增强，不强制全集语音口型。
+- **半身像实心桌与推镜标题红线**：齐腰半身图集（`drawActorAtlas`）必须配 `kit/rooms.ts` `drawCloseWallBackdrop()`（无地板纯墙裁切）与 `kit/actor.ts` `drawForegroundDesk()`（贴画布底边实心前景桌）配 `clipBottomY`，**严禁与带腿镂空 `desk()` 同镜混用**；`heading()` 必须绘制在 `stage.camera()` 作用域之外，避免推镜缩放将标题顶出画布上沿（`y < 0`）。
+- **克制节律、360px 清晰度与同步显隐**：3–5s 短镜最多 1 次转折（2 态，单姿停留 `>= 1.8s`），`drawActorPose` 默认 `blendWindow: 0` 消双影，`drawActorAtlas` 默认 `allowBlink: false` 避跨手势闪烁；单关键帧走姿收束至单步 `<= 70px`；360px 手机实宽下关键卡标题与正文建议 `42–48px` 深墨色且距卡边/桌沿 `>= 12–16px`；清单圆点与文字放同 `opacity` 组同步显现（禁空纸孤点）；双切段与文字显影早于 `0.5 * span - 0.5s` 适配 `mobile-360.jpg`；改 `score.json` 必重跑 `mix --reuse-from-project`（已自动唤醒脱水源工程）。

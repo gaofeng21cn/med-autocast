@@ -301,3 +301,55 @@ export function paperRoom(s: Stage, kind: RoomKind, opts: { seed?: number } = {}
     s.tracking = oldTracking;
   }
 }
+
+/**
+ * Draw a floorless upper-wall backdrop for medium close-ups paired with
+ * waist-up `drawActorAtlas` busts and a solid bottom-flush `drawForegroundDesk`.
+ * Cropping out the floor junction prevents waist-up busts from appearing behind
+ * a ground plane or desk legs.
+ */
+export function drawCloseWallBackdrop(
+  s: Stage,
+  source: HTMLImageElement | string = 'bg_home',
+  opts: {
+    wallCropRatio?: number;
+    overscanX?: number;
+    overscanTop?: number;
+    overscanBottom?: number;
+    fill?: string;
+  } = {},
+): void {
+  const im = typeof source === 'string' ? s.images[source] : source;
+  if (!im) {
+    throw Error(`缺少中近景墙面背景资源 ${typeof source === 'string' ? source : 'image'}`);
+  }
+  const wallCropRatio = opts.wallCropRatio ?? 0.84;
+  const overscanX = opts.overscanX ?? 80;
+  const overscanTop = opts.overscanTop ?? 40;
+  const overscanBottom = opts.overscanBottom ?? 20;
+  const oldTracking = s.tracking;
+  s.tracking = false;
+  const g = s.g;
+  g.save();
+  try {
+    if (opts.fill) {
+      g.fillStyle = opts.fill;
+      g.fillRect(0, 0, s.width, s.height);
+    }
+    const cropH = Math.max(1, im.height * wallCropRatio);
+    g.drawImage(
+      im,
+      0,
+      0,
+      im.width,
+      cropH,
+      -overscanX,
+      -overscanTop,
+      s.width + overscanX * 2,
+      s.height + overscanTop + overscanBottom,
+    );
+  } finally {
+    g.restore();
+    s.tracking = oldTracking;
+  }
+}

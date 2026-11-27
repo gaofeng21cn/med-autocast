@@ -136,6 +136,16 @@ class NativeContractTests(unittest.TestCase):
         backups=list((self.root/'archive/deliveries/s/01_example').glob('*/publish/video.mp4'))
         self.assertEqual(len(backups),1)
         self.assertEqual(backups[0].read_bytes(),(self.root/self.master).read_bytes())
+        self.assertEqual(run_tool(self.root, 'package_review', args), 0)
+        verified_backups = list((self.root/'archive/deliveries/s/01_example').glob('*/publish/video.mp4'))
+        self.assertEqual(len(verified_backups), 1)
+        snapshot = verified_backups[0].parent.parent
+        restored = self.root/'restored'
+        self.assertEqual(run_tool(self.root, 'project_lifecycle', [
+            'verify-rollback', '--workspace', str(self.root), '--snapshot', str(snapshot),
+            '--restore-to', str(restored),
+        ]), 0)
+        self.assertEqual((restored/'publish/video.mp4').read_bytes(), (self.root/self.master).read_bytes())
 
     def test_incorrect_review_cannot_replace_delivery(self):
         before=(self.publish/'video.mp4').read_bytes()

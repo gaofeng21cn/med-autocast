@@ -8,6 +8,7 @@ import shutil
 import sys
 import tempfile
 
+from _opl_file_hash import sha256_file
 from build_release_packages import platform_text
 from delivery_layout import locations, install, save
 from workbench_config import ROOT, load_yaml, series_paths
@@ -66,7 +67,13 @@ def package_review(series, episode, plan, master, review, source_review=None, te
         probe = {'schema': manifest['schema'], 'series_id': series, 'episodes': [probe_entry]}
         save(stage / 'probe.json', probe)
         preflight_native(ROOT, series, episode, str(plan), str(master), str(stage / 'probe.json'), str(source_review) if source_review else None)
-        episode_manifest = {'schema': manifest['schema'], 'series_id': series, 'episodes': [entry], 'delivery_layout': 'latest_only'}
+        episode_manifest = {
+            'schema': manifest['schema'],
+            'series_id': series,
+            'episodes': [entry],
+            'delivery_layout': 'latest_only',
+            'sha256': sha256_file(target / 'video.mp4'),
+        }
         save(process / 'manifest.json', episode_manifest)
         updated = [entry if (e.get('id') or e.get('episode_id')) == episode else e for e in manifest['episodes']]
         if not any((e.get('id') or e.get('episode_id')) == episode for e in manifest['episodes']):

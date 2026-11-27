@@ -66,14 +66,11 @@ LINEAGE_AUDIO_KEEP = {"narration_beats.json", "mix-receipt.json", "timing-receip
 SCRIPT_DIR = Path(__file__).resolve().parent
 if str(SCRIPT_DIR) not in sys.path:
     sys.path.insert(0, str(SCRIPT_DIR))
-DELIVERY_REQUIRED_FILES = (
+DELIVERY_COMMON_FILES = (
     "video.mp4",
-    "封面.jpg",
-    "subtitles.srt",
-    "小红书文案.txt",
-    "微信视频号文案.txt",
     "发布交付包.md",
 )
+DELIVERY_COPY_FILES = ("小红书文案.txt", "微信视频号文案.txt")
 
 
 def dir_stats(directory: Path) -> tuple[int, int]:
@@ -782,17 +779,24 @@ def verify_delivery_rollback(
     else:
         try:
             manifest = read_json(manifest_path)
+            if not isinstance(manifest, dict):
+                errors.append("record/manifest.json must contain an object")
+                manifest = {}
         except (OSError, ValueError) as exc:
             errors.append(f"invalid record/manifest.json: {exc}")
 
     debt_codes = {
         d.get("code") for d in (manifest.get("quality_debt") or []) if isinstance(d, dict)
     }
-    required_files = [
-        fn
-        for fn in DELIVERY_REQUIRED_FILES
-        if not ("release_copy_pending" in debt_codes and fn in ("小红书文案.txt", "微信视频号文案.txt"))
-    ]
+    required_files = list(DELIVERY_COMMON_FILES)
+    if manifest.get("schema") == "medical_video_review_package/v1":
+        required_files.append("字幕.srt")
+    else:
+        required_files.append("subtitles.srt")
+        if "cover_pending" not in debt_codes:
+            required_files.append("封面.jpg")
+    if "release_copy_pending" not in debt_codes:
+        required_files.extend(DELIVERY_COPY_FILES)
     missing_files = [
         fn for fn in required_files if not (pub / fn).is_file() or (pub / fn).stat().st_size == 0
     ]
@@ -802,7 +806,9 @@ def verify_delivery_rollback(
     video_path = pub / "video.mp4"
     actual_sha = sha256_file(video_path) if video_path.is_file() else None
     expected_sha = manifest.get("sha256")
-    if expected_sha and actual_sha != expected_sha:
+    if not isinstance(expected_sha, str) or not re.fullmatch(r"[0-9a-f]{64}", expected_sha):
+        errors.append("record/manifest.json is missing a valid video SHA-256")
+    elif actual_sha != expected_sha:
         errors.append(f"video.mp4 SHA mismatch: expected {expected_sha}, got {actual_sha}")
 
     compaction_path = rec / "storage-compaction.json"
@@ -1228,7 +1234,7 @@ def optimize_workspace(
     return result
 
 
-def main() -> None:
+def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     sub = parser.add_subparsers(dest="command", required=True)
 
@@ -1342,7 +1348,8 @@ def main() -> None:
     if getattr(args, "output", None):
         write_json(args.output, res)
     print(json.dumps(res, ensure_ascii=False, indent=2))
+    return int(args.command == "verify-rollback" and res["status"] != "verified")
 
 
 if __name__ == "__main__":
-    main()
+    sys.exit(main())

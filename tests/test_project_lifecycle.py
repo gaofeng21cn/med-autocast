@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import subprocess
 import sys
 import tarfile
 import tempfile
@@ -143,6 +144,39 @@ class ProjectLifecycleRegressionTests(unittest.TestCase):
         mf2_path.write_text(json.dumps(mf2) + "\n", encoding="utf-8")
         v2 = pl.verify_delivery_rollback(self.ws, snap2)
         self.assertEqual(v2["status"], "verified", v2)
+
+    def test_verify_rollback_cli_refuses_unverified_video(self) -> None:
+        snap = self._make_delivery_snapshot("s", "e", "20261125T010000Z", b"archived-video")
+        manifest_path = snap / "record/manifest.json"
+        manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+        restore = self.ws / "restore"
+        command = [
+            sys.executable, str(ROOT / "runtime/workbench/scripts/project_lifecycle.py"),
+            "verify-rollback", "--workspace", str(self.ws), "--snapshot", str(snap),
+            "--restore-to", str(restore),
+        ]
+        for digest, error in (
+            (None, "missing a valid video SHA-256"),
+            ("invalid-sha", "missing a valid video SHA-256"),
+            ("0" * 64, "SHA mismatch"),
+        ):
+            with self.subTest(digest=digest):
+                body = {key: value for key, value in manifest.items() if key != "sha256"}
+                if digest is not None:
+                    body["sha256"] = digest
+                manifest_path.write_text(json.dumps(body), encoding="utf-8")
+                result = subprocess.run(command, capture_output=True, text=True)
+                self.assertEqual(result.returncode, 1, result.stderr)
+                receipt = json.loads(result.stdout)
+                self.assertEqual(receipt["status"], "failed")
+                self.assertIn(error, " ".join(receipt["errors"]))
+                self.assertFalse(restore.exists())
+
+        manifest_path.write_text(json.dumps(manifest), encoding="utf-8")
+        result = subprocess.run(command, capture_output=True, text=True)
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertEqual(json.loads(result.stdout)["status"], "verified")
+        self.assertEqual((restore / "publish/video.mp4").read_bytes(), b"archived-video")
 
 
 if __name__ == "__main__":

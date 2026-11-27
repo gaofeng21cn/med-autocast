@@ -31,17 +31,31 @@ for dirname in ['agent','contracts','docs','runtime']:
     for rel in originals:assert (R/rel).read_bytes()==(carrier/rel).read_bytes(),('载体内容漂移',rel)
 print(json.dumps({'status':'passed','stages':len(manifest['stages']),'professional_skills':len(list((R/'agent/professional_skills').glob('*/SKILL.md')))},ensure_ascii=False))
 # Distribution identifiers and versions must agree before creating a release.
-package=json.loads((R/'contracts/opl_agent_package_manifest.json').read_text())
-market=json.loads((R/'.agents/plugins/marketplace.json').read_text())
 plugin_root=R/'plugins/med-autocast'
+package=json.loads((R/'opl-package.json').read_text())
+companion=json.loads((R/'contracts/opl_agent_package_manifest.json').read_text())['capability_dependencies'][0]
+market=json.loads((R/'.agents/plugins/marketplace.json').read_text())
 assert market['name']=='med-autocast'
 assert market['plugins'][0]['source']['path']=='./plugins/med-autocast'
-assert package['codex_surface']['configured_codex_plugin_carrier']['plugin_selector']=='med-autocast@med-autocast'
+assert package['schema_version']=='opl.package.v2'
+assert package['identity']['id']=='med-autocast'
+assert not (plugin_root/'opl-package.json').exists(), '根目录必须是唯一 OPL 包清单入口'
+assert package['dependencies']['packages']==[{
+    'id': companion['package_id'],
+    'presence': 'required' if companion['required'] else 'optional',
+    'required_capabilities': companion['required_export_ids'],
+    'required_module_ids': companion['required_module_ids'],
+}]
+provides=package['provides']
+assert (R / provides['agent']['stages_ref']).is_file()
+assert (R / provides['skills'][0]['path'] / 'SKILL.md').is_file()
+assert (R / provides['contribution_handler']['argv'][1]).is_file()
+assert (R / provides['mcp_servers'][0]['args'][0]).is_file()
 for path in [plugin_root/'plugin.json',plugin_root/'.codex-plugin/plugin.json']:
     plugin=json.loads(path.read_text())
-    assert plugin['name']==package['codex_surface']['plugin_id']==market['plugins'][0]['name']
-    assert plugin['version']==package['version']
-print(json.dumps({'distribution_identity':'passed','version':package['version']}))
+    assert plugin['name']==package['identity']['id']==market['plugins'][0]['name']
+    assert plugin['version']==package['identity']['version']
+print(json.dumps({'distribution_identity':'passed','version':package['identity']['version']}))
 
 # Portable resources must stay reachable after installation, not only in the source workbench.
 for directory in ['agent/professional_skills','docs','runtime/workbench']:

@@ -110,23 +110,31 @@ class MiniAppTests(unittest.TestCase):
         projected_entry = ROOT / 'plugins/med-autocast/skills/med-autocast/runtime/native_helpers/app_contribution.py'
         if not projected_entry.is_file():
             subprocess.run(['node', str(ROOT / 'scripts/project-carrier.mjs')], check=True, capture_output=True)
-        carrier = self.root / 'isolated-carrier'
-        shutil.copytree(ROOT / 'plugins/med-autocast', carrier)
-        adapter = json.loads((carrier / 'app-contribution-adapter.json').read_text())
-        entry = adapter['reads']['med-autocast.workspace.v1#media']
-        result = subprocess.run(entry['argv'], cwd=carrier, env={**os.environ,'OPL_PROFILE_WORKSPACE':str(self.root)},
-                                input='{}', text=True, capture_output=True, check=True)
+        package = json.loads((ROOT / 'opl-package.json').read_text())
+        handler_argv = package['provides']['contribution_handler']['argv']
+        cmd = [sys.executable if handler_argv[0] == 'python3' else handler_argv[0], *handler_argv[1:]]
+        read_req = json.dumps({'operation': 'read', 'ref': 'med-autocast.workspace.v1#media', 'input': {}})
+        result = subprocess.run(cmd, cwd=ROOT, env={**os.environ, 'OPL_PROFILE_WORKSPACE': str(self.root)},
+                                input=read_req, text=True, capture_output=True, check=True)
         body = json.loads(result.stdout)
         self.assertEqual(body['data']['items'][0]['id'], 'demo/ep01')
         self.assertEqual(body['state'], 'ready')
-        value = {**body['data']['items'][0]['actions'][0]['input'], 'note': 'Review from relocated carrier'}
-        action = adapter['actions']['med-autocast.workspace.v1#review.note']
-        written = subprocess.run(action['argv'], cwd=carrier, env={**os.environ,'OPL_PROFILE_WORKSPACE':str(self.root)},
-                                 input=json.dumps(value), text=True, capture_output=True, check=True)
+        value = {**body['data']['items'][0]['actions'][0]['input'], 'note': 'Review from v2 contribution handler'}
+        exec_req = json.dumps({'operation': 'execute', 'ref': 'med-autocast.workspace.v1#review.note', 'input': value})
+        written = subprocess.run(cmd, cwd=ROOT, env={**os.environ, 'OPL_PROFILE_WORKSPACE': str(self.root)},
+                                 input=exec_req, text=True, capture_output=True, check=True)
         receipt = json.loads(written.stdout)['result']
-        readback = adapter['reads'][receipt['readback']['data_ref']]
-        reopened = subprocess.run(readback['argv'], cwd=carrier, env={**os.environ,'OPL_PROFILE_WORKSPACE':str(self.root)},
-                                  input=json.dumps(receipt['readback']['input']), text=True, capture_output=True, check=True)
+        carrier = self.root / 'isolated-carrier'
+        shutil.copytree(ROOT / 'plugins/med-autocast', carrier)
+        carrier_handler = carrier / 'skills/med-autocast/runtime/native_helpers/app_contribution.py'
+        readback_req = json.dumps({
+            'operation': 'read',
+            'ref': receipt['readback']['data_ref'],
+            'input': receipt['readback']['input'],
+        })
+        reopened = subprocess.run([sys.executable, str(carrier_handler)], cwd=carrier,
+                                  env={**os.environ, 'OPL_PROFILE_WORKSPACE': str(self.root)},
+                                  input=readback_req, text=True, capture_output=True, check=True)
         note = json.loads(reopened.stdout)['data']['items'][0]['requested_note']
         self.assertEqual(note['status'], 'recorded')
         self.assertEqual(note['note']['note'], value['note'])

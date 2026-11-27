@@ -1,4 +1,4 @@
-"""Resolve the installed companion library via `opl packages locate`."""
+"""Resolve the installed companion library via `opl pack inspect`."""
 import importlib.util
 import json
 import os
@@ -34,42 +34,23 @@ class NativeCompanionDiscoveryTests(unittest.TestCase):
         current = self.base / "installed-companion"
         self.library(current)
         stdout = json.dumps({
-            "version": "g2",
-            "opl_package_location": {
-                "surface_kind": "opl_package_location",
-                "package_id": "mac-media-assets",
-                "found": True,
-                "enabled": False,
-                "readiness": {"installed": True, "physical_status": "available"},
-                "package_root": str(current),
-                "source_kind": "local",
-                "asset_path": None,
-                "asset_exists": False,
-            },
+            "manifest": {"schema_version": "opl.package.v2", "identity": {"id": "mac-media-assets"}},
+            "installed": {"package_id": "mac-media-assets", "enabled": False, "install_path": str(current)},
         })
         with patch.dict(os.environ, {"OPL_BIN": "/fixture/opl"}, clear=False), \
              patch.object(companion.subprocess, "run", return_value=subprocess.CompletedProcess([], 0, stdout=stdout, stderr="")) as run:
             self.assertEqual(companion.locate_installed_companion("mac-media-assets"), [current])
         run.assert_called_once_with(
-            ["/fixture/opl", "packages", "locate", "mac-media-assets", "--json"],
+            ["/fixture/opl", "pack", "inspect", "mac-media-assets", "--json"],
             capture_output=True,
             text=True,
             timeout=30,
         )
 
     def test_uninstalled_or_missing_location_returns_empty(self):
-        not_found = json.dumps({
-            "version": "g2",
-            "opl_package_location": {"package_id": "mac-media-assets", "found": False, "package_root": None},
-        })
+        not_found = json.dumps({"installed": None})
         uninstalled = json.dumps({
-            "version": "g2",
-            "opl_package_location": {
-                "package_id": "mac-media-assets",
-                "found": True,
-                "package_root": str(self.base / "absent"),
-                "readiness": {"installed": False},
-            },
+            "installed": {"package_id": "mac-media-assets", "install_path": str(self.base / "absent")},
         })
         for payload in (not_found, uninstalled, "not-json"):
             with patch.dict(os.environ, {"OPL_BIN": "/fixture/opl"}, clear=False), \

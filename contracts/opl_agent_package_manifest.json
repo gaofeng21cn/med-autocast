@@ -25,22 +25,7 @@
     "required_capability_package_ids": [
       "mac-media-assets"
     ],
-    "app_contribution_abi": {
-      "schema_version": "opl-package-app-contribution-cli.v1",
-      "transport": "stdin_json_stdout_json",
-      "argv": [
-        "opl",
-        "app",
-        "contribution",
-        "adapter",
-        "--stdin"
-      ],
-      "request_schema": "opl-package-app-contribution-request.v1",
-      "response_schema": "opl-package-app-contribution-response.v1"
-    },
-    "app_contribution_adapter": {
-      "manifest": "app-contribution-adapter.json"
-    }
+    "package_manifest_ref": "opl-package.json"
   },
   "dependency_profiles": [],
   "capability_dependencies": [

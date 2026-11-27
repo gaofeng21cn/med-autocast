@@ -307,13 +307,13 @@ class MediaCompanionTests(unittest.TestCase):
             "import json,shutil,sys\nfrom pathlib import Path\n"
             f"with Path({str(calls)!r}).open('a') as out: out.write(json.dumps(sys.argv[1:])+'\\n')\n"
             f"dest = Path({str(installed)!r})\n"
-            "if sys.argv[1:3] == ['packages', 'install']:\n"
+            "if sys.argv[1:3] == ['pack', 'ensure']:\n"
             "    dest.parent.mkdir(parents=True,exist_ok=True)\n"
             f"    shutil.copytree({str(self.repo)!r}, dest, ignore=shutil.ignore_patterns('.git'))\n"
             "    print('{}')\n"
-            "elif sys.argv[1:3] == ['packages', 'locate']:\n"
+            "elif sys.argv[1:3] == ['pack', 'inspect']:\n"
             "    found = (dest / 'catalog/assets.jsonl').is_file()\n"
-            "    print(json.dumps({'version':'g2','opl_package_location':{'found':found,'package_root':str(dest) if found else None,'readiness':{'installed':found}}}))\n"
+            "    print(json.dumps({'installed': {'package_id': 'mac-media-assets', 'install_path': str(dest)} if found else None}))\n"
             "else:\n"
             "    print('{}')\n"
         )
@@ -338,10 +338,10 @@ class MediaCompanionTests(unittest.TestCase):
             self.assertEqual(Path(result['asset_library']['repo']), installed.resolve())
         recorded_calls = [json.loads(line) for line in calls.read_text().splitlines()]
         self.assertEqual(
-            [c for c in recorded_calls if c[:2] == ['packages', 'install']],
-            [['packages', 'install', 'mac-media-assets', '--json']],
+            [c for c in recorded_calls if c[:2] == ['pack', 'ensure']],
+            [['pack', 'ensure', 'mac-media-assets', '--json']],
         )
-        self.assertIn(['packages', 'locate', 'mac-media-assets', '--json'], recorded_calls)
+        self.assertIn(['pack', 'inspect', 'mac-media-assets', '--json'], recorded_calls)
         self.assertFalse(self.target.exists())
 
     def test_framework_success_without_discoverable_files_is_not_reported_ready(self):
@@ -383,16 +383,14 @@ class MediaCompanionTests(unittest.TestCase):
         shutil.copytree(self.repo, stale, ignore=shutil.ignore_patterns('.git'))
         (self.workspace / 'workbench.yaml').write_text('asset_library:\n  root: ../mac-media-assets\n')
         locate_payload = json.dumps({
-            'version': 'g2',
-            'opl_package_location': {
-                'found': True,
-                'package_root': str(current),
-                'readiness': {'installed': True},
+            'installed': {
+                'package_id': 'mac-media-assets',
+                'install_path': str(current),
             },
         })
         orig_run = companion.subprocess.run
         def run_locate_only(cmd, *args, **kwargs):
-            if len(cmd) >= 3 and cmd[1:3] == ['packages', 'locate']:
+            if len(cmd) >= 3 and cmd[1:3] == ['pack', 'inspect']:
                 return subprocess.CompletedProcess(cmd, 0, stdout=locate_payload, stderr='')
             return orig_run(cmd, *args, **kwargs)
         with patch.dict('os.environ', {'OPL_BIN': '/fixture/opl', 'OPL_COMPANION_SOURCES_ROOT': str(sources_root)}), \

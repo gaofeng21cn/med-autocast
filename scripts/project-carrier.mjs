@@ -1,48 +1,12 @@
 // Project med-autocast's domain resources into its native plugin carrier.
-// Prefers Framework CLI (`opl pack project-carrier`), with a deterministic
-// standalone projector fallback driven by contracts/carrier_projection.json
-// so fresh checkouts and standalone CI can materialize the gitignored carrier.
-import { spawnSync } from 'node:child_process';
+// Framework v2 uses the repository's authored package manifest.
+// Materialize the gitignored Codex carrier resources from repository sources.
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const checkOnly = process.argv.includes('--check');
-
-function resolveOplBin() {
-  const envBin = process.env.OPL_BIN?.trim();
-  if (envBin) return envBin;
-  const fwRoot = process.env.OPL_FRAMEWORK_ROOT?.trim();
-  if (fwRoot) {
-    const candidate = path.join(fwRoot, 'bin', 'opl');
-    if (fs.existsSync(candidate)) return candidate;
-  }
-  const sibling = path.resolve(root, '..', 'one-person-lab', 'bin', 'opl');
-  if (fs.existsSync(sibling)) return sibling;
-  return 'opl';
-}
-
-function tryFrameworkProjector() {
-  const args = ['pack', 'project-carrier', '--repo', root, '--json'];
-  if (checkOnly) args.push('--check');
-  const result = spawnSync(resolveOplBin(), args, { encoding: 'utf8' });
-  if (result.error) return null;
-  const stdout = (result.stdout || '').trim();
-  const stderr = (result.stderr || '').trim();
-  // Fall back only when the external OPL CLI itself is unavailable or lacks its
-  // own node_modules; real drift/contract errors must surface directly.
-  if (
-    result.status !== 0 &&
-    !stdout.includes('"opl_carrier_projection"') &&
-    (stderr.includes('ERR_MODULE_NOT_FOUND') || stderr.includes('Cannot find package') || result.status === 127)
-  ) {
-    return null;
-  }
-  if (stdout) process.stdout.write(`${stdout}\n`);
-  if (stderr) process.stderr.write(`${stderr}\n`);
-  return result.status ?? 1;
-}
 
 function jsonBytes(payload) {
   return Buffer.from(`${JSON.stringify(payload, null, 2)}\n`, 'utf8');
@@ -77,16 +41,13 @@ function walkResources(repoRoot, rootRel, excludeSegments, out) {
   visit(startDir, rootRel);
 }
 
-function updatePluginManifest(repoRoot, rule, owner) {
+function updatePluginManifest(repoRoot, rule, manifest) {
   const existing = JSON.parse(fs.readFileSync(path.join(repoRoot, rule.path), 'utf8'));
   const updated = structuredClone(existing);
-  if (rule.sync_version) updated.version = owner.version;
-  if (rule.sync_name_from_plugin_id && owner.codex_surface?.plugin_id) {
-    updated.name = owner.codex_surface.plugin_id;
-  }
+  if (rule.sync_version) updated.version = manifest.identity.version;
   if (rule.set_fields) Object.assign(updated, structuredClone(rule.set_fields));
   if (rule.sync_interface) {
-    const iconRef = owner.presentation?.icon_ref;
+    const iconRef = manifest.identity.icon;
     const prefix = rule.sync_interface.logo_prefix ?? './';
     const iconPath = typeof iconRef === 'string' && iconRef ? `${prefix}${iconRef.replace(/^\.\//, '')}` : undefined;
     let uiTarget;
@@ -99,7 +60,7 @@ function updatePluginManifest(repoRoot, rule, owner) {
       updated.extensions['com.openai'].interface = updated.extensions['com.openai'].interface || {};
       uiTarget = updated.extensions['com.openai'].interface;
     }
-    if (typeof owner.display_name === 'string') uiTarget.displayName = owner.display_name;
+    uiTarget.displayName = manifest.identity.name['en-US'];
     if (iconPath) {
       uiTarget.logo = iconPath;
       uiTarget.composerIcon = iconPath;
@@ -108,27 +69,11 @@ function updatePluginManifest(repoRoot, rule, owner) {
   return jsonBytes(updated);
 }
 
-function rewriteAdapter(repoRoot, cfg) {
-  const parsed = JSON.parse(fs.readFileSync(path.join(repoRoot, cfg.source), 'utf8'));
-  const cloned = structuredClone(parsed);
-  const rewrites = new Map((cfg.argv_rewrites || []).map((item) => [item.from, item.to]));
-  for (const section of ['reads', 'actions']) {
-    const map = cloned[section];
-    if (!map || typeof map !== 'object') continue;
-    for (const entry of Object.values(map)) {
-      if (entry && Array.isArray(entry.argv)) {
-        entry.argv = entry.argv.map((arg) => (typeof arg === 'string' && rewrites.has(arg) ? rewrites.get(arg) : arg));
-      }
-    }
-  }
-  return jsonBytes(cloned);
-}
-
 function runStandaloneProjector() {
   const configRel = 'contracts/carrier_projection.json';
   const config = JSON.parse(fs.readFileSync(path.join(root, configRel), 'utf8'));
-  const owner = JSON.parse(fs.readFileSync(path.join(root, 'contracts/opl_agent_package_manifest.json'), 'utf8'));
   const carrierRel = config.carrier_root.replace(/\/+$/, '');
+  const manifest = JSON.parse(fs.readFileSync(path.join(root, 'opl-package.json'), 'utf8'));
   const targetPrefix = (config.resource_target_prefix || '').replace(/^\/+|\/+$/g, '');
   const excludeSegments = new Set(config.exclude_path_segments || []);
 
@@ -145,26 +90,12 @@ function runStandaloneProjector() {
     if (alias.optional && !fs.existsSync(src)) continue;
     expected.set(joinRel(carrierRel, alias.to), fs.readFileSync(src));
   }
-  if (config.copy_presentation_icon && owner.presentation?.icon_ref) {
-    const iconRel = owner.presentation.icon_ref.replace(/^\/+/, '');
+  if (config.copy_presentation_icon && manifest.identity.icon) {
+    const iconRel = manifest.identity.icon;
     expected.set(joinRel(carrierRel, iconRel), fs.readFileSync(path.join(root, iconRel)));
   }
-  if (config.adapter_projection) {
-    expected.set(
-      joinRel(carrierRel, config.adapter_projection.target),
-      rewriteAdapter(root, config.adapter_projection),
-    );
-  }
-  if (config.package_manifest_projection?.mode === 'clone_with_plugin_source_dot') {
-    const cloned = structuredClone(owner);
-    cloned.codex_surface = { ...(cloned.codex_surface || {}), plugin_source_path: '.' };
-    expected.set(
-      joinRel(carrierRel, config.package_manifest_projection.target || 'opl-package.json'),
-      jsonBytes(cloned),
-    );
-  }
   for (const manifestRule of config.plugin_manifests || []) {
-    expected.set(manifestRule.path, updatePluginManifest(root, manifestRule, owner));
+    expected.set(manifestRule.path, updatePluginManifest(root, manifestRule, manifest));
   }
 
   const unexpectedFiles = [];
@@ -227,7 +158,7 @@ function runStandaloneProjector() {
   const report = {
     surface_kind: 'opl_carrier_projection',
     schema_version: 'opl_carrier_projection.v1',
-    projector: 'standalone_fallback',
+    projector: 'standalone',
     mode: checkOnly ? 'check' : 'write',
     status: checkOnly ? (hasDrift ? 'drifted' : 'passed') : 'projected',
     repo_root: root,
@@ -245,5 +176,4 @@ function runStandaloneProjector() {
   return checkOnly && hasDrift ? 1 : 0;
 }
 
-const fwStatus = tryFrameworkProjector();
-process.exit(fwStatus !== null ? fwStatus : runStandaloneProjector());
+process.exit(runStandaloneProjector());

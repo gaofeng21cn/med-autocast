@@ -4,7 +4,7 @@
 
 ## 安装与发现
 
-标准安装 `opl packages install med-autocast --json` 由 OPL Framework 解析 required 依赖，先自动安装公开的 `mac-media-assets` 轻量目录包，再安装 MAC；更新同样使用 Framework 的软件包入口。用户只执行一次 MAC 安装，不必单独安装素材 Skill 或手动克隆。资产库作为独立 headless 能力包，媒体与入口可由 MAC 调用，不占用普通对话的 Skill 入口。分发通过各自的 OCI 软件包，来源及版权证据随素材保存。
+标准安装 `opl pack install ghcr.io/gaofeng21cn/one-person-lab-packages/med-autocast --json` 由 OPL Framework 解析 required 依赖，先自动安装公开的 `mac-media-assets` 轻量目录包，再安装 MAC；更新同样使用 Framework 的 `opl pack update` / `ensure` 入口。用户只执行一次 MAC 安装，不必单独安装素材 Skill 或手动克隆。资产库作为独立 headless 能力包，媒体与入口可由 MAC 调用，不占用普通对话的 Skill 入口。分发通过各自的 OCI 软件包，来源及版权证据随素材保存。
 
 首次准备工作台使用 `bash scripts/setup_workbench.sh --workspace <目录>`。它调用 `media_asset_library ensure`，优先发现已安装的资产库；已有配置或兄弟目录仍可复用。缺失才从公开 GitHub 仓库获取并校验。已有库不隐式 fetch、reset 或覆盖；部分目录有内容时保留并诊断。直接使用原生 Codex 插件安装入口不会运行工作台 shell，也不会替代 Framework 的依赖安装入口。
 

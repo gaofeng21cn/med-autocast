@@ -3,17 +3,17 @@
 通过已支持此软件包的 OPL Framework 安装：
 
 ```bash
-opl packages install med-autocast --json
-opl packages status --package-id med-autocast --json
+opl pack install ghcr.io/gaofeng21cn/one-person-lab-packages/med-autocast --json
+opl pack inspect med-autocast --json
 ```
 
-OPL 通过 `ghcr.io/gaofeng21cn/one-person-lab-packages/med-autocast:latest-stable` 解析当前版本，校验发布内容，并交给原生插件管理器安装。安装时会先自动安装公开的 `mac-media-assets` 依赖，再安装 MAC；用户只执行一次安装命令。资产库的媒体与查询入口由 MAC 自动发现。插件选择器为 med-autocast@med-autocast。安装后在新任务中使用 Med Auto Cast。
+OPL 通过 `ghcr.io/gaofeng21cn/one-person-lab-packages/med-autocast` 解析当前版本，校验发布内容，并交给原生插件管理器安装。安装时会先自动安装公开的 `mac-media-assets` 依赖，再安装 MAC；用户只执行一次安装命令。资产库的媒体与查询入口由 MAC 自动发现。插件选择器为 med-autocast@med-autocast。安装后在新任务中使用 Med Auto Cast。
 
 软件包发布以 OCI 为准，GitHub Release 页面不是安装前提。源码仓库和版本标签用于开发与追溯；常规安装不需要手动下载 ZIP、添加 Git 市场或执行本仓打包脚本。
 
 ## 在 OPL App 中使用
 
-Med Auto Cast 是 OPL 官方标准智能体之一。App 从软件包目录和已安装载体动态读取其能力与状态；安装后可从首页“开展医学科普视频工作”进入，也可在智能体目录管理安装和更新。已有安装用 `opl packages update med-autocast --json` 更新，并在新任务中发现新版 Skill。
+Med Auto Cast 是 OPL 官方标准智能体之一。App 从软件包目录和已安装载体动态读取其能力与状态；安装后可从首页“开展医学科普视频工作”进入，也可在智能体目录管理安装和更新。已有安装用 `opl pack update med-autocast --source ghcr.io/gaofeng21cn/one-person-lab-packages/med-autocast --json`（或 `opl pack ensure med-autocast --json`）更新，并在新任务中发现新版 Skill。
 
 提供主题、受众和期望时长，或指向已有制作工作区即可开始。新系列默认先确定作者、品牌和授权声线，可显式跳过人物形象或专用声线。默认本地 JavaScript 手绘拼贴；导演先规划视觉故事并查素材库，制作与审片中持续打磨，交付后保管可复用元素。人物是否出镜与品牌露出分开，具体品牌从工作区读取。
 

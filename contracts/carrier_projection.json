@@ -30,9 +30,6 @@
     "skills/med-autocast/docs",
     "skills/med-autocast/runtime"
   ],
-  "package_manifest_projection": {
-    "mode": "clone_with_plugin_source_dot"
-  },
   "plugin_manifests": [
     {
       "path": "plugins/med-autocast/plugin.json",
@@ -53,15 +50,5 @@
         "logo_prefix": "./"
       }
     }
-  ],
-  "adapter_projection": {
-    "source": "app-contribution-adapter.json",
-    "target": "app-contribution-adapter.json",
-    "argv_rewrites": [
-      {
-        "from": "runtime/native_helpers/app_contribution.py",
-        "to": "skills/med-autocast/runtime/native_helpers/app_contribution.py"
-      }
-    ]
-  }
+  ]
 }

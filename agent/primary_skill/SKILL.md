@@ -103,7 +103,7 @@ Stage 返回尽量引用真实产物与版本/来源信息，给出质量债务�
 
 导演稿前先看 `media_asset_library character-coverage`，用 `query --character-role <角色> --pose <姿态>` 找到并实际查看完整人物。缺姿态先补同一母版，按当前尺寸与器械/椅面做代表动作；`use` 后回读本集manifest与 `registration_readback`。管理链的字段、版本与复制证据不代替真实接触和连续动态，细节见人物与尺度契约。
 
-标准 `opl packages install med-autocast --json` 通过 Framework required 依赖自动安装公开的 `mac-media-assets`，用户只需一次安装。默认安装轻量素材包，Full 也集成这份小核心；用户可在软件中心为同一素材库选择“安装离线完整版”。开始/恢复制作时运行 `med_autocast.py prepare` 再检查、安装和发现。首次准备工作台时 `setup_workbench.sh` 调用 `media_asset_library ensure` 优先发现已安装库，已有内容不覆盖，离线或没有合适素材时继续其他工作与新创。插件安装与工作台运行环境准备分开，首次工作台仍使用随包 setup。路径发现与真实取用见 `docs/media-assets-integration.md`。制作时先用外挂仓库的只读查询发现纸片、环境板、动作组件和 BGM 分轨，再回到当前工作区登记实际复用版本。MAC 可直接调用：
+标准 `opl pack install ghcr.io/gaofeng21cn/one-person-lab-packages/med-autocast --json`（或通过软件中心安装）由 Framework 解析 required 依赖并自动安装公开的 `mac-media-assets`，用户只需一次安装。默认安装轻量素材包，Full 也集成这份小核心；用户可在软件中心为同一素材库选择“安装离线完整版”。开始/恢复制作时运行 `med_autocast.py prepare` 再检查、安装和发现。首次准备工作台时 `setup_workbench.sh` 调用 `media_asset_library ensure` 优先发现已安装库，已有内容不覆盖，离线或没有合适素材时继续其他工作与新创。插件安装与工作台运行环境准备分开，首次工作台仍使用随包 setup。路径发现与真实取用见 `docs/media-assets-integration.md`。制作时先用外挂仓库的只读查询发现纸片、环境板、动作组件和 BGM 分轨，再回到当前工作区登记实际复用版本。MAC 可直接调用：
 
 ```sh
 python3 runtime/native_helpers/med_autocast.py assets --workspace <workspace> --library external --query 纸景

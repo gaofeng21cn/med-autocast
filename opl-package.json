@@ -2,7 +2,7 @@
   "schema_version": "opl.package.v2",
   "identity": {
     "id": "med-autocast",
-    "version": "0.3.23",
+    "version": "0.3.24",
     "intent": "agent",
     "name": {
       "zh-CN": "Med Auto Cast",

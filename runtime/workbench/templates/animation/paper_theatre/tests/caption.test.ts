@@ -86,14 +86,18 @@ export function draw(text, background, time = 1) {
     await page.setContent("<!doctype html><meta charset=utf-8><title>离线字幕回归</title>");
     await page.addScriptTag({content:built.outputFiles[0].text});
     const results = await page.evaluate(() => {
-      const api=(window as any).CaptionFixture, rows=[];
+      const api=(window as any).CaptionFixture, rows=[], wrapRows=[];
       for(const background of ["#f1e7d0", "#263733"])
         for(const text of ["看字清楚", "看字清楚\n周边视野", "看字清楚\r\n周边视野", "看字清楚\r周边视野"]) {
           const first=api.draw(text,background);
           api.draw(text,background,2.1);
           rows.push({text,background,...first,sameSeek:JSON.stringify(first)===JSON.stringify(api.draw(text,background))});
         }
-      return {rows, expired:api.draw("看字清楚", "#f1e7d0", 2)};
+      const longLine = "单次检查结果只是线索，需要结合症状、体征和随访变化一起判断。";
+      for(const background of ["#f1e7d0", "#263733"]) {
+        wrapRows.push({text: longLine, background, ...api.draw(longLine, background)});
+      }
+      return {rows, wrapRows, expired:api.draw("看字清楚", "#f1e7d0", 2)};
     });
     for (const row of results.rows) {
       await t.test(`${row.background} ${JSON.stringify(row.text)}`, () => {
@@ -102,17 +106,27 @@ export function draw(text, background, time = 1) {
         const strokes=row.calls.filter((c: any) => c.kind === "stroke");
         assert.deepEqual(fills.map((c: any) => c.text),lines);
         assert.deepEqual(strokes.map((c: any) => c.text),lines);
-        assert.equal(fills.at(-1).y,653, "existing last-line baseline must stay fixed");
-        assert.ok(fills.every((c: any, i:number) => c.x === 640 && c.y === 653-(lines.length-1-i)*33));
-        assert.ok(fills.every((c: any) => c.font.startsWith("500 27px")));
-        assert.ok(fills.every((c: any) => c.color === (row.background === "#263733" ? "#fff8e8" : "#253f3b")));
+        assert.equal(fills.at(-1).y,662, "existing last-line baseline must stay fixed");
+        assert.ok(fills.every((c: any, i:number) => c.x === 640 && c.y === 662-(lines.length-1-i)*48));
+        assert.ok(fills.every((c: any) => c.font.startsWith("600 34px")));
+        assert.ok(fills.every((c: any) => c.color === (row.background === "#263733" ? "#fffdf5" : "#0e221f")));
         assert.equal(row.samples.length,lines.length*5, "sample each line's real background");
         assert.equal(row.bands,lines.length, "real pixels must occupy separate line bands");
         assert.ok(row.pixels > 0);
         assert.equal(row.escaped,0, "returned bounds must include all glyph and stroke pixels");
-        assert.ok(row.bounds.y >= 600 && row.bounds.y+row.bounds.h <= 670);
+        assert.ok(row.bounds.y >= 566 && row.bounds.y+row.bounds.h <= 702);
         assert.equal(row.restored,true);
         assert.equal(row.sameSeek,true);
+      });
+    }
+    for (const row of results.wrapRows) {
+      await t.test(`wrap ${row.background}`, () => {
+        const fills=row.calls.filter((c: any) => c.kind === "fill");
+        assert.equal(fills.length, 2, "long Chinese cue should wrap cleanly into 2 balanced lines");
+        assert.equal(fills.map((c: any) => c.text).join(""), row.text);
+        assert.equal(fills.at(-1).y, 662);
+        assert.equal(row.escaped, 0, "wrapped bounds must enclose all glyph, stroke and halo pixels");
+        assert.ok(row.bounds.x >= 200 && row.bounds.x + row.bounds.w <= 1080);
       });
     }
     assert.equal(results.expired.pixels,0);

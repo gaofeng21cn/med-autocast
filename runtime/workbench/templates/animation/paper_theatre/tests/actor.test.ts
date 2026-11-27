@@ -41,6 +41,24 @@ async function loadActorModule() {
   return mod.exports;
 }
 
+async function loadRoomsModule() {
+  const esbuild = dependency("esbuild");
+  if (!esbuild) return null;
+  const bundle = await esbuild.build({
+    entryPoints: [path.join(root, "src/kit/rooms.ts")],
+    bundle: true,
+    write: false,
+    format: "cjs",
+    platform: "neutral",
+    mainFields: ["module", "main"],
+    target: "es2022",
+  });
+  const mod = { exports: {} as Record<string, any> };
+  const fn = new Function("exports", "module", bundle.outputFiles[0].text);
+  fn(mod.exports, mod);
+  return mod.exports;
+}
+
 function makeMockStage(assets: Record<string, any> = {}, images: Record<string, any> = {}) {
   const drawCalls: any[] = [];
   const boundsCalls: any[] = [];
@@ -453,4 +471,22 @@ test("drawForegroundDesk aligns visible_bounds top edge to topY, returns clipBot
   assert.deepEqual(mock.drawCalls[0].args, [0, 512, 1536, 512, -48, 508, 1376, 228]);
   assert.equal(mock.boundsCalls.length, 0, "foreground backdrop must not pollute subject bounds by default");
   assert.equal(mock.stage.tracking, true, "stage.tracking must be restored after drawForegroundDesk");
+});
+
+test("drawCloseWallBackdrop crops upper wall above floor line and restores tracking", async (t) => {
+  const rooms = await loadRoomsModule();
+  if (!rooms) {
+    t.skip("缺少 esbuild，跳过 rooms 打包单测");
+    return;
+  }
+  const mock = makeMockStage({}, { bg_home: { width: 1408, height: 768 } });
+  rooms.drawCloseWallBackdrop(mock.stage, "bg_home");
+  assert.equal(mock.drawCalls.length, 1);
+  const args = mock.drawCalls[0].args;
+  assert.equal(args[0], 0);
+  assert.equal(args[1], 0);
+  assert.equal(args[2], 1408);
+  assert.ok(Math.abs(args[3] - 768 * 0.84) < 0.01);
+  assert.deepEqual(args.slice(4), [-80, -40, 1440, 780]);
+  assert.equal(mock.stage.tracking, true, "stage.tracking must remain intact");
 });

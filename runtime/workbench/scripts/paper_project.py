@@ -535,6 +535,15 @@ def revise(a):
     if (target / "storage-hydration.json").is_file():
         import project_lifecycle
         project_lifecycle.hydrate_project(target, a.workspace)
+    refreshed_kit = False
+    if getattr(a, "refresh_kit", False):
+        kit_src = BUNDLE / "templates/animation/paper_theatre/src/kit"
+        kit_dst = target / "src/kit"
+        if kit_src.is_dir():
+            kit_dst.mkdir(parents=True, exist_ok=True)
+            for item in kit_src.glob("*.ts"):
+                shutil.copy2(item, kit_dst / item.name)
+            refreshed_kit = True
     evidence = source / "qa/asset-reviews"
     if evidence.is_dir():
         shutil.copytree(evidence, target / "qa/asset-reviews", copy_function=clone_or_copy)
@@ -545,9 +554,10 @@ def revise(a):
         "source_project": str(source), "source_score_sha256": sha(source / config["score"]),
         "source_narration_sha256": sha(source / config["narration"]),
         "copy_method": "independent_files", "registered_as_current": False,
+        "refreshed_kit": refreshed_kit,
         "review_inheritance": "unchanged_asset_evidence_only",
     })
-    return {"status": "revision_created", "project": str(target), "source": str(source)}
+    return {"status": "revision_created", "project": str(target), "source": str(source), "refreshed_kit": refreshed_kit}
 
 
 def assert_built(p):
@@ -1092,6 +1102,9 @@ def reuse_mix(a, project, config):
     source = a.reuse_from_project.resolve()
     if source == project:
         raise ValueError("复用混音需要独立的原工程，不能以当前工程自证")
+    if (source / "storage-hydration.json").is_file():
+        import project_lifecycle
+        project_lifecycle.hydrate_project(source, a.workspace)
     source_config = read(source / "project.json")
     if source_config.get("schema") != "paper_project/v1":
         raise ValueError("混音来源不是已登记的纸剧场项目")
@@ -1663,6 +1676,7 @@ def main():
     sub.add_parser("inspect")
     s = sub.add_parser("revise")
     s.add_argument("--from-project", type=Path, required=True, help="明确源工程；独立复制可编辑文件，不使用硬链接")
+    s.add_argument("--refresh-kit", action="store_true", help="创建修订后顺带从工作台模板同步最新 src/kit/*.ts（保留源工程独有文件）")
     sub.add_parser("build")
     s = sub.add_parser("retime")
     s.add_argument("--reference-score", type=Path, help="可选：用精确旧版Score恢复原字幕断句，不改变当前镜头动作")

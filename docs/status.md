@@ -2,7 +2,7 @@
 
 ## 源码与载体现状
 
-- **软件包版本**：当前源码与 manifest 版本以 `contracts/opl_agent_package_manifest.json` 为准（通过 `scripts/project-carrier.mjs` 依据 `contracts/carrier_projection.json` 投影至 `plugins/med-autocast/`）。
+- **软件包版本**：当前源码与 manifest 版本以根目录 `opl-package.json`（`opl.package.v2`）为准；通过 `scripts/project-carrier.mjs` 依据 `contracts/carrier_projection.json` 将随包资源与 Codex 插件元数据投影至 `plugins/med-autocast/`。
 - **核心能力边界**：
   - 声明式领域包覆盖六个核心 Stage、可选 `asset-curation` 后置沉淀以及对应专业 Skill，随包提供工作台 `runtime/workbench` 核心脚本、模板与长方法 SOP。
   - 默认视觉路线为本地 JavaScript 手绘拼贴（`paper_collage + canvas2d`），支持 `shot_recipe`、角色表演与镜头语言、可恢复三态媒体生命周期治理以及 `publish/` 单一最新版双平台交付。

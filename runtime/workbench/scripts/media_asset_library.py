@@ -31,13 +31,13 @@ def _resolve_opl_bin():
 
 
 def locate_installed_companion(package_id='mac-media-assets'):
-    """Resolve an installed companion package via Framework `opl packages locate`."""
+    """Resolve an installed companion through Framework v2 Package inspection."""
     opl = _resolve_opl_bin()
     if not opl:
         return []
     try:
         completed = subprocess.run(
-            [opl, 'packages', 'locate', package_id, '--json'],
+            [opl, 'pack', 'inspect', package_id, '--json'],
             capture_output=True,
             text=True,
             timeout=30,
@@ -52,16 +52,15 @@ def locate_installed_companion(package_id='mac-media-assets'):
         return []
     if not isinstance(payload, dict):
         return []
-    location = payload.get('opl_package_location')
-    if not isinstance(location, dict) or location.get('found') is not True:
-        return []
-    readiness = location.get('readiness')
-    if isinstance(readiness, dict) and readiness.get('installed') is False:
-        return []
-    package_root = location.get('package_root')
+    installed = payload.get('installed')
+    if isinstance(installed, dict):
+        package_root = installed.get('install_path') or installed.get('dir')
+    else:
+        package_root = payload.get('install_path') or payload.get('dir')
     if not isinstance(package_root, str) or not package_root.strip():
         return []
-    return [Path(package_root).expanduser()]
+    candidate = Path(package_root).expanduser()
+    return [candidate] if candidate.is_dir() else []
 
 
 def config(workspace):
@@ -173,7 +172,7 @@ def ensure(workspace, explicit=None, repository=REPOSITORY, offline=False):
     opl = _resolve_opl_bin()
     if repository == REPOSITORY and opl:
         try:
-            completed = subprocess.run([opl, 'packages', 'install', 'mac-media-assets', '--json'],
+            completed = subprocess.run([opl, 'pack', 'ensure', 'mac-media-assets', '--json'],
                                        capture_output=True, timeout=600)
         except (OSError, subprocess.TimeoutExpired):
             return {**result, 'installation': 'framework_install_unresolved',

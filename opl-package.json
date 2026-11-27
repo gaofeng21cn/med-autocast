@@ -1,0 +1,169 @@
+{
+  "schema_version": "opl.package.v2",
+  "identity": {
+    "id": "med-autocast",
+    "version": "0.3.23",
+    "intent": "agent",
+    "name": {
+      "zh-CN": "Med Auto Cast",
+      "en-US": "Med Auto Cast"
+    },
+    "summary": {
+      "zh-CN": "医学科普动画规划、制作、视听复核与可复用素材保管。",
+      "en-US": "Medical education animation planning, production, audiovisual review, and reusable element curation."
+    },
+    "publisher": "one-person-lab",
+    "license": "Apache-2.0",
+    "icon": "assets/branding/medautocast-logo.png",
+    "repository": "https://github.com/gaofeng21cn/med-autocast.git",
+    "maturity": "stable",
+    "routing_summary": {
+      "en-US": "Plan evidence-based medical education animations, direct their stories, review audiovisual quality, and preserve reusable visual, code, motion, and audio elements.",
+      "zh-CN": "规划循证医学科普动画，设计叙事与镜头，复核视听质量并保管可复用图像、代码、动作与声音。"
+    },
+    "home_shortcuts": [
+      {
+        "id": "open_medical_video_workflow",
+        "label": {
+          "zh-CN": "开展医学科普视频工作",
+          "en-US": "Open Med Auto Cast workflow"
+        },
+        "default_visible": true,
+        "target": {
+          "kind": "agent",
+          "ref": "med-autocast"
+        }
+      }
+    ]
+  },
+  "dependencies": {
+    "opl_base": "^2.0.0",
+    "packages": [
+      {
+        "id": "mac-media-assets",
+        "presence": "required",
+        "required_capabilities": [
+          "mac-media-assets"
+        ],
+        "required_module_ids": [
+          "mac-media-assets.discovery",
+          "mac-media-assets.media"
+        ]
+      }
+    ]
+  },
+  "provides": {
+    "agent": {
+      "stages_ref": "./agent/stages/manifest.json"
+    },
+    "skills": [
+      {
+        "id": "med-autocast",
+        "path": "./agent/primary_skill",
+        "exposure": "default"
+      }
+    ],
+    "mcp_servers": [
+      {
+        "id": "media-review",
+        "transport": "stdio",
+        "command": "node",
+        "args": [
+          "./plugins/med-autocast/media-review/server.bundle.mjs"
+        ]
+      }
+    ],
+    "contribution_handler": {
+      "kind": "cli",
+      "argv": [
+        "python3",
+        "./runtime/native_helpers/app_contribution.py"
+      ],
+      "transport": "stdin_json_stdout_json"
+    }
+  },
+  "ui": {
+    "declarative": {
+      "views": [
+        {
+          "id": "med-autocast.workspace.status",
+          "view_type": "list_detail",
+          "slot": "runtime.detail",
+          "title": {
+            "zh-CN": "视频制作进度",
+            "en-US": "Video production progress"
+          },
+          "data_ref": "med-autocast.workspace.v1#status",
+          "empty_state": {
+            "zh-CN": "选择制作工作区，读取已登记单集",
+            "en-US": "Select a workspace to inspect registered episodes"
+          },
+          "sort_order": 520,
+          "actions": [
+            {
+              "id": "med-autocast.review.note",
+              "label": {
+                "zh-CN": "记录审看意见",
+                "en-US": "Record review note"
+              },
+              "action_ref": "med-autocast.workspace.v1#review.note",
+              "confirm": true
+            }
+          ]
+        },
+        {
+          "id": "med-autocast.workspace.media",
+          "view_type": "list_detail",
+          "slot": "runtime.detail",
+          "title": {
+            "zh-CN": "视频与镜头审看",
+            "en-US": "Video and shot review"
+          },
+          "data_ref": "med-autocast.workspace.v1#media",
+          "empty_state": {
+            "zh-CN": "选择制作工作区，读取已登记单集",
+            "en-US": "Select a workspace to inspect registered episodes"
+          },
+          "sort_order": 521,
+          "actions": [
+            {
+              "id": "med-autocast.review.note",
+              "label": {
+                "zh-CN": "记录审看意见",
+                "en-US": "Record review note"
+              },
+              "action_ref": "med-autocast.workspace.v1#review.note",
+              "confirm": true
+            }
+          ]
+        }
+      ]
+    },
+    "mcp_apps": [
+      {
+        "id": "media-review",
+        "title": {
+          "zh-CN": "视频与镜头审看",
+          "en-US": "Video and shot review"
+        },
+        "mcp_server_id": "media-review",
+        "resource_uri": "ui://med-autocast/media-review.html"
+      }
+    ]
+  },
+  "distribution": {
+    "oci": "ghcr.io/gaofeng21cn/one-person-lab-packages/med-autocast",
+    "visibility": "public"
+  },
+  "host_hints": {
+    "codex": {
+      "sync_enabled": true,
+      "plugin_name": "med-autocast",
+      "category": "Productivity",
+      "capabilities": [
+        "Interactive",
+        "Write"
+      ]
+    }
+  }
+}

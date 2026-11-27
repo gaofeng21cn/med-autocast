@@ -25,6 +25,15 @@ if [[ -n "${framework_python_root}" && -d "${framework_python_root}" ]]; then
   export PYTHONPATH="${framework_python_root}${PYTHONPATH:+:${PYTHONPATH}}"
 fi
 
+sdk_root="${OPL_PYTHON_SDK_ROOT:-${OPL_FRAMEWORK_ROOT:+${OPL_FRAMEWORK_ROOT}/sdks/python-client}}"
+if [[ -z "${sdk_root}" && -n "${opl_bin}" ]] && command -v "${opl_bin}" >/dev/null 2>&1; then
+  sdk_root="$(dirname "$(command -v "${opl_bin}")")/../sdks/python-client"
+fi
+if [[ -n "${sdk_root}" && -d "${sdk_root}/src/opl_client" ]]; then
+  export OPL_PYTHON_SDK_ROOT="${sdk_root}"
+  export PYTHONPATH="${sdk_root}/src${PYTHONPATH:+:${PYTHONPATH}}"
+fi
+
 if command -v node >/dev/null 2>&1; then
   node "${repo_dir}/scripts/project-carrier.mjs" >/dev/null
 fi
@@ -36,9 +45,8 @@ if [[ "${1:-fast}" == "full" ]]; then
     echo "OPL CLI is unavailable; set OPL_BIN or OPL_FRAMEWORK_ROOT." >&2
     exit 1
   }
-  "${opl_bin}" agents check --repo "${repo_dir}" --json
-  "${opl_bin}" workspace source-hygiene --source-root "${repo_dir}" --json
-  "${opl_bin}" pack native-helper probe --descriptor "${repo_dir}/runtime/native_helpers/med_autocast.native-helper-probe.json" --json
+  "${opl_bin}" pack inspect "${repo_dir}" --json
+  "${opl_bin}" pack build "${repo_dir}" --no-write-lock --json
 elif [[ "${1:-fast}" != "fast" ]]; then
   echo "Usage: scripts/verify.sh [fast|full]" >&2
   exit 2

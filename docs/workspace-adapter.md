@@ -2,8 +2,8 @@
 
 ## Mini App 任务与媒体入口
 
-Package 声明 `task_board` 和 `artifact_view` 两个共享视图，读取同一当前工作区。
-`app-contribution-adapter.json` 调用随包 `runtime/native_helpers/app_contribution.py`，
+Package 在根目录 `opl-package.json` 的 `ui.declarative` 与 `provides.contribution_handler`
+声明 `med-autocast.workspace.status`、`med-autocast.workspace.media` 等共享视图并直连随包 `runtime/native_helpers/app_contribution.py`，
 工作区只从 Framework 验证后注入的 `OPL_PROFILE_WORKSPACE` 取得。空输入列出全部登记单集；
 `series_id`、`episode_id` 定位一集，`shot_id` 进一步聚焦 Score 中的镜头。不存在的身份返回诊断，不改选其他集或旧版本。
 
@@ -37,7 +37,7 @@ JSON
 MCP 请求由 Framework 处理确认与工作区身份；业务意见、媒体与专业审查仍由 MAC 工作区保管。
 
 独立媒体审看未收到已验证的 profile 环境时，从 `opl workspace list --json` 读取 Med Auto Cast 的当前工作区，
-通过公开 `opl app contribution read/execute` 调用原领域入口。显式 `workspace_path` 每次由 Framework
+通过 `opld` 公开 `app.contribution.read` / `app.action.execute` 调用原领域入口。显式 `workspace_path` 每次由 Framework
 核对登记和目录状态；未登记时提示接入，不猜测源码目录。页面显示当前工作区，并在切换单集、
 刷新、记录意见和恢复最近位置时保留这一引用。没有第二份工作区注册表。
 
@@ -123,10 +123,8 @@ opl workspace adopt --agent med-autocast --workspace /absolute/workspace \
 `--project-root` 必须来自实际定位结果，不要求与示例目录同名。Framework 维护唯一正式项目 inventory，保留已有其他集，不搬动媒体或覆盖制作原件；MAC 不另写一份 inventory。接入后重新运行定位，确认身份和目录一致，再消费这一集：
 
 ```sh
-opl knowledge prepare --repo /absolute/med-autocast --domain medical_video \
-  --stage story-directing --task-intent produce-episodes --workspace /absolute/workspace \
-  --project /absolute/workspace/productions/SERIES/EPISODE --output /absolute/task/episode.binding.json
-opl knowledge read-context --binding /absolute/task/episode.binding.json --json
+opl workspace sources list --workspace <workspace-id> --json
+opl workspace snapshot --workspace <workspace-id> --stage-run <stage-run-id> --json
 ```
 
 正文来源、知识 ID、归属和授权仍须先按 Framework 的[知识来源接口](https://github.com/gaofeng21cn/one-person-lab/blob/main/docs/specs/knowledge-sources.md)登记；项目接入只建立身份映射，不产生知识读取授权。两集分别 prepare，输出使用各自新的 binding 文件。身份不一致时停止项目知识召回，独立制作工作仍可按现有范围继续。

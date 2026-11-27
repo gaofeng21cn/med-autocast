@@ -7,55 +7,82 @@ import json
 import math
 import os
 from pathlib import Path
+import re
 import sys
+import tempfile
 import uuid
 
 from med_autocast import ContractError, local_path, mapping
 import yaml
 
 
-def _bootstrap_opl_framework() -> None:
-    try:
-        import opl_framework  # noqa: F401
-        return
-    except ImportError:
-        pass
-    candidates: list[Path] = []
-    for env_key, suffix in (('OPL_FRAMEWORK_PYTHON_ROOT', ''), ('OPL_FRAMEWORK_ROOT', 'python')):
-        raw = os.environ.get(env_key, '').strip()
-        if raw:
-            candidates.append(Path(raw) / suffix if suffix else Path(raw))
-    here = Path(__file__).resolve()
-    for parent in here.parents:
-        candidates.append(parent / 'src')
-        candidates.append(parent / 'one-person-lab' / 'python')
-    for candidate in candidates:
-        if (candidate / 'opl_framework').is_dir() and str(candidate) not in sys.path:
-            sys.path.insert(0, str(candidate))
-            return
-
-
-_bootstrap_opl_framework()
-
-from opl_framework.app_contribution import (  # noqa: E402
-    AppContributionError,
-    read_stdin_json,
-    ready_envelope,
-    resolve_workspace_root,
-    unavailable_envelope,
-    write_json_stdout,
-)
-from opl_framework.review_feedback_store import (  # noqa: E402
-    ReviewFeedbackError,
-    list_feedback_notes,
-    record_feedback_note,
-    validate_feedback_id,
-)
+try:
+    from opl_client import helpers as opl_helpers
+except ModuleNotFoundError as exc:
+    if exc.name != 'opl_client':
+        raise
+    opl_helpers = None  # The standalone MCP carrier can call the owner directly.
 
 BUNDLE = Path(__file__).resolve().parents[1] / 'workbench/scripts'
 sys.path.insert(0, str(BUNDLE))
 from delivery_layout import locations  # noqa: E402
 from _opl_file_hash import sha256_file  # noqa: E402
+
+PACKAGE_ID = 'med-autocast'
+
+
+def resolve_workspace_root() -> Path:
+    selected = Path(os.environ.get('OPL_PROFILE_WORKSPACE', ''))
+    if not selected.is_absolute():
+        raise ContractError('请先选择已登记制作工作区')
+    return selected.resolve(strict=True)
+
+
+def list_feedback_notes(directory: Path, revision: str) -> list[dict]:
+    notes = []
+    for note_path in sorted(directory.glob('*.json')):
+        if note_path.is_symlink():
+            raise ContractError('审看意见文件不能是符号链接')
+        note = mapping(note_path)
+        notes.append({
+            **note,
+            'artifact_ref': str(note_path),
+            'matches_current_revision': note.get('revision') == revision,
+        })
+    return notes
+
+
+def read_note(target: Path, identity: dict) -> dict:
+    if target.is_symlink():
+        raise ContractError('审看意见文件不能是符号链接')
+    saved = mapping(target)
+    if any(saved.get(key) != value for key, value in identity.items()):
+        raise ContractError('意见编号已被不同输入使用')
+    return saved
+
+
+def write_note(target: Path, record: dict, identity: dict) -> dict:
+    target.parent.mkdir(parents=True, exist_ok=True)
+    temporary = None
+    try:
+        with tempfile.NamedTemporaryFile(
+            mode='w', encoding='utf-8', dir=target.parent, suffix='.tmp', delete=False,
+        ) as handle:
+            temporary = Path(handle.name)
+            json.dump(record, handle, ensure_ascii=False, indent=2)
+            handle.write('\n')
+            handle.flush()
+            os.fsync(handle.fileno())
+        try:
+            # Only one writer can claim the request ID, after its JSON is complete.
+            os.link(temporary, target)
+        except FileExistsError:
+            return read_note(target, identity)
+        return record
+    finally:
+        if temporary is not None:
+            temporary.unlink(missing_ok=True)
+
 
 NOTE_ACTION = 'med-autocast.workspace.v1#review.note'
 INPUT_SCHEMA = {
@@ -83,10 +110,9 @@ NOTE_SCHEMA = {
 
 
 def identifier(value: object) -> str:
-    try:
-        return validate_feedback_id(value, label='请求编号')
-    except ReviewFeedbackError as exc:
-        raise ContractError('需要有效的系列、集号或请求编号') from exc
+    if not isinstance(value, str) or not re.fullmatch(r'[A-Za-z0-9_-]{1,100}', value):
+        raise ContractError('需要有效的系列、集号或请求编号')
+    return value
 
 
 def relative(root: Path, path: Path) -> str:
@@ -159,11 +185,10 @@ def episode(root: Path, sid: str, eid: str, series: dict, spec: dict) -> dict:
     delivered = artifact(root, delivery_path, '交付与原审查记录', 'review')
     if delivered:
         artifacts.append(delivered)
-    notes_root = local_path(root, str(project / 'qa/miniapp-notes'), exists=False)
-    try:
-        notes = list_feedback_notes(notes_root, revision=revision, root=root) if notes_root.is_dir() else []
-    except ReviewFeedbackError as exc:
-        raise ContractError(str(exc)) from exc
+    notes_root = project / 'qa/miniapp-notes'
+    if notes_root.is_symlink():
+        raise ContractError('审看意见目录不能是符号链接')
+    notes = list_feedback_notes(local_path(root, str(notes_root), exists=False), revision)
     defaults = {'series_id': sid, 'episode_id': eid, 'revision': revision, 'request_id': str(uuid.uuid4())}
     return {
         'id': f'{sid}/{eid}',
@@ -237,8 +262,10 @@ def read_workspace(root: Path, value: dict, view: str) -> dict:
                 if selected_episode:
                     raise
                 diagnostics.append({'series_id': sid, 'episode_id': eid, 'message': str(exc)})
-    return ready_envelope(
-        {
+    return {
+        'state': 'ready',
+        'input_schema': INPUT_SCHEMA,
+        'data': {
             'schema': 'med_autocast_miniapp/v1',
             'view': view,
             'items': items,
@@ -246,8 +273,8 @@ def read_workspace(root: Path, value: dict, view: str) -> dict:
             'command_inputs': {NOTE_ACTION: {'input_schema': NOTE_SCHEMA}},
             'workspace_ref': str(root),
             'domain_quality_approved': False,
-        }
-    )
+        },
+    }
 
 
 def record_note(root: Path, value: dict) -> dict:
@@ -263,14 +290,11 @@ def record_note(root: Path, value: dict) -> dict:
     row = read_workspace(root, selection, 'media')['data']['items'][0]
     project = Path(row['project_ref']).parent
     notes_dir = local_path(root, str(project / 'qa/miniapp-notes'), exists=False)
-    target = local_path(root, str(notes_dir / (request_id + '.json')), exists=False)
+    target = notes_dir / f'{request_id}.json'
     identity_keys = ('series_id', 'episode_id', 'shot_id', 'revision', 'request_id', 'note')
     identity = {key: value.get(key, '') for key in identity_keys}
-    if target.is_file():
-        saved = mapping(target)
-        if any(saved.get(key) != field for key, field in identity.items()):
-            raise ContractError('意见编号已被不同输入使用')
-        return note_result(target, saved)
+    if target.is_file() or target.is_symlink():
+        return note_result(target, read_note(target, identity))
     if value.get('revision') != row['revision']:
         raise ContractError('当前工程或候选已变化；刷新后针对当前版本记录意见')
     if value.get('shot_id'):
@@ -291,24 +315,13 @@ def record_note(root: Path, value: dict) -> dict:
     }
     from datetime import datetime, timezone
     record['recorded_at'] = datetime.now(timezone.utc).isoformat()
-    try:
-        stored_path, saved, _created = record_feedback_note(
-            notes_dir,
-            request_id=request_id,
-            payload=record,
-            identity_keys=identity_keys,
-            root=root,
-        )
-    except ReviewFeedbackError as exc:
-        if exc.reason_code == 'idempotency_conflict':
-            raise ContractError('意见编号已被不同输入使用') from exc
-        raise ContractError(str(exc)) from exc
-    return note_result(stored_path, saved)
+    return note_result(target, write_note(target, record, identity))
 
 
 def note_result(target: Path, saved: dict) -> dict:
-    return ready_envelope(
-        result={
+    return {
+        'state': 'ready',
+        'result': {
             'status': 'recorded',
             'artifact_ref': str(target),
             'note': saved,
@@ -316,32 +329,76 @@ def note_result(target: Path, saved: dict) -> dict:
                 'data_ref': 'med-autocast.workspace.v1#status',
                 'input': {key: saved[key] for key in ('series_id', 'episode_id', 'request_id')},
             },
-        }
-    )
+        },
+    }
+
+
+def read_request() -> dict:
+    if opl_helpers is not None:
+        return opl_helpers.read_stdin_json()
+    raw = sys.stdin.read().strip()
+    request = json.loads(raw) if raw else {}
+    if not isinstance(request, dict):
+        raise ContractError('请求必须是 JSON 对象')
+    return request
 
 
 def main() -> int:
+    command = sys.argv[1] if len(sys.argv) > 1 else None
+    execute = command == 'note'
+    ref = NOTE_ACTION if execute else None
     try:
-        root = resolve_workspace_root()
-        if root is None:
-            raise ContractError('请先选择已登记制作工作区')
-        value = read_stdin_json()
-        operation = sys.argv[1] if len(sys.argv) > 1 else 'status'
-        if operation not in ('status', 'media', 'note'):
+        request = read_request()
+        if command is None and 'operation' in request:
+            operation = request['operation']
+            execute = operation == 'execute'
+            ref = request.get('ref') or request.get('action_id')
+            value = request.get('input', request.get('payload'))
+            if not isinstance(value, dict):
+                raise ContractError('请求输入必须是 JSON 对象')
+            if execute and ref == NOTE_ACTION:
+                command = 'note'
+            elif operation == 'read':
+                command = {
+                    'med-autocast.workspace.v1#status': 'status',
+                    'med-autocast.workspace.v1#media': 'media',
+                }.get(ref)
+        else:
+            command = command or 'status'
+            value = request
+        if request.get('package_id') not in (None, PACKAGE_ID):
+            raise ContractError('请求的软件包标识与 med-autocast 不一致')
+        if command not in ('status', 'media', 'note'):
             raise ContractError('未知 Mini App 操作')
-        result = record_note(root, value) if operation == 'note' else read_workspace(root, value, operation)
-    except (ValueError, AppContributionError, OSError, TypeError, KeyError, json.JSONDecodeError, yaml.YAMLError) as exc:
-        result = unavailable_envelope(str(exc))
-        if len(sys.argv) > 1 and sys.argv[1] == 'note':
-            result = {
-                'schema_version': 'opl-package-app-contribution-response.v1',
-                'ok': False,
-                'operation': 'execute',
-                'ref': NOTE_ACTION,
-                'error': {'message': str(exc)},
-            }
-    write_json_stdout(result)
+
+        root = resolve_workspace_root()
+        result = record_note(root, value) if command == 'note' else read_workspace(root, value, command)
+        if opl_helpers is not None and command != 'note':
+            result = {**opl_helpers.ready_envelope(package_id=PACKAGE_ID, data=result['data']), **result}
+    except (ValueError, OSError, TypeError, KeyError, yaml.YAMLError) as exc:
+        result = {'state': 'unavailable', 'reason': str(exc), 'error': {'message': str(exc)}}
+        if opl_helpers is not None:
+            result = {**result, **opl_helpers.unavailable_envelope(package_id=PACKAGE_ID, reason=str(exc))}
+
+    if execute:
+        envelope = {
+            'schema_version': 'opl-package-app-contribution-response.v1',
+            'package_id': PACKAGE_ID,
+            'operation': 'execute',
+            'ref': ref,
+            'ok': result['state'] == 'ready',
+        }
+        if envelope['ok']:
+            result = {**envelope, 'result': result['result']} if command == 'note' and len(sys.argv) == 1 else result
+        else:
+            result = {**envelope, 'error': result['error']}
+
+    if opl_helpers is not None:
+        opl_helpers.write_json_stdout(result)
+    else:
+        print(json.dumps(result, ensure_ascii=False))
     return 0
+
 
 
 if __name__ == '__main__':

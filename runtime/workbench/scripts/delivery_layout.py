@@ -6,18 +6,6 @@ import json
 from pathlib import Path
 import shutil
 
-from _opl_framework_bootstrap import bootstrap_opl_framework
-
-bootstrap_opl_framework()
-
-from opl_framework.delivery_layout import (  # noqa: E402
-    compact_archived_wav_files,
-    prune_archived_versions,
-    transactional_swap_directories,
-)
-from opl_framework.workspace_storage import sha256_file as _sha256_file  # noqa: E402
-
-
 def save(path: Path, value: dict) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(json.dumps(value, ensure_ascii=False, indent=2) + '\n', encoding='utf-8')
@@ -25,6 +13,8 @@ def save(path: Path, value: dict) -> None:
 
 def _compact_archived_wavs(backup: Path) -> None:
     """Losslessly archive WAV copies inside a retired delivery backup as exact-restore FLAC."""
+    from opl_framework.delivery_layout import compact_archived_wav_files
+
     compact_archived_wav_files(
         backup / 'record',
         compaction_schema='medical_video_storage_compaction_group/v1',
@@ -64,6 +54,8 @@ def _prune_old_archived_deliveries(archive_episode_dir: Path, keep_latest: int) 
         d.name for d in archive_episode_dir.iterdir()
         if d.is_dir() and is_pinned_delivery_snapshot(d)[0]
     ]
+    from opl_framework.delivery_layout import prune_archived_versions
+
     return prune_archived_versions(
         archive_episode_dir,
         keep_latest=keep_latest,
@@ -97,6 +89,11 @@ def archive_destination(workspace: Path, series: str, episode: str) -> Path:
 
 def install(workspace: Path, series: str, episode: str, user_stage: Path, record_stage: Path) -> dict:
     """Replace one episode's selected files and receipt with rollback on error."""
+    from _opl_framework_bootstrap import bootstrap_opl_framework
+
+    bootstrap_opl_framework()
+    from opl_framework.delivery_layout import transactional_swap_directories
+
     loc = locations(workspace, series, episode)
     user, record, pointer = loc['user'], loc['record'], loc['pointer']
     backup = archive_destination(workspace, series, episode)

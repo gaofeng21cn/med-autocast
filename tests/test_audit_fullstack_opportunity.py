@@ -94,6 +94,64 @@ class FullstackOpportunityAuditTests(unittest.TestCase):
             self.assertFalse(clean["actor_opportunities"]["stiff_actor_risk"])
             self.assertEqual(clean["storyboard_opportunities"]["heading_inside_camera"], 0)
 
+    def test_dense_cue_shots_ignores_long_shot_above_threshold(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            project = Path(tmp) / "ep_dense_cue"
+            (project / "src").mkdir(parents=True)
+            (project / "asset_manifest.json").write_text(
+                json.dumps({"schema": "medical_animation_assets/v1", "assets": []}),
+                encoding="utf-8",
+            )
+            (project / "score.json").write_text(
+                json.dumps({
+                    "duration": 10.0,
+                    "shots": [{
+                        "id": "S01",
+                        "start": 0.0,
+                        "end": 10.0,
+                        "events": {"prepare": 0.3, "action": 2.0, "reaction": 5.0, "settle": 7.5},
+                        "motion_arc": "explain",
+                        "visual_anchor": "card",
+                    }],
+                    "cues": [
+                        {"start": 0.2, "end": 2.5, "text": "第一句短字幕。"},
+                        {"start": 2.5, "end": 5.0, "text": "第二句短字幕。"},
+                        {"start": 5.0, "end": 7.4, "text": "第三句短字幕。"},
+                        {"start": 7.4, "end": 9.6, "text": "第四句短字幕。"},
+                    ],
+                }),
+                encoding="utf-8",
+            )
+            long_rep = fullstack_audit.analyze_project(project)
+            self.assertEqual(long_rep["script_opportunities"]["dense_cue_shots"], [])
+
+            # Same 4 cues inside a 7.2s shot (1.8s/cue < 2.2) should still trigger dense_cue_shots.
+            (project / "score.json").write_text(
+                json.dumps({
+                    "duration": 7.2,
+                    "shots": [{
+                        "id": "S01",
+                        "start": 0.0,
+                        "end": 7.2,
+                        "events": {"prepare": 0.3, "action": 1.8, "reaction": 3.8, "settle": 5.5},
+                        "motion_arc": "explain",
+                        "visual_anchor": "card",
+                    }],
+                    "cues": [
+                        {"start": 0.2, "end": 1.8, "text": "第一句短字幕。"},
+                        {"start": 1.8, "end": 3.5, "text": "第二句短字幕。"},
+                        {"start": 3.5, "end": 5.2, "text": "第三句短字幕。"},
+                        {"start": 5.2, "end": 6.8, "text": "第四句短字幕。"},
+                    ],
+                }),
+                encoding="utf-8",
+            )
+            short_rep = fullstack_audit.analyze_project(project)
+            self.assertEqual(
+                short_rep["script_opportunities"]["dense_cue_shots"],
+                [{"shot": "S01", "span": 7.2, "cue_count": 4}],
+            )
+
 
 if __name__ == "__main__":
     unittest.main()

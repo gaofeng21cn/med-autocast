@@ -95,15 +95,15 @@ export function caption(s: Stage, score: Score, t: number) {
   if (!c) return;
   const g = s.g;
   g.save();
-  g.font = '600 34px "PingFang SC",sans-serif';
+  g.font = '700 38px "PingFang SC",sans-serif';
   g.textAlign = "center";
   g.textBaseline = "middle";
   const hardMaxW = Math.max(480, s.width - 120);
-  const targetW = Math.min(hardMaxW, 760);
+  const targetW = Math.min(hardMaxW, 820);
   const lines = c.text
     .split(/\r\n|\r|\n/)
     .flatMap((raw) => wrapCaptionLine(g, raw, targetW, hardMaxW));
-  const lineHeight = 48;
+  const lineHeight = 52;
   // Keep the last line on the authored caption baseline; extra lines grow
   // upwards cleanly within the safe bottom band without intruding on FLOOR=562.
   const firstY = s.height - 58 - (lines.length - 1) * lineHeight;
@@ -118,13 +118,13 @@ export function caption(s: Stage, score: Score, t: number) {
       }));
     luminance = samples.reduce((a,b) => a+b,0)/samples.length;
   } catch { /* Local rendering normally permits pixel reads. */ }
-  const dark = luminance < 142;
+  const dark = luminance < 152;
   g.lineJoin = "round";
-  g.lineWidth = 5.6;
-  g.strokeStyle = dark ? "rgba(15,30,27,.96)" : "rgba(252,247,235,.98)";
-  g.fillStyle = dark ? "#fffdf5" : "#0e221f";
-  g.shadowColor = dark ? "rgba(0,0,0,.38)" : "rgba(255,250,238,.85)";
-  g.shadowBlur = 3;
+  g.lineWidth = 5.8;
+  g.strokeStyle = dark ? "rgba(10,20,18,.98)" : "rgba(255,253,247,.98)";
+  g.fillStyle = dark ? "#fffdf5" : "#081715";
+  g.shadowColor = dark ? "rgba(0,0,0,.42)" : "rgba(255,253,247,.90)";
+  g.shadowBlur = 2;
   lines.forEach((line, i) => {
     const y = firstY + i * lineHeight;
     g.strokeText(line, s.width / 2, y);
@@ -133,7 +133,7 @@ export function caption(s: Stage, score: Score, t: number) {
   g.shadowColor = "transparent";
   g.shadowBlur = 0;
   const metrics = lines.map(line => g.measureText(line));
-  const blurPad = 6;
+  const blurPad = 4;
   const pad = g.lineWidth / 2 + blurPad;
   const left = Math.max(...metrics.map(m => Math.max(m.width/2, m.actualBoundingBoxLeft))) + pad;
   const right = Math.max(...metrics.map(m => Math.max(m.width/2, m.actualBoundingBoxRight))) + pad;

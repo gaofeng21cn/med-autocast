@@ -107,9 +107,9 @@ export function draw(text, background, time = 1) {
         assert.deepEqual(fills.map((c: any) => c.text),lines);
         assert.deepEqual(strokes.map((c: any) => c.text),lines);
         assert.equal(fills.at(-1).y,662, "existing last-line baseline must stay fixed");
-        assert.ok(fills.every((c: any, i:number) => c.x === 640 && c.y === 662-(lines.length-1-i)*48));
-        assert.ok(fills.every((c: any) => c.font.startsWith("600 34px")));
-        assert.ok(fills.every((c: any) => c.color === (row.background === "#263733" ? "#fffdf5" : "#0e221f")));
+        assert.ok(fills.every((c: any, i:number) => c.x === 640 && c.y === 662-(lines.length-1-i)*52));
+        assert.ok(fills.every((c: any) => c.font.startsWith("bold 38px") || c.font.startsWith("700 38px")));
+        assert.ok(fills.every((c: any) => c.color === (row.background === "#263733" ? "#fffdf5" : "#081715")));
         assert.equal(row.samples.length,lines.length*5, "sample each line's real background");
         assert.equal(row.bands,lines.length, "real pixels must occupy separate line bands");
         assert.ok(row.pixels > 0);

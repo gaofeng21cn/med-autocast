@@ -208,7 +208,7 @@ def analyze_project(project_dir: Path, series: str = "", episode: str = "") -> d
         sc = cues_for_shot(cues, st, en)
         if span >= 13.0:
             extra_long_shots.append({"shot": sid, "span": span, "cue_count": len(sc)})
-        if len(sc) >= 4:
+        if len(sc) >= 4 and (span / max(1, len(sc))) < 2.2:
             dense_cue_shots.append({"shot": sid, "span": span, "cue_count": len(sc)})
         if sc:
             last_cue_end = max(float(q.get("end", 0) or 0) for q in sc)

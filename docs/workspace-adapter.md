@@ -116,8 +116,8 @@ python3 runtime/native_helpers/med_autocast.py project-knowledge-locator \
 若单集尚未登记，使用定位结果的真实 `project_root`，为该集指定稳定项目 ID，由 Framework 既有工作区入口接入：
 
 ```sh
-opl workspace adopt --agent med-autocast --workspace /absolute/workspace \
-  --project-id EXPLICIT_PROJECT_ID --project-root /absolute/workspace/productions/SERIES/EPISODE --apply
+opl workspace init --workspace /absolute/workspace \
+  --project-id EXPLICIT_PROJECT_ID --project-root /absolute/workspace/productions/SERIES/EPISODE --json
 ```
 
 `--project-root` 必须来自实际定位结果，不要求与示例目录同名。Framework 维护唯一正式项目 inventory，保留已有其他集，不搬动媒体或覆盖制作原件；MAC 不另写一份 inventory。接入后重新运行定位，确认身份和目录一致，再消费这一集：

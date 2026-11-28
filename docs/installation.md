@@ -7,7 +7,7 @@ opl pack install ghcr.io/gaofeng21cn/one-person-lab-packages/med-autocast --json
 opl pack inspect med-autocast --json
 ```
 
-OPL 通过 `ghcr.io/gaofeng21cn/one-person-lab-packages/med-autocast` 解析当前版本，校验发布内容，并交给原生插件管理器安装。安装时会先自动安装公开的 `mac-media-assets` 依赖，再安装 MAC；用户只执行一次安装命令。资产库的媒体与查询入口由 MAC 自动发现。插件选择器为 med-autocast@med-autocast。安装后在新任务中使用 Med Auto Cast。
+OPL 通过 `ghcr.io/gaofeng21cn/one-person-lab-packages/med-autocast` 解析当前版本，校验发布内容，并交给原生插件管理器安装。安装时会先自动安装公开的 `mac-media-assets` 依赖，再安装 MAC；用户只执行一次安装命令。资产库的媒体与查询入口由 MAC 自动发现。并通过原生载体投影向 Codex 暴露能力。安装后在新任务中使用 Med Auto Cast。
 
 软件包发布以 OCI 为准，GitHub Release 页面不是安装前提。源码仓库和版本标签用于开发与追溯；常规安装不需要手动下载 ZIP、添加 Git 市场或执行本仓打包脚本。
 

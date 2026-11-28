@@ -821,7 +821,18 @@ export function drawForegroundDesk(
     opacity?: number;
     recordBackdropBounds?: boolean;
   } = {},
-): { topY: number; clipBottomY: number } {
+): {
+  topY: number;
+  clipBottomY: number;
+  /** 水平桌台面安全落底上限（桌面道具/厚纸件 bottomY <= 此值，防越过前棱线垂挂前挡板） */
+  surfaceSafeBottomY: number;
+  /** 桌板前沿厚度条上沿（约 topY + dh * 0.17） */
+  frontLipTopY: number;
+  /** 桌檐下沿暗线 / 垂直前挡板起始线（约 topY + dh * 0.235） */
+  frontPanelTopY: number;
+  /** 纯墙面结论标牌安全底沿（墙面标牌 bottomY <= 此值，防骑跨桌后沿） */
+  wallSafeBottomY: number;
+} {
   const assetId = opts.assetId ?? "bg_foreground_desk";
   const topY = opts.topY ?? 508;
   const overscanX = opts.overscanX ?? 48;
@@ -858,5 +869,12 @@ export function drawForegroundDesk(
     stage.tracking = prevTracking;
   }
 
-  return { topY, clipBottomY: topY + 8 };
+  return {
+    topY,
+    clipBottomY: topY + 8,
+    surfaceSafeBottomY: Math.round(topY + dh * 0.125),
+    frontLipTopY: Math.round(topY + dh * 0.17),
+    frontPanelTopY: Math.round(topY + dh * 0.235),
+    wallSafeBottomY: Math.round(topY - 14),
+  };
 }

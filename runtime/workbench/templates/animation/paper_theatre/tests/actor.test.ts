@@ -466,11 +466,22 @@ test("drawForegroundDesk aligns visible_bounds top edge to topY, returns clipBot
   const res = actor.drawForegroundDesk(mock.stage, { topY: 508, overscanX: 48, bottomOverscan: 16 });
   assert.equal(res.topY, 508);
   assert.equal(res.clipBottomY, 516);
+  assert.equal(res.wallSafeBottomY, 494);
+  assert.equal(res.surfaceSafeBottomY, 537);
+  assert.equal(res.frontLipTopY, 547);
+  assert.equal(res.frontPanelTopY, 562);
+  assert.ok(res.wallSafeBottomY < res.topY && res.topY < res.surfaceSafeBottomY && res.surfaceSafeBottomY < res.frontLipTopY && res.frontLipTopY < res.frontPanelTopY);
   assert.equal(mock.drawCalls.length, 1);
   // drawImage(im, sx, sy, sw, sh, dx, dy, dw, dh)
   assert.deepEqual(mock.drawCalls[0].args, [0, 512, 1536, 512, -48, 508, 1376, 228]);
   assert.equal(mock.boundsCalls.length, 0, "foreground backdrop must not pollute subject bounds by default");
   assert.equal(mock.stage.tracking, true, "stage.tracking must be restored after drawForegroundDesk");
+
+  const highDesk = actor.drawForegroundDesk(mock.stage, { topY: 414, overscanX: 48, bottomOverscan: 16 });
+  assert.equal(highDesk.surfaceSafeBottomY, 454);
+  assert.equal(highDesk.frontLipTopY, 469);
+  assert.equal(highDesk.frontPanelTopY, 490);
+  assert.equal(highDesk.wallSafeBottomY, 400);
 });
 
 test("drawCloseWallBackdrop crops upper wall above floor line and restores tracking", async (t) => {

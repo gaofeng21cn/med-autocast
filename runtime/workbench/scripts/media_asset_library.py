@@ -133,8 +133,13 @@ def report(workspace, explicit=None):
             marker = full/'offline-installation.json'
             if marker.is_file() and valid(full):
                 receipt = json.loads(marker.read_text())
-                descriptor = root/'opl-package.json'
-                core_digest = json.loads(descriptor.read_text()).get('content_lock', {}).get('digest') if descriptor.is_file() else None
+                descriptor = root / 'opl-package.json'
+                v2_lock = root / 'opl-release.lock.json'
+                core_digest = (
+                    json.loads(v2_lock.read_text()).get('digest') if v2_lock.is_file() else None
+                ) or (
+                    json.loads(descriptor.read_text()).get('content_lock', {}).get('digest') if descriptor.is_file() else None
+                )
                 if receipt.get('source_catalog_sha256') == sha256_file(root/'catalog/assets.jsonl') and receipt.get('core_content_digest') == core_digest:
                     root, source = full, 'complete_offline_installation'
     result = {'schema': 'mac_media_assets_status/v1', 'read_only': True, 'status': 'unavailable',

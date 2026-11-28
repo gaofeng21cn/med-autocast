@@ -7,7 +7,7 @@
 - **产品定位与骨架**：Med Auto Cast 采用 OPL Framework 标准声明式骨架，以 OPL Book Forge 为结构参考；通过 OCI 不可变版本与 `latest-stable` 分发，不自建 ZIP 分发器或 GitHub Release 附件。原工作台十阶段职责归并为六个核心 Stage 并保留专业 Skill 分工，保持长方法按需加载而不删减职责。
 - **领域来源与权责边界**：领域方法源自医学科普制作工作台的专业 Skill 与 SOP；构建输入留在维护者本地档案，不随公开包分发。结构参考和通用标准归 OPL Framework，制作工作区原数据仍是系列、作者与媒体事实权威。
 - **核心不变量**：拒用源优先于残留可用区间；当前制作单优先于旧 `ready` 快照；同一任务保持单一 writer；原音轨未变才可复用；静态、动态、技术、听感、医学与平台发布分别留存证据；资产 catalog 是工作区唯一索引，产品源码不携带真实媒体与凭据；机器只校验可确定条件，不替代质量或授权判断。
-- **长期维护规则**：工作台纯文件 SHA-256 复用 Framework 的 `python/opl_framework/file_hash.py`（由 `scripts/project-carrier.mjs` 投影到 `runtime/workbench/scripts/_opl_file_hash.py`，独立工作区不要求安装 Framework）；`plugins/med-autocast/skills/` 与 `plugins/med-autocast/assets/` 为构建/验证/发布期由 `scripts/project-carrier.mjs` 按 `contracts/carrier_projection.json` 从根目录唯一事实源确定性物化的载体投影（已在 `.gitignore` 中排除，不再向 Git 提交双份源码）；工作区优先兼容原制作单/交付合同而不新建平行制作状态；不把结构检查、Skill 数量或安装成功等价为 OMA 资格或内容质量通过。
+- **长期维护规则**：工作台纯文件 SHA-256 携带独立副本 `runtime/workbench/scripts/_opl_file_hash.py`（与 Framework `sdks/python-client` / `opl_client` 哈希逻辑一致，独立工作区不要求安装 Framework）；`plugins/med-autocast/skills/` 与 `plugins/med-autocast/assets/` 为构建/验证/发布期由 `scripts/project-carrier.mjs` 按 `contracts/carrier_projection.json` 从根目录唯一事实源确定性物化的载体投影（已在 `.gitignore` 中排除，不再向 Git 提交双份源码）；工作区优先兼容原制作单/交付合同而不新建平行制作状态；不把结构检查、Skill 数量或安装成功等价为 OMA 资格或内容质量通过。
 
 ## 知识归属、正文来源与运行记录
 
@@ -26,7 +26,7 @@
 
 公开动作支持处理多集，因此明确声明 `execution_scope.kind: none`。它们保留工作区来源授权，只召回适用的产品、用户或团队、主题知识，不将系列名或任意一集冒充本次项目范围。需要单集项目知识时，直接 Skill 从 `workbench.yaml` 选择真实单集，核对 `project.json` 的系列和集号，再由正式 `workspace_index.json.projects` 找到该真实目录唯一对应的 `project_id`；通过 Framework `opl workspace sources` 与 `opl workspace snapshot --workspace <ws_id> --stage-run <sr_id>` 为本次 StageRun 绑定来源快照。每集独立绑定，另一集的私有知识不进入快照。未登记、目录冲突或身份不一致时报告项目知识缺口，不从目录名生成身份，也不回退读取全部项目。
 
-`project-knowledge-locator` 提供上述只读核验；缺少正式登记时，Framework 的 `workspace adopt --project-root` 接入已存在单集目录，MAC 不写另一套 inventory。操作步骤见[单集知识登记](workspace-adapter.md#单集知识登记)。
+`project-knowledge-locator` 提供上述只读核验；缺少正式登记时，Framework 的 `opl workspace init --workspace <workspace> --project-id <id> --project-root <project_root>` 接入已存在单集目录，MAC 不写另一套 inventory。操作步骤见[单集知识登记](workspace-adapter.md#单集知识登记)。
 
 MAC 判断经验是否值得沉淀及其归属，有权维护者接受后经通用写回机制更新唯一正文。可选经验缺失不阻断独立制作；必需医学依据、作者关键约束或授权缺失限制依赖它的行动。媒体生成与发布前复核关键约束与授权，派生摘要随来源变化重审。素材复用包、原始媒体和项目交付按业务保留规则管理，不随知识缓存或运行日志清理。
 

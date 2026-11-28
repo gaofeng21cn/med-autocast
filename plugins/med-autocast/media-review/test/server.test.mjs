@@ -58,7 +58,7 @@ test('standalone launcher selects the active Framework workspace and preserves e
 });
 
 test('standalone reads and notes use the authoritative contribution broker with the exact workspace', async () => {
-  const { invoke } = await import('../server.mjs');
+  const { invoke, resolveMediaFocus } = await import('../server.mjs');
   const focus = { workspace_path: '/production', series_id: 'series', episode_id: 'ep2' };
   const calls = [];
   const data = { state: 'ready', data: { items: [{ episode_id: 'ep2' }] } };
@@ -73,4 +73,21 @@ test('standalone reads and notes use the authoritative contribution broker with 
   assert.ok(calls[1][1].includes('--confirm'));
   assert.deepEqual(calls[1][2], note);
   await assert.rejects(invoke('media', focus, {}, async () => ({ opl_app_contribution: { response: { result: { state: 'unavailable', reason: 'Workspace was archived' } } } })), /Workspace was archived/);
+
+  assert.deepEqual(await resolveMediaFocus({ episode_id: 'ep3' }, {}, async () => ({
+    workspaces: [
+      { workspace_id: 'other', name: 'other', status: 'active', root_path: '/other' },
+      { workspace_id: 'mac', name: 'med-autocast', status: 'active', root_path: '/v2-mac' },
+    ],
+  })), { workspace_path: '/v2-mac', episode_id: 'ep3' });
+
+  const v2Calls = [];
+  const v2Run = async (...args) => {
+    v2Calls.push(args);
+    if (args[0] === 'opl') throw Object.assign(new Error('Unknown command namespace app'), { stderr: 'Unknown command namespace app' });
+    return { state: 'ready', data: { items: [] } };
+  };
+  assert.deepEqual(await invoke('media', focus, {}, v2Run), { state: 'ready', data: { items: [] } });
+  assert.equal(v2Calls[1][0], 'python3');
+  assert.equal(v2Calls[1][1][1], 'media');
 });

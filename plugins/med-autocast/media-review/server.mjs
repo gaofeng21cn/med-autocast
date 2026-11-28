@@ -3,6 +3,7 @@ import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js'
 import { getUiCapability, registerAppResource, registerAppTool, RESOURCE_MIME_TYPE } from '@modelcontextprotocol/ext-apps/server';
 import { z } from 'zod';
 import { execFile } from 'node:child_process';
+import { existsSync } from 'node:fs';
 import { readFile } from 'node:fs/promises';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -11,6 +12,8 @@ import { createHash } from 'node:crypto';
 const root = dirname(fileURLToPath(import.meta.url));
 const packageRoot = resolve(root, '..');
 const adapter = resolve(packageRoot, 'skills/med-autocast/runtime/native_helpers/app_contribution.py');
+const repoAdapter = resolve(packageRoot, '..', '..', 'runtime/native_helpers/app_contribution.py');
+const resolveAdapter = () => (existsSync(adapter) ? adapter : repoAdapter);
 const html = await readFile(resolve(root, 'index.html'), 'utf8');
 const resourceUri = 'ui://med-autocast/media-review.html';
 const inputSchema = z.object({
@@ -35,17 +38,17 @@ function supportsUi(server) {
 }
 function runJson(command, args, input, env = process.env) {
   return new Promise((resolvePromise, reject) => {
-    const child = execFile(command, args, { cwd: packageRoot, env, timeout: 120000, maxBuffer: 32 * 1024 * 1024 }, (error, stdout) => {
+    const child = execFile(command, args, { cwd: packageRoot, env, timeout: 120000, maxBuffer: 32 * 1024 * 1024 }, (error, stdout, stderr) => {
       try {
         const result = JSON.parse(stdout || '{}');
         if (error || result.ok === false || result.state === 'unavailable') {
-          const message = result.error?.message || result.reason || 'Med Auto Cast 工作区读取未完成';
-          reject(Object.assign(new Error(message), { result }));
+          const message = result.error?.message || result.reason || stderr?.trim() || error?.message || 'Med Auto Cast 工作区读取未完成';
+          reject(Object.assign(new Error(message), { result, code: error?.code, stderr }));
           return;
         }
         resolvePromise(result);
       } catch {
-        reject(new Error('Med Auto Cast owner 返回不可解析结果，请重新读取当前工作区。'));
+        reject(Object.assign(new Error(stderr?.trim() || error?.message || 'Med Auto Cast owner 返回不可解析结果，请重新读取当前工作区。'), { code: error?.code, stderr }));
       }
     });
     child.stdin.on('error', () => {});
@@ -61,23 +64,41 @@ export async function resolveMediaFocus(input, env = process.env, run = runJson)
   const catalog = await run(env.OPL_BIN || 'opl', ['workspace', 'list', '--json'], undefined, env);
   const project = catalog.workspace_catalog?.projects?.find(entry => entry.project === 'med-autocast');
   const binding = project?.active_binding;
-  if (!binding?.workspace_path || binding.status !== 'active') {
-    throw new Error('请先在 OPL 登记制作工作区，并将它设为 Med Auto Cast 的当前工作区，再重新读取。');
+  if (binding?.workspace_path && binding.status === 'active') {
+    return { ...input, workspace_path: binding.workspace_path };
   }
-  return { ...input, workspace_path: binding.workspace_path };
+  const v2Workspaces = Array.isArray(catalog.workspaces) ? catalog.workspaces : [];
+  const activeV2 = v2Workspaces.filter(ws => ws && (ws.active === true || ws.status === 'active' || !ws.status) && (ws.root_path || ws.workspace_path));
+  const matchedV2 = activeV2.find(ws =>
+    [ws.project, ws.domain, ws.name, ws.workspace_id].some(v => typeof v === 'string' && v.toLowerCase().includes('med-autocast'))
+  ) ?? (activeV2.length === 1 ? activeV2[0] : null);
+  const v2Path = matchedV2?.root_path || matchedV2?.workspace_path;
+  if (v2Path) return { ...input, workspace_path: v2Path };
+  throw new Error('请先在 OPL 登记制作工作区，并将它设为 Med Auto Cast 的当前工作区，再重新读取。');
 }
 
 export async function invoke(operation, input, env = process.env, run = runJson) {
   const focus = await resolveMediaFocus(input, env, run);
   if (env.OPL_PROFILE_WORKSPACE && resolve(focus.workspace_path) === resolve(env.OPL_PROFILE_WORKSPACE)) {
-    return run('python3', [adapter, operation], focus, env);
+    return run('python3', [resolveAdapter(), operation], focus, env);
   }
   const writing = operation === 'note';
-  const result = await run(env.OPL_BIN || 'opl', [
-    'app', 'contribution', writing ? 'execute' : 'read', '--package-id', 'med-autocast',
-    '--ref', writing ? 'med-autocast.workspace.v1#review.note' : 'med-autocast.workspace.v1#media',
-    '--input-stdin', ...(writing ? ['--confirm'] : []), '--json',
-  ], focus, env);
+  let result;
+  try {
+    result = await run(env.OPL_BIN || 'opl', [
+      'app', 'contribution', writing ? 'execute' : 'read', '--package-id', 'med-autocast',
+      '--ref', writing ? 'med-autocast.workspace.v1#review.note' : 'med-autocast.workspace.v1#media',
+      '--input-stdin', ...(writing ? ['--confirm'] : []), '--json',
+    ], focus, env);
+  } catch (error) {
+    if (!error?.result?.opl_app_contribution && (
+      error?.code === 'ENOENT'
+      || /unknown|unsupported|unrecognized|not found/i.test(`${error?.message ?? ''} ${error?.stderr ?? ''}`)
+    )) {
+      return run('python3', [resolveAdapter(), operation], focus, env);
+    }
+    throw error;
+  }
   const data = result.opl_app_contribution?.response?.result;
   if (!data || data.ok === false || data.state === 'unavailable') {
     throw new Error(data?.error?.message || data?.reason || result.error?.message || 'Med Auto Cast 工作区读取未完成');

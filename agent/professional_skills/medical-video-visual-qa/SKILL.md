@@ -159,3 +159,4 @@ H3对照按[研究方案第6节](../../../runtime/workbench/docs/12_H3调研与�
 
 - 结合 `scripts/audit_fullstack_opportunity.py` 与 `scripts/first_draft_preflight.py` 做多层归因路由：均等节拍或 `>= 13s` 复合长镜退回导演按 `cues` 边界零漂移重切；口播过载退回策划精炼；素材稀疏退回策展补分层透明件；源码结构定位须核对 `stiff_actor_risk == False`、`hard_cut_pose_switches == 0`、`rapid_actor_switches == 0`、`bust_behind_hollow_desk == 0`、`heading_inside_camera == 0`。
 - **自然度四问与 360px 实宽复核**：除联系表与 `mobile-360.jpg`（重点查楷体细笔画、空纸先出孤点与小卡压桌沿）外，代表片须抽取 `~0.35s` 连续动态条（审手势细节时附 1 张原分辨率帧避免缩略图误判），严问四题：① 抽掉该手势是否损表意？② 真人诊室交谈会不会这样做？③ 是否混拼“抽象放大图解”与“写实人手/物体”？④ 若为齐腰半身像，是否严格配无地板纯墙 `drawCloseWallBackdrop` + 贴底实心前景桌 `drawForegroundDesk()` 无镂空悬空感？同步核查落地接触影、`pose11` 归零与透明边缘干净度。
+- **分级盲审 QA 路由与缩略图 OCR 误读仲裁**：批量盲审视觉 QA 可优先采用轻量多模态模型实现秒级初筛；当出现「仅在 360px 缩略图中报告形近汉字错字而原分辨率帧清晰可读」或「审看正文通过却遗漏 `VERDICT: PASS/FAIL` 结构化尾行」两类情况时，应自动升级至高精度多模态模型复核仲裁，避免误杀已达标工程。同时，对照实测显示闭环视觉自检与局部返修对终版观感的提升大于单次盲写编码的模型差异，任何制作链路均不可省去初稿视觉自检。
